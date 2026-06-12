@@ -1,0 +1,43 @@
+name: Pipeline quotidien
+
+on:
+  schedule:
+    # 07:00 UTC chaque jour (~08h/09h heure de Paris)
+    - cron: "0 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Scraper les sources
+        run: npm run scrape
+
+      - name: Générer les articles
+        run: npx tsx pipeline/generate.ts
+        env:
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+
+      - name: Commit des nouveaux articles
+        run: |
+          git config user.name "signal-ia-bot"
+          git config user.email "actions@github.com"
+          git add content/articles
+          if git diff --cached --quiet; then
+            echo "Aucun nouvel article."
+          else
+            git commit -m "content: articles du $(date -u +%F)"
+            git push
+          fi

@@ -1,36 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# signal·ia — site de veille IA automatisé
 
-## Getting Started
+Site de news IA en français, alimenté chaque jour par un pipeline automatisé :
+scraping de sources d'actualité IA → sélection + rédaction par un agent LLM → publication.
 
-First, run the development server:
+Projet d'entraînement aux agents IA.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Architecture
+
+```
+Sources RSS (TechCrunch AI, Hugging Face Blog, ...)
+        │
+        ▼
+[1. Scraper]  pipeline/scrape.ts           → data/raw/YYYY-MM-DD.json
+        │
+        ▼
+[2. Agent rédacteur]  pipeline/generate.ts → content/articles/*.md
+        │   triage LLM (sélection des 3 news majeures) puis rédaction FR
+        ▼
+[3. Site Next.js]  src/app/                lit content/articles en SSG
+        │
+        ▼
+[4. Automatisation]  .github/workflows/daily.yml
+        cron quotidien 07:00 UTC : scrape → generate → commit → redéploiement
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Choix techniques
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Brique | Choix | Pourquoi |
+|---|---|---|
+| Framework | Next.js 16 (App Router, TypeScript, Tailwind 4) | SSG idéal pour du contenu, zéro serveur |
+| Pipeline | Scripts Node standalone (`tsx`), hors Next.js | Testables en local, découplés du site |
+| Sources | Flux RSS | Gratuit, stable, pas de scraping HTML fragile |
+| LLM | Mistral API (`mistral-small-latest`) | Free tier, appel direct via fetch (pas de SDK) |
+| Stockage | Fichiers (JSON brut + Markdown) dans le repo | Zéro coût, versionné par git, pas d'infra |
+| Automatisation | GitHub Actions cron | Gratuit sur repo public, commit les articles |
+| Hébergement cible | Vercel free tier | Redéploiement auto à chaque commit d'articles |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Structure du repo
 
-## Learn More
+```
+pipeline/          Pipeline de publication (scripts standalone)
+  sources.ts       Liste des flux RSS scrapés
+  scrape.ts        Récupère les news → data/raw/YYYY-MM-DD.json (idempotent, dédup par URL)
+  generate.ts      Agent LLM : triage des items puis rédaction FR → content/articles/
+data/raw/          Sorties brutes du scraper (gitignored, éphémère)
+content/articles/  Articles Markdown publiés (committés, source du site)
+src/app/           Site Next.js (App Router) — home + /articles/[slug]
+src/lib/           Lecture des articles (gray-matter + marked)
+.github/workflows/ daily.yml — cron quotidien
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Utilisation
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm install
+npm run scrape                 # récupère les news du jour dans data/raw/
+npx tsx pipeline/generate.ts   # triage + rédaction (nécessite MISTRAL_API_KEY)
+npm run dev                    # lance le site
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Activer l'automatisation complète
 
-## Deploy on Vercel
+1. **Clé Mistral** (free tier, gratuit) : créer une clé sur https://console.mistral.ai
+2. Sur GitHub : Settings → Secrets and variables → Actions → ajouter `MISTRAL_API_KEY`
+3. Le workflow `daily.yml` tourne chaque jour à 07:00 UTC (déclenchable manuellement via l'onglet Actions)
+4. **Déploiement** : importer le repo sur https://vercel.com (free tier) — chaque commit d'articles redéploie le site
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Roadmap
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. ✅ Scraper RSS (2 sources, sortie JSON locale)
+2. ✅ Agent rédacteur (triage + rédaction Mistral) — les 6 premiers articles ont été rédigés manuellement pour amorcer la v1
+3. ✅ Frontend (home + pages articles, SSG, design sombre)
+4. ✅ Workflow GitHub Actions quotidien (en attente du secret `MISTRAL_API_KEY`)
+5. ⬜ Améliorations : plus de sources, pages par tag, sitemap + schema.org, flux RSS sortant, OG images
