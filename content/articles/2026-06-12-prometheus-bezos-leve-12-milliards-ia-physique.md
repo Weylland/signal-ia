@@ -1,9 +1,20 @@
 ---
-title: "Prometheus, la startup de Jeff Bezos, lève 12 milliards de dollars pour une IA du monde physique"
-date: "2026-06-12T08:00:00.000Z"
-excerpt: "La startup d'IA physique vise à automatiser l'ingénierie lourde et la conception de médicaments. Valorisation : 41 milliards de dollars."
-tags: ["financement", "ia-physique"]
-sources: [{"name": "TechCrunch AI", "url": "https://techcrunch.com/2026/06/11/jeff-bezoss-prometheus-raises-12b-to-build-an-artificial-general-engineer-for-the-physical-world/"}]
+title: >-
+  Prometheus, la startup de Jeff Bezos, lève 12 milliards de dollars pour une IA
+  du monde physique
+date: '2026-06-12T08:00:00.000Z'
+excerpt: >-
+  La startup d'IA physique vise à automatiser l'ingénierie lourde et la
+  conception de médicaments. Valorisation : 41 milliards de dollars.
+tags:
+  - financement
+  - ia-physique
+sources:
+  - name: TechCrunch AI
+    url: >-
+      https://techcrunch.com/2026/06/11/jeff-bezoss-prometheus-raises-12b-to-build-an-artificial-general-engineer-for-the-physical-world/
+image: >-
+  https://techcrunch.com/wp-content/uploads/2025/04/GettyImages-2208733347.jpg?w=1024
 ---
 Prometheus, la startup d'IA cofondée par Jeff Bezos, annonce une levée de 12 milliards de dollars qui valorise l'entreprise à 41 milliards.
 

@@ -1,9 +1,18 @@
 ---
-title: "Hugging Face connecte des outils MCP au robot Reachy Mini"
-date: "2026-06-12T06:30:00.000Z"
-excerpt: "Le protocole MCP arrive sur le petit robot open source de Hugging Face — les agents IA peuvent désormais le piloter comme un outil."
-tags: ["robotique", "mcp", "open-source"]
-sources: [{"name": "Hugging Face Blog", "url": "https://huggingface.co/blog/adding-mcp-tools-to-reachy-mini"}]
+title: Hugging Face connecte des outils MCP au robot Reachy Mini
+date: '2026-06-12T06:30:00.000Z'
+excerpt: >-
+  Le protocole MCP arrive sur le petit robot open source de Hugging Face — les
+  agents IA peuvent désormais le piloter comme un outil.
+tags:
+  - robotique
+  - mcp
+  - open-source
+sources:
+  - name: Hugging Face Blog
+    url: 'https://huggingface.co/blog/adding-mcp-tools-to-reachy-mini'
+image: >-
+  https://huggingface.co/blog/assets/adding-mcp-tools-to-reachy-mini/reachy_mini_remote_spaces_thumbnail.png
 ---
 Hugging Face publie un guide pour ajouter des outils MCP (Model Context Protocol) à Reachy Mini, son petit robot de bureau open source.
 

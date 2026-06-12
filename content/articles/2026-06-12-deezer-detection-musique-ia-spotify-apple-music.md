@@ -1,9 +1,20 @@
 ---
-title: "Deezer lance un outil qui détecte la musique générée par IA sur Spotify et Apple Music"
-date: "2026-06-12T07:00:00.000Z"
-excerpt: "L'outil scanne les playlists des plateformes concurrentes pour identifier les morceaux créés par IA."
-tags: ["musique", "détection-ia"]
-sources: [{"name": "TechCrunch AI", "url": "https://techcrunch.com/2026/06/11/deezers-new-tool-can-identify-ai-music-from-spotify-apple-music-and-others/"}]
+title: >-
+  Deezer lance un outil qui détecte la musique générée par IA sur Spotify et
+  Apple Music
+date: '2026-06-12T07:00:00.000Z'
+excerpt: >-
+  L'outil scanne les playlists des plateformes concurrentes pour identifier les
+  morceaux créés par IA.
+tags:
+  - musique
+  - détection-ia
+sources:
+  - name: TechCrunch AI
+    url: >-
+      https://techcrunch.com/2026/06/11/deezers-new-tool-can-identify-ai-music-from-spotify-apple-music-and-others/
+image: >-
+  https://techcrunch.com/wp-content/uploads/2025/03/GettyImages-2180853826.jpg?resize=1200,800
 ---
 Deezer présente un outil capable d'identifier la musique générée par IA, y compris dans les playlists de plateformes concurrentes comme Spotify et Apple Music.
 

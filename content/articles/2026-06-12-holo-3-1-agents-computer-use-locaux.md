@@ -1,9 +1,17 @@
 ---
-title: "Holo3.1 : des agents computer use rapides et exécutables en local"
-date: "2026-06-12T06:00:00.000Z"
-excerpt: "H Company publie une nouvelle version de ses modèles d'agents capables de contrôler un ordinateur, optimisés pour tourner localement."
-tags: ["agents", "modèles"]
-sources: [{"name": "Hugging Face Blog", "url": "https://huggingface.co/blog/Hcompany/holo31"}]
+title: 'Holo3.1 : des agents computer use rapides et exécutables en local'
+date: '2026-06-12T06:00:00.000Z'
+excerpt: >-
+  H Company publie une nouvelle version de ses modèles d'agents capables de
+  contrôler un ordinateur, optimisés pour tourner localement.
+tags:
+  - agents
+  - modèles
+sources:
+  - name: Hugging Face Blog
+    url: 'https://huggingface.co/blog/Hcompany/holo31'
+image: >-
+  https://cdn-thumbnails.huggingface.co/social-thumbnails/blog/Hcompany/holo31.png
 ---
 H Company annonce Holo3.1, une nouvelle génération de ses modèles d'agents « computer use », présentés comme rapides et capables de fonctionner en local.
 

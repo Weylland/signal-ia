@@ -1,9 +1,20 @@
 ---
-title: "Theker lève 85 millions de dollars pour un robot d'usine qui ne se spécialise dans rien"
-date: "2026-06-12T07:30:00.000Z"
-excerpt: "À contre-courant des humanoïdes à forme fixe, Theker construit des machines reconfigurables selon la tâche."
-tags: ["robotique", "financement"]
-sources: [{"name": "TechCrunch AI", "url": "https://techcrunch.com/2026/06/11/theker-just-raised-85m-to-build-the-factory-robot-that-doesnt-specialize-in-anything/"}]
+title: >-
+  Theker lève 85 millions de dollars pour un robot d'usine qui ne se spécialise
+  dans rien
+date: '2026-06-12T07:30:00.000Z'
+excerpt: >-
+  À contre-courant des humanoïdes à forme fixe, Theker construit des machines
+  reconfigurables selon la tâche.
+tags:
+  - robotique
+  - financement
+sources:
+  - name: TechCrunch AI
+    url: >-
+      https://techcrunch.com/2026/06/11/theker-just-raised-85m-to-build-the-factory-robot-that-doesnt-specialize-in-anything/
+image: >-
+  https://techcrunch.com/wp-content/uploads/2026/06/THEKER-photo-seriesA.jpg?resize=1200,799
 ---
 La startup de robotique Theker annonce une levée de 85 millions de dollars pour développer un robot industriel volontairement généraliste.
 

@@ -1,71 +1,83 @@
+import Image from "next/image";
 import Link from "next/link";
-import { getAllArticles, formatDate } from "@/lib/articles";
+import { getAllArticles, getAllTags, formatDate } from "@/lib/articles";
+import { ArticleCard } from "@/components/ArticleCard";
+import { FadeIn, FadeUp } from "@/components/Reveal";
 
 export default async function Home() {
-  const articles = await getAllArticles();
+  const [articles, tags] = await Promise.all([getAllArticles(), getAllTags()]);
 
   if (articles.length === 0) {
-    return (
-      <p className="font-mono text-sm text-muted">
-        Aucun article pour l&apos;instant. Le pipeline n&apos;a pas encore tourné.
-      </p>
-    );
+    return <p className="text-sm text-muted">Aucun article publié pour l&apos;instant.</p>;
   }
 
   const [featured, ...rest] = articles;
 
   return (
-    <div className="flex flex-col gap-12">
-      <section>
-        <p className="mb-3 font-mono text-xs uppercase tracking-widest text-accent">
-          À la une
-        </p>
-        <Link href={`/articles/${featured.slug}`} className="group block">
-          <h1 className="font-display text-3xl font-bold leading-tight tracking-tight transition-colors group-hover:text-accent sm:text-5xl">
-            {featured.title}
-          </h1>
-          <p className="mt-4 max-w-3xl text-lg text-muted">{featured.excerpt}</p>
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            <span className="font-mono text-xs text-muted">{formatDate(featured.date)}</span>
-            {featured.tags.map((tag) => (
-              <span
-                key={tag}
-                className="rounded-full border border-border px-2.5 py-0.5 font-mono text-xs text-muted"
-              >
-                {tag}
+    <div className="flex flex-col gap-14">
+      <FadeIn>
+        <section className="card overflow-hidden !shadow-none sm:grid sm:grid-cols-2">
+          <Link
+            href={`/articles/${featured.slug}`}
+            className="card-image relative block aspect-[16/10] overflow-hidden bg-accent-soft sm:aspect-auto sm:min-h-[360px]"
+          >
+            {featured.image && (
+              <Image
+                src={featured.image}
+                alt={featured.title}
+                fill
+                priority
+                sizes="(max-width: 640px) 100vw, 50vw"
+                className="object-cover"
+              />
+            )}
+          </Link>
+          <div className="flex flex-col justify-center p-7 sm:p-10">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-accent">
+              À la une
+            </p>
+            <Link href={`/articles/${featured.slug}`} className="group">
+              <h1 className="font-display text-3xl font-semibold leading-tight tracking-tight transition-colors group-hover:text-accent-deep sm:text-4xl">
+                {featured.title}
+              </h1>
+            </Link>
+            <p className="mt-4 leading-relaxed text-muted">{featured.excerpt}</p>
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              <span className="text-xs font-medium uppercase tracking-wider text-muted">
+                {formatDate(featured.date)}
               </span>
-            ))}
+              {featured.tags.map((tag) => (
+                <Link key={tag} href={`/tags/${encodeURIComponent(tag)}`} className="pill">
+                  {tag}
+                </Link>
+              ))}
+            </div>
           </div>
-        </Link>
-      </section>
+        </section>
+      </FadeIn>
+
+      {tags.length > 0 && (
+        <FadeUp>
+          <section className="flex flex-wrap items-center gap-2">
+            <span className="mr-2 text-sm font-semibold">Explorer :</span>
+            {tags.map(({ tag, count }) => (
+              <Link key={tag} href={`/tags/${encodeURIComponent(tag)}`} className="pill">
+                {tag} <span className="ml-1 opacity-60">{count}</span>
+              </Link>
+            ))}
+          </section>
+        </FadeUp>
+      )}
 
       <section>
-        <p className="mb-5 font-mono text-xs uppercase tracking-widest text-muted">
-          Dernières news
-        </p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          {rest.map((article) => (
-            <Link
-              key={article.slug}
-              href={`/articles/${article.slug}`}
-              className="group flex flex-col rounded-xl border border-border bg-surface p-5 transition-colors hover:border-accent-dim hover:bg-surface-hover"
-            >
-              <span className="font-mono text-xs text-muted">{formatDate(article.date)}</span>
-              <h2 className="mt-2 font-display text-xl font-semibold leading-snug transition-colors group-hover:text-accent">
-                {article.title}
-              </h2>
-              <p className="mt-2 line-clamp-3 text-sm text-muted">{article.excerpt}</p>
-              <div className="mt-auto flex flex-wrap gap-2 pt-4">
-                {article.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full border border-border px-2.5 py-0.5 font-mono text-xs text-muted"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </Link>
+        <FadeUp>
+          <h2 className="mb-6 font-display text-2xl font-semibold">Dernières actualités</h2>
+        </FadeUp>
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {rest.map((article, i) => (
+            <FadeUp key={article.slug} delay={Math.min(i * 0.06, 0.3)}>
+              <ArticleCard article={article} />
+            </FadeUp>
           ))}
         </div>
       </section>

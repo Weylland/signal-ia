@@ -1,9 +1,17 @@
 ---
-title: "La communauté open source se rallie à OpenEnv pour le RL agentique"
-date: "2026-06-12T05:30:00.000Z"
-excerpt: "OpenEnv s'impose comme standard d'environnements d'entraînement par renforcement pour les agents IA."
-tags: ["recherche", "open-source", "agents"]
-sources: [{"name": "Hugging Face Blog", "url": "https://huggingface.co/blog/openenv-agentic-rl"}]
+title: La communauté open source se rallie à OpenEnv pour le RL agentique
+date: '2026-06-12T05:30:00.000Z'
+excerpt: >-
+  OpenEnv s'impose comme standard d'environnements d'entraînement par
+  renforcement pour les agents IA.
+tags:
+  - recherche
+  - open-source
+  - agents
+sources:
+  - name: Hugging Face Blog
+    url: 'https://huggingface.co/blog/openenv-agentic-rl'
+image: 'https://huggingface.co/blog/assets/openenv/thumbnail_expansion.png'
 ---
 Hugging Face fait le point sur l'adoption d'OpenEnv, un standard ouvert d'environnements d'entraînement par renforcement (RL) pour les agents IA, désormais soutenu par une part croissante de la communauté open source.
 

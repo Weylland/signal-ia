@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import type { RawItem } from "./scrape";
+import { fetchOgImage } from "./og";
 
 const ARTICLES_DIR = path.join(process.cwd(), "content", "articles");
 const RAW_DIR = path.join(process.cwd(), "data", "raw");
@@ -132,6 +133,7 @@ async function main() {
     console.log(`Rédaction : ${selected.title}`);
     const body = await writeArticle(selected, items);
     const sources = items.filter((item) => selected.links.includes(item.link));
+    const image = sources.length > 0 ? await fetchOgImage(sources[0].link) : null;
 
     const frontmatter = [
       "---",
@@ -139,6 +141,7 @@ async function main() {
       `date: ${JSON.stringify(new Date().toISOString())}`,
       `excerpt: ${JSON.stringify(selected.reason)}`,
       `tags: ${JSON.stringify(selected.tags)}`,
+      ...(image ? [`image: ${JSON.stringify(image)}`] : []),
       `sources: ${JSON.stringify(sources.map((s) => ({ name: s.sourceName, url: s.link })))}`,
       "---",
       "",

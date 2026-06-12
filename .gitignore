@@ -42,3 +42,4 @@ next-env.d.ts
 
 # pipeline
 /data/raw/
+!.env.example
