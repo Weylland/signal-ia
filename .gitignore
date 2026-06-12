@@ -51,3 +51,4 @@ database.sqlite-wal
 database.sqlite-shm
 /public/uploads/
 pipeline.log
+commit-msg.txt
