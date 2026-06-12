@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — signal·ia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:          oklch(0.16 0.008 160);
+  --bg-raised:   oklch(0.19 0.009 160);
+  --bg-deep:     oklch(0.13 0.008 160);
+  --ink:         oklch(0.93 0.008 130);
+  --ink-dim:     oklch(0.66 0.012 140);
+  --ink-faint:   oklch(0.48 0.012 140);
+  --line:        oklch(0.30 0.012 150);
+  --line-strong: oklch(0.42 0.014 150);
+  --accent:      oklch(0.91 0.22 127);
+  --accent-dim:  oklch(0.91 0.22 127 / 0.14);
+  --on-accent:   oklch(0.15 0.02 130);
+  --ok:          oklch(0.78 0.16 150);
+  --ok-dim:      oklch(0.78 0.16 150 / 0.14);
+  --warn:        oklch(0.85 0.18 58);
+  --warn-dim:    oklch(0.85 0.18 58 / 0.14);
+  --err:         oklch(0.72 0.20 20);
+  --err-dim:     oklch(0.72 0.20 20 / 0.14);
+  --font-display:"Instrument Serif", Georgia, serif;
+  --font-body:   "Instrument Sans","Helvetica Neue",Arial,sans-serif;
+  --font-mono:   "IBM Plex Mono","SF Mono",Menlo,monospace;
+  --sb: 224px;
+}
+*{ margin:0; padding:0; box-sizing:border-box; }
+html,body{ height:100%; }
+body{ background:var(--bg); color:var(--ink); font-family:var(--font-body); font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased; display:flex; overflow:hidden; }
+::selection{ background:var(--accent); color:var(--on-accent); }
+a{ color:inherit; text-decoration:none; }
+button,input,textarea,select{ font-family:var(--font-body); }
+
+/* ═══ SIDEBAR ═══ */
+.sidebar{
+  width:var(--sb); flex:none;
+  background:var(--bg-deep); border-right:1px solid var(--line);
+  display:flex; flex-direction:column; height:100vh; overflow-y:auto;
+  position:sticky; top:0;
+}
+.sb-logo{
+  display:flex; align-items:center; gap:10px;
+  padding:18px 16px 14px; border-bottom:1px solid var(--line);
+  font-family:var(--font-display); font-size:24px; line-height:1;
+  letter-spacing:-0.01em;
+}
+.sb-logo .dot{ color:var(--accent); }
+.sb-logo .ia{ font-style:italic; }
+.sb-logo .badge-admin{
+  font-family:var(--font-mono); font-size:9px; font-weight:600;
+  letter-spacing:0.14em; text-transform:uppercase;
+  border:1px solid var(--line-strong); color:var(--ink-faint);
+  padding:2px 5px 1px; line-height:1.4; white-space:nowrap;
+}
+.sb-section{ font-family:var(--font-mono); font-size:9.5px; font-weight:600; letter-spacing:0.16em; text-transform:uppercase; color:var(--ink-faint); padding:14px 16px 6px; }
+.sb-nav{ flex:1; padding:8px 0; }
+.nav-item{
+  display:flex; align-items:center; justify-content:space-between; width:100%;
+  padding:9px 16px; background:none; border:0; color:var(--ink-dim); cursor:pointer;
+  font-family:var(--font-mono); font-size:12px; font-weight:500; letter-spacing:0.04em;
+  text-align:left; transition:background .12s, color .12s;
+}
+.nav-item:hover{ background:var(--bg-raised); color:var(--ink); }
+.nav-item.active{ background:var(--accent-dim); color:var(--accent); }
+.nav-item .nbadge{ font-size:10px; font-weight:600; background:var(--accent); color:var(--on-accent); padding:1px 6px 0; line-height:1.6; }
+.sb-user{ border-top:1px solid var(--line); padding:14px 16px; display:flex; align-items:center; gap:10px; }
+.sb-avatar{ width:28px; height:28px; border-radius:50%; background:var(--bg-raised); border:1px solid var(--line); display:grid; place-items:center; font-family:var(--font-mono); font-size:11px; font-weight:600; color:var(--accent); flex:none; }
+.sb-uname{ font-family:var(--font-mono); font-size:11px; color:var(--ink-dim); line-height:1.4; }
+.sb-urole{ font-size:10px; color:var(--ink-faint); }
+
+/* ═══ MAIN ═══ */
+.main{ flex:1; min-width:0; height:100vh; overflow-y:auto; display:flex; flex-direction:column; }
+.main-topbar{
+  position:sticky; top:0; z-index:10; background:var(--bg);
+  border-bottom:1px solid var(--line);
+  display:flex; align-items:center; justify-content:space-between; gap:16px;
+  padding:0 24px; height:52px; flex:none;
+}
+.main-title{ font-family:var(--font-mono); font-size:13px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; }
+.topbar-right{ display:flex; gap:10px; align-items:center; }
+.live-dot{ display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--ok); margin-right:6px; vertical-align:1px; animation:blink 2.5s ease-in-out infinite; }
+@keyframes blink{ 0%,100%{opacity:1} 50%{opacity:.2} }
+.mono-lbl{ font-family:var(--font-mono); font-size:10.5px; color:var(--ink-faint); letter-spacing:0.1em; text-transform:uppercase; }
+.btn{ font-family:var(--font-mono); font-size:11.5px; font-weight:500; letter-spacing:0.07em; text-transform:uppercase; padding:6px 14px; border:1px solid var(--line-strong); background:none; color:var(--ink-dim); cursor:pointer; white-space:nowrap; transition:all .15s; }
+.btn:hover{ border-color:var(--accent); color:var(--accent); }
+.btn-primary{ background:var(--accent); color:var(--on-accent); border-color:var(--accent); font-weight:600; }
+.btn-primary:hover{ filter:brightness(1.07); color:var(--on-accent); border-color:var(--accent); }
+.btn-ok{ border-color:var(--ok); color:var(--ok); }
+.btn-ok:hover{ background:var(--ok-dim); }
+.btn-err{ border-color:var(--err); color:var(--err); }
+.btn-err:hover{ background:var(--err-dim); }
+.tag-small{ font-family:var(--font-mono); font-size:10px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; border:1px solid var(--line-strong); color:var(--ink-dim); padding:2px 6px 1px; display:inline-block; white-space:nowrap; }
+
+/* ═══ TAB PANELS ═══ */
+.tab-panel{ display:none; padding:22px 24px; flex:1; }
+.tab-panel.active{ display:block; }
+
+/* ─ DASHBOARD ─ */
+.stat-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px; }
+.stat-card{ border:1px solid var(--line); background:var(--bg-raised); padding:18px 20px; }
+.stat-card .s-label{ font-family:var(--font-mono); font-size:10px; font-weight:600; letter-spacing:0.16em; text-transform:uppercase; color:var(--ink-faint); margin-bottom:10px; }
+.stat-card .s-value{ font-family:var(--font-display); font-size:42px; line-height:1; font-weight:400; letter-spacing:-0.02em; }
+.stat-card .s-delta{ font-family:var(--font-mono); font-size:11px; margin-top:7px; }
+.s-delta.up{ color:var(--ok); }
+.s-delta.neutral{ color:var(--ink-faint); }
+.s-delta.down{ color:var(--err); }
+
+.dash-grid{ display:grid; grid-template-columns:1fr 310px; gap:14px; }
+.panel-box{ border:1px solid var(--line); background:var(--bg-raised); }
+.panel-head{ border-bottom:1px solid var(--line); padding:11px 16px; display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.panel-head h3{ font-family:var(--font-mono); font-size:11px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:var(--ink); }
+
+.chart-area{ padding:16px 16px 10px; display:flex; align-items:flex-end; gap:5px; height:124px; }
+.bwrap{ flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; }
+.bar{ width:100%; background:var(--accent-dim); border-top:2px solid var(--accent); min-height:3px; transition:background .2s; }
+.bar:hover{ background:oklch(0.91 0.22 127 / 0.28); }
+.bar-lbl{ font-family:var(--font-mono); font-size:9px; color:var(--ink-faint); }
+.bar.ok-bar{ border-top-color:var(--ok); background:var(--ok-dim); }
+
+.mini-queue{ list-style:none; }
+.mini-row{ display:flex; align-items:center; gap:10px; padding:11px 16px; border-bottom:1px solid var(--line); }
+.mini-row:last-child{ border-bottom:0; }
+.mini-score{ font-family:var(--font-mono); font-size:12px; font-weight:600; flex:none; width:36px; text-align:right; }
+.mini-score.hi{ color:var(--ok); }
+.mini-score.med{ color:var(--warn); }
+.mini-title{ font-size:13px; line-height:1.35; flex:1; min-width:0; color:var(--ink-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mini-time{ font-family:var(--font-mono); font-size:10.5px; color:var(--ink-faint); flex:none; }
+
+/* ─ QUEUE ─ */
+.queue-filters{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:16px; }
+.filter-btn{ font-family:var(--font-mono); font-size:11px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; padding:5px 12px; background:none; border:1px solid var(--line); color:var(--ink-dim); cursor:pointer; transition:all .12s; }
+.filter-btn:hover,.filter-btn.active{ border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
+.queue-table{ border:1px solid var(--line); background:var(--bg-raised); }
+.col-lbl{ font-family:var(--font-mono); font-size:9.5px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:var(--ink-faint); }
+.q-head{ background:var(--bg-deep); }
+.q-row{
+  display:grid; grid-template-columns:62px 1fr 96px 72px 56px 190px;
+  gap:12px; align-items:center; padding:13px 16px;
+  border-bottom:1px solid var(--line); transition:background .12s, opacity .28s, transform .28s;
+}
+.q-row:last-child{ border-bottom:0; }
+.q-row:hover{ background:oklch(0.19 0.009 160); }
+.q-row.removing{ opacity:0; transform:translateX(24px); pointer-events:none; }
+.q-head .q-row{ padding-block:8px; }
+.q-conf{ font-family:var(--font-mono); font-size:13px; font-weight:600; }
+.q-conf.hi{ color:var(--ok); }
+.q-conf.med{ color:var(--warn); }
+.q-conf.lo{ color:var(--err); }
+.q-title{ font-size:13.5px; font-weight:500; line-height:1.35; }
+.q-title .src{ display:block; font-family:var(--font-mono); font-size:10.5px; color:var(--ink-faint); margin-top:2px; font-weight:400; }
+.q-time{ font-family:var(--font-mono); font-size:11.5px; color:var(--ink-faint); }
+.q-actions{ display:flex; gap:5px; justify-content:flex-end; }
+
+/* ─ EDITOR ─ */
+.editor-layout{ display:grid; grid-template-columns:1fr 250px; gap:16px; }
+.form-group{ margin-bottom:15px; }
+.f-label{ display:block; font-family:var(--font-mono); font-size:10.5px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:var(--ink-faint); margin-bottom:6px; }
+.f-input,.f-textarea,.f-select{ width:100%; background:var(--bg-raised); border:1px solid var(--line); color:var(--ink); padding:10px 12px; font-size:14px; outline:none; transition:border-color .15s; font-family:var(--font-body); }
+.f-input:focus,.f-textarea:focus,.f-select:focus{ border-color:var(--accent); }
+.f-textarea{ resize:vertical; min-height:140px; line-height:1.65; }
+.f-input::placeholder,.f-textarea::placeholder{ color:var(--ink-faint); }
+.f-row2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.ed-side-box{ border:1px solid var(--line); background:var(--bg-raised); margin-bottom:12px; }
+.ed-side-head{ border-bottom:1px solid var(--line); padding:10px 14px; font-family:var(--font-mono); font-size:10.5px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:var(--ink); }
+.ed-side-body{ padding:14px; }
+.status-opts{ display:grid; gap:8px; }
+.status-opt{ display:flex; align-items:center; gap:8px; font-family:var(--font-mono); font-size:12px; color:var(--ink-dim); cursor:pointer; }
+.status-opt input{ accent-color:var(--accent); }
+.sdot{ width:7px; height:7px; border-radius:50%; flex:none; }
+.sdot.draft{ background:var(--ink-faint); }
+.sdot.review{ background:var(--warn); }
+.sdot.pub{ background:var(--ok); }
+
+/* ─ SOURCES ─ */
+.sources-table{ border:1px solid var(--line); background:var(--bg-raised); }
+.src-row{ display:grid; grid-template-columns:14px 1fr 70px 70px 140px 80px; gap:16px; align-items:center; padding:12px 16px; border-bottom:1px solid var(--line); transition:background .12s; }
+.src-row:last-child{ border-bottom:0; }
+.src-row:hover{ background:oklch(0.19 0.009 160); }
+.src-dot{ width:8px; height:8px; border-radius:50%; flex:none; }
+.src-dot.ok{ background:var(--ok); }
+.src-dot.err{ background:var(--err); }
+.src-dot.slow{ background:var(--warn); }
+.src-name{ font-weight:500; font-size:13.5px; }
+.src-url{ display:block; font-family:var(--font-mono); font-size:10px; color:var(--ink-faint); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.src-type{ font-family:var(--font-mono); font-size:10.5px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:0.08em; }
+.src-count{ font-family:var(--font-mono); font-size:13px; font-weight:600; color:var(--accent); }
+.src-last{ font-family:var(--font-mono); font-size:11px; color:var(--ink-faint); }
+.src-head{ background:var(--bg-deep); }
+
+/* ─ SETTINGS ─ */
+.settings-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.s-box{ border:1px solid var(--line); background:var(--bg-raised); }
+.s-head{ border-bottom:1px solid var(--line); padding:11px 16px; font-family:var(--font-mono); font-size:11px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:var(--ink); }
+.s-body{ padding:16px; display:grid; gap:14px; }
+.s-row{ display:flex; justify-content:space-between; align-items:center; gap:16px; }
+.s-name{ font-size:13.5px; font-weight:500; }
+.s-desc{ font-size:12px; color:var(--ink-faint); margin-top:2px; }
+.toggle{ position:relative; flex:none; width:36px; height:20px; background:var(--line); border-radius:10px; cursor:pointer; border:0; transition:background .2s; display:block; }
+.toggle::after{ content:''; position:absolute; top:2px; left:2px; width:16px; height:16px; background:var(--ink-faint); border-radius:50%; transition:transform .2s, background .2s; }
+.toggle.on{ background:var(--accent); }
+.toggle.on::after{ transform:translateX(16px); background:var(--on-accent); }
+.f-inline{ background:var(--bg); border:1px solid var(--line); color:var(--ink); padding:5px 10px; font-family:var(--font-mono); font-size:12.5px; width:150px; text-align:right; outline:none; transition:border-color .15s; }
+.f-inline:focus{ border-color:var(--accent); }
+
+/* ═══ RESPONSIVE ═══ */
+@media(max-width:1024px){
+  :root{ --sb:180px; }
+  .stat-grid{ grid-template-columns:repeat(2,1fr); }
+  .dash-grid{ grid-template-columns:1fr; }
+  .q-row{ grid-template-columns:60px 1fr 86px 160px; }
+  .q-row .q-time,.q-row .col-lbl:nth-child(5){ display:none; }
+  .settings-grid{ grid-template-columns:1fr; }
+  .editor-layout{ grid-template-columns:1fr; }
+}
+@media(max-width:640px){
+  :root{ --sb:52px; }
+  .sb-logo .badge-admin,.sb-logo .dot,.sb-logo .ia,
+  .sb-section,.nav-item span:first-child,.sb-uname{ display:none; }
+  .sb-logo{ font-size:18px; padding:14px 10px; }
+  .nav-item{ justify-content:center; padding:10px; }
+  .src-row{ grid-template-columns:14px 1fr 60px 80px; }
+  .src-row .src-type,.src-row .src-last{ display:none; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ SIDEBAR ═══ -->
+<aside class="sidebar">
+  <a class="sb-logo" href="signal-ia — Terminal éditorial.html">signal<span class="dot">·</span><span class="ia">ia</span> <span class="badge-admin">Admin</span></a>
+  <nav class="sb-nav">
+    <div class="sb-section">Contenu</div>
+    <button class="nav-item active" data-tab="dashboard"><span>Tableau de bord</span></button>
+    <button class="nav-item" data-tab="queue"><span>File d'attente</span><span class="nbadge" id="queue-badge">12</span></button>
+    <button class="nav-item" data-tab="editor"><span>Éditeur</span></button>
+    <div class="sb-section">Configuration</div>
+    <button class="nav-item" data-tab="sources"><span>Sources</span></button>
+    <button class="nav-item" data-tab="settings"><span>Paramètres</span></button>
+    <div class="sb-section" style="margin-top:auto;"></div>
+    <a class="nav-item" href="signal-ia — Terminal éditorial.html"><span>← Retour au site</span></a>
+  </nav>
+  <div class="sb-user">
+    <div class="sb-avatar">TM</div>
+    <div class="sb-uname">T. Moreau<div class="sb-urole">Rédacteur</div></div>
+  </div>
+</aside>
+
+<!-- ═══ MAIN ═══ -->
+<main class="main">
+  <div class="main-topbar">
+    <span class="main-title" id="main-title">Tableau de bord</span>
+    <div class="topbar-right">
+      <span class="mono-lbl"><span class="live-dot"></span>GÉNÉRATION ACTIVE</span>
+      <button class="btn">Exporter</button>
+      <button class="btn btn-primary" id="btn-new">+ Nouvel article</button>
+    </div>
+  </div>
+
+  <!-- ─── DASHBOARD ─── -->
+  <div class="tab-panel active" id="tab-dashboard" data-screen-label="Dashboard">
+    <div class="stat-grid">
+      <div class="stat-card"><div class="s-label">Signaux publiés — 24h</div><div class="s-value">47</div><div class="s-delta up">+12 vs hier</div></div>
+      <div class="stat-card"><div class="s-label">En attente de validation</div><div class="s-value" id="stat-queue">12</div><div class="s-delta neutral">3 urgents</div></div>
+      <div class="stat-card"><div class="s-label">Sources surveillées</div><div class="s-value">34</div><div class="s-delta down">2 en erreur</div></div>
+      <div class="stat-card"><div class="s-label">Abonnés newsletter</div><div class="s-value">12k</div><div class="s-delta up">+108 cette semaine</div></div>
+    </div>
+    <div class="dash-grid">
+      <div class="panel-box">
+        <div class="panel-head"><h3>Publications par heure — jeudi 12 juin</h3><span class="mono-lbl">Heure locale</span></div>
+        <div class="chart-area" id="chart"></div>
+      </div>
+      <div class="panel-box">
+        <div class="panel-head">
+          <h3>File d'attente — aperçu</h3>
+          <button class="btn" style="font-size:10px;padding:3px 9px;" id="btn-see-queue">Voir tout →</button>
+        </div>
+        <ul class="mini-queue">
+          <li class="mini-row"><span class="mini-score hi">93%</span><span class="mini-title">Magistral 2 : poids ouverts, inférence divisée par 3</span><span class="mini-time">17:05</span></li>
+          <li class="mini-row"><span class="mini-score hi">91%</span><span class="mini-title">AI Act : nouvelles obligations GPAI au 2 août</span><span class="mini-time">16:20</span></li>
+          <li class="mini-row"><span class="mini-score hi">88%</span><span class="mini-title">Cursor 2.0 : revue de code multi-agents</span><span class="mini-time">15:54</span></li>
+          <li class="mini-row"><span class="mini-score med">74%</span><span class="mini-title">Panne API OpenAI — chronologie et solutions</span><span class="mini-time">18:37</span></li>
+          <li class="mini-row"><span class="mini-score hi">89%</span><span class="mini-title">DeepMind : record prévision météo 15 jours</span><span class="mini-time">14:31</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── QUEUE ─── -->
+  <div class="tab-panel" id="tab-queue" data-screen-label="File de validation">
+    <div class="queue-filters">
+      <span class="mono-lbl" style="margin-right:4px;">Filtrer —</span>
+      <button class="filter-btn active">Tous (12)</button>
+      <button class="filter-btn">Modèles</button>
+      <button class="filter-btn">Outils</button>
+      <button class="filter-btn">Légal</button>
+      <button class="filter-btn">Recherche</button>
+      <button class="filter-btn">Éco</button>
+    </div>
+    <div class="queue-table">
+      <div class="q-head"><div class="q-row"><span class="col-lbl">Confiance</span><span class="col-lbl">Titre / Source</span><span class="col-lbl">Catégorie</span><span class="col-lbl">Heure</span><span class="col-lbl">Lu</span><span class="col-lbl" style="text-align:right;">Actions</span></div></div>
+      <div id="queue-list">
+        <div class="q-row" data-id="1"><span class="q-conf hi">93%</span><div class="q-title">Magistral 2 : poids ouverts, coût d'inférence divisé par 3<span class="src">mistral.ai · huggingface.co · 2 autres</span></div><span class="tag-small">Modèles</span><span class="q-time">17:05</span><span class="q-time">4 mn</span><div class="q-actions"><button class="btn btn-ok" onclick="validateRow(this)">Valider</button><button class="btn" onclick="editRow(this,'Magistral 2 : poids ouverts, coût d\'inférence divisé par 3','93%')">Modifier</button><button class="btn btn-err" onclick="rejectRow(this)">Rejeter</button></div></div>
+        <div class="q-row" data-id="2"><span class="q-conf hi">91%</span><div class="q-title">AI Act : calendrier GPAI, obligations au 2 août<span class="src">ec.europa.eu · legifrance.gouv.fr</span></div><span class="tag-small">Légal</span><span class="q-time">16:20</span><span class="q-time">6 mn</span><div class="q-actions"><button class="btn btn-ok" onclick="validateRow(this)">Valider</button><button class="btn" onclick="editRow(this,'AI Act : calendrier GPAI, obligations au 2 août','91%')">Modifier</button><button class="btn btn-err" onclick="rejectRow(this)">Rejeter</button></div></div>
+        <div class="q-row" data-id="3"><span class="q-conf hi">88%</span><div class="q-title">Cursor 2.0 : revue de code multi-agents, mode hors-ligne<span class="src">cursor.sh · github.com/getcursor</span></div><span class="tag-small">Outils</span><span class="q-time">15:54</span><span class="q-time">5 mn</span><div class="q-actions"><button class="btn btn-ok" onclick="validateRow(this)">Valider</button><button class="btn" onclick="editRow(this,'Cursor 2.0 : revue de code multi-agents','88%')">Modifier</button><button class="btn btn-err" onclick="rejectRow(this)">Rejeter</button></div></div>
+        <div class="q-row" data-id="4"><span class="q-conf hi">89%</span><div class="q-title">DeepMind : prévision météo fiable à 15 jours, record sur 90% des métriques<span class="src">deepmind.com · nature.com</span></div><span class="tag-small">Recherche</span><span class="q-time">14:31</span><span class="q-time">4 mn</span><div class="q-actions"><button class="btn btn-ok" onclick="validateRow(this)">Valider</button><button class="btn" onclick="editRow(this,'DeepMind : prévision météo fiable à 15 jours','89%')">Modifier</button><button class="btn btn-err" onclick="rejectRow(this)">Rejeter</button></div></div>
+        <div class="q-row" data-id="5"><span class="q-conf med">74%</span><div class="q-title">Panne API OpenAI — chronologie et solutions de repli<span class="src">status.openai.com · twitter.com</span></div><span class="tag-small">API</span><span class="q-time">18:37</span><span class="q-time">2 mn</span><div class="q-actions"><button class="btn btn-ok" onclick="validateRow(this)">Valider</button><button class="btn" onclick="editRow(this,'Panne API OpenAI — chronologie et solutions','74%')">Modifier</button><button class="btn btn-err" onclick="rejectRow(this)">Rejeter</button></div></div>
+        <div class="q-row" data-id="6"><span class="q-conf hi">92%</span><div class="q-title">Nvidia centre R&D Grenoble : 400 postes, profils recherchés<span class="src">nvidia.com · lemonde.fr · usinenouvelle.fr</span></div><span class="tag-small">Éco</span><span class="q-time">09:15</span><span class="q-time">3 mn</span><div class="q-actions"><button class="btn btn-ok" onclick="validateRow(this)">Valider</button><button class="btn" onclick="editRow(this,'Nvidia centre R&D Grenoble : 400 postes','92%')">Modifier</button><button class="btn btn-err" onclick="rejectRow(this)">Rejeter</button></div></div>
+        <div class="q-row" data-id="7"><span class="q-conf hi">85%</span><div class="q-title">Qwen 4 : nouveau record MMLU multilingue, comparaison avec Llama 4<span class="src">qwenlm.github.io · arxiv.org</span></div><span class="tag-small">Modèles</span><span class="q-time">11:46</span><span class="q-time">3 mn</span><div class="q-actions"><button class="btn btn-ok" onclick="validateRow(this)">Valider</button><button class="btn" onclick="editRow(this,'Qwen 4 : nouveau record MMLU multilingue','85%')">Modifier</button><button class="btn btn-err" onclick="rejectRow(this)">Rejeter</button></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── EDITOR ─── -->
+  <div class="tab-panel" id="tab-editor" data-screen-label="Éditeur article">
+    <div class="editor-layout">
+      <div>
+        <div class="form-group"><label class="f-label">Titre</label><input class="f-input" id="edit-title" type="text" placeholder="Titre de l'article…"></div>
+        <div class="form-group"><label class="f-label">Chapeau</label><textarea class="f-textarea" id="edit-chapo" rows="3" style="min-height:76px;" placeholder="Résumé accrocheur en 2-3 phrases…"></textarea></div>
+        <div class="f-row2">
+          <div class="form-group"><label class="f-label">Catégorie</label><select class="f-input f-select"><option>Modèles</option><option>Outils</option><option>Légal</option><option>Recherche</option><option>Agents</option><option>Éco</option><option>API</option><option>Open source</option></select></div>
+          <div class="form-group"><label class="f-label">Temps de lecture</label><input class="f-input" type="text" placeholder="ex : 4 min"></div>
+        </div>
+        <div class="form-group"><label class="f-label">Corps de l'article</label><textarea class="f-textarea" id="edit-body" rows="10" placeholder="Généré par signal·ia — à relire et amender…"></textarea></div>
+        <div class="form-group"><label class="f-label">Sources (une par ligne)</label><textarea class="f-textarea" id="edit-sources" rows="4" style="min-height:80px;font-family:var(--font-mono);font-size:12.5px;" placeholder="https://source1.com&#10;https://source2.com"></textarea></div>
+        <div style="display:flex;gap:10px;padding-top:4px;flex-wrap:wrap;">
+          <button class="btn btn-primary">Enregistrer et publier</button>
+          <button class="btn">Sauvegarder brouillon</button>
+          <a class="btn" href="article.html" style="display:inline-flex;align-items:center;" target="_blank">Prévisualiser ↗</a>
+          <button class="btn btn-err" style="margin-left:auto;">Supprimer</button>
+        </div>
+      </div>
+      <div>
+        <div class="ed-side-box">
+          <div class="ed-side-head">Statut</div>
+          <div class="ed-side-body">
+            <div class="status-opts">
+              <label class="status-opt"><input type="radio" name="status" value="draft" checked><span class="sdot draft"></span>Brouillon</label>
+              <label class="status-opt"><input type="radio" name="status" value="review"><span class="sdot review"></span>En relecture</label>
+              <label class="status-opt"><input type="radio" name="status" value="pub"><span class="sdot pub"></span>Publié</label>
+            </div>
+          </div>
+        </div>
+        <div class="ed-side-box">
+          <div class="ed-side-head">Score IA</div>
+          <div class="ed-side-body">
+            <div id="ai-score" style="font-family:var(--font-mono);font-size:36px;font-weight:600;color:var(--ok);line-height:1;">—</div>
+            <div style="font-family:var(--font-mono);font-size:11px;color:var(--ink-faint);margin-top:5px;">confiance de génération</div>
+            <div id="ai-warn" style="margin-top:10px;font-size:12px;color:var(--ink-faint);"></div>
+          </div>
+        </div>
+        <div class="ed-side-box">
+          <div class="ed-side-head">Tags</div>
+          <div class="ed-side-body" style="display:flex;flex-wrap:wrap;gap:6px;" id="tags-area">
+            <span class="tag-small" style="cursor:pointer;">+ Ajouter un tag</span>
+          </div>
+        </div>
+        <div class="ed-side-box">
+          <div class="ed-side-head">Modèle utilisé</div>
+          <div class="ed-side-body" style="font-family:var(--font-mono);font-size:12px;color:var(--ink-faint);line-height:1.7;">
+            Magistral 2 70B<br>
+            <span style="color:var(--ink-dim);" id="edit-time">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SOURCES ─── -->
+  <div class="tab-panel" id="tab-sources" data-screen-label="Sources">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+      <span class="mono-lbl">34 sources actives · <span style="color:var(--err);">2 en erreur</span></span>
+      <div style="display:flex;gap:8px;">
+        <button class="btn">Tester toutes les sources</button>
+        <button class="btn btn-primary">+ Ajouter une source</button>
+      </div>
+    </div>
+    <div class="sources-table">
+      <div class="src-head"><div class="src-row"><span></span><span class="col-lbl">Source</span><span class="col-lbl">Type</span><span class="col-lbl">Aujourd'hui</span><span class="col-lbl">Dernière vérif.</span><span></span></div></div>
+      <div class="src-row"><span class="src-dot ok"></span><div class="src-name">HuggingFace Blog<span class="src-url">huggingface.co/blog/rss.xml</span></div><span class="src-type">RSS</span><span class="src-count">8</span><span class="src-last">18:41 — ok</span><button class="btn" style="font-size:10px;padding:4px 9px;">Gérer</button></div>
+      <div class="src-row"><span class="src-dot ok"></span><div class="src-name">ArXiv cs.AI<span class="src-url">arxiv.org/rss/cs.AI</span></div><span class="src-type">RSS</span><span class="src-count">14</span><span class="src-last">18:39 — ok</span><button class="btn" style="font-size:10px;padding:4px 9px;">Gérer</button></div>
+      <div class="src-row"><span class="src-dot ok"></span><div class="src-name">TechCrunch AI<span class="src-url">techcrunch.com/category/artificial-intelligence/feed</span></div><span class="src-type">RSS</span><span class="src-count">5</span><span class="src-last">18:35 — ok</span><button class="btn" style="font-size:10px;padding:4px 9px;">Gérer</button></div>
+      <div class="src-row"><span class="src-dot err"></span><div class="src-name" style="color:var(--err);">The Register AI<span class="src-url" style="color:var(--err);">theregister.com/…/artificial_intelligence/headlines.atom</span></div><span class="src-type">Atom</span><span class="src-count" style="color:var(--err);">0</span><span class="src-last" style="color:var(--err);">Erreur 503</span><button class="btn btn-err" style="font-size:10px;padding:4px 9px;">Relancer</button></div>
+      <div class="src-row"><span class="src-dot ok"></span><div class="src-name">Mistral AI News<span class="src-url">mistral.ai/news/rss</span></div><span class="src-type">RSS</span><span class="src-count">2</span><span class="src-last">17:01 — ok</span><button class="btn" style="font-size:10px;padding:4px 9px;">Gérer</button></div>
+      <div class="src-row"><span class="src-dot slow"></span><div class="src-name">OpenAI Blog<span class="src-url">openai.com/blog/rss.xml</span></div><span class="src-type">RSS</span><span class="src-count">1</span><span class="src-last" style="color:var(--warn);">Lent — 8.4 s</span><button class="btn" style="font-size:10px;padding:4px 9px;">Gérer</button></div>
+      <div class="src-row"><span class="src-dot ok"></span><div class="src-name">Anthropic News<span class="src-url">anthropic.com/news/rss.xml</span></div><span class="src-type">RSS</span><span class="src-count">4</span><span class="src-last">18:15 — ok</span><button class="btn" style="font-size:10px;padding:4px 9px;">Gérer</button></div>
+      <div class="src-row"><span class="src-dot err"></span><div class="src-name" style="color:var(--err);">EU AI Office<span class="src-url" style="color:var(--err);">digital-strategy.ec.europa.eu/rss</span></div><span class="src-type">RSS</span><span class="src-count" style="color:var(--err);">0</span><span class="src-last" style="color:var(--err);">Erreur 404</span><button class="btn btn-err" style="font-size:10px;padding:4px 9px;">Relancer</button></div>
+      <div class="src-row"><span class="src-dot ok"></span><div class="src-name">VentureBeat AI<span class="src-url">venturebeat.com/category/ai/feed</span></div><span class="src-type">RSS</span><span class="src-count">3</span><span class="src-last">18:33 — ok</span><button class="btn" style="font-size:10px;padding:4px 9px;">Gérer</button></div>
+      <div class="src-row"><span class="src-dot ok"></span><div class="src-name">Liste X/Twitter #AINews<span class="src-url">x.com/i/lists/1234567 (API v2)</span></div><span class="src-type">API</span><span class="src-count">7</span><span class="src-last">18:40 — ok</span><button class="btn" style="font-size:10px;padding:4px 9px;">Gérer</button></div>
+    </div>
+  </div>
+
+  <!-- ─── SETTINGS ─── -->
+  <div class="tab-panel" id="tab-settings" data-screen-label="Paramètres">
+    <div class="settings-grid">
+      <div class="s-box">
+        <div class="s-head">Génération automatique</div>
+        <div class="s-body">
+          <div class="s-row"><div><div class="s-name">Génération active</div><div class="s-desc">Traite les sources en continu</div></div><button class="toggle on" onclick="this.classList.toggle('on')"></button></div>
+          <div class="s-row"><div><div class="s-name">Fréquence de cycle</div><div class="s-desc">Intervalle entre deux passages</div></div><input class="f-inline" value="15 min"></div>
+          <div class="s-row"><div><div class="s-name">Seuil de confiance min.</div><div class="s-desc">Sous ce seuil, rejeté auto.</div></div><input class="f-inline" value="70%"></div>
+          <div class="s-row"><div><div class="s-name">Validation humaine requise</div><div class="s-desc">Avant toute publication</div></div><button class="toggle on" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+      </div>
+      <div class="s-box">
+        <div class="s-head">Modèle IA</div>
+        <div class="s-body">
+          <div class="s-row"><div><div class="s-name">Modèle principal</div><div class="s-desc">Génération des articles</div></div><input class="f-inline" value="Magistral 2 70B"></div>
+          <div class="s-row"><div><div class="s-name">Modèle de secours</div><div class="s-desc">En cas d'indisponibilité</div></div><input class="f-inline" value="Mistral Small"></div>
+          <div class="s-row"><div><div class="s-name">Température</div><div class="s-desc">Créativité (0.0 → 1.0)</div></div><input class="f-inline" value="0.35"></div>
+          <div class="s-row"><div><div class="s-name">Auto-hébergé</div><div class="s-desc">Cluster privé, sans API externe</div></div><button class="toggle on" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+      </div>
+      <div class="s-box">
+        <div class="s-head">Newsletter</div>
+        <div class="s-body">
+          <div class="s-row"><div><div class="s-name">Envoi automatique</div><div class="s-desc">Digest hebdomadaire</div></div><button class="toggle on" onclick="this.classList.toggle('on')"></button></div>
+          <div class="s-row"><div><div class="s-name">Jour et heure</div><div class="s-desc">Prochain envoi : ven. 13/06</div></div><input class="f-inline" value="Vendredi 08:00"></div>
+          <div class="s-row"><div><div class="s-name">Signaux dans le digest</div><div class="s-desc">Nombre d'articles inclus</div></div><input class="f-inline" value="10"></div>
+        </div>
+      </div>
+      <div class="s-box">
+        <div class="s-head">Notifications</div>
+        <div class="s-body">
+          <div class="s-row"><div><div class="s-name">Email de notification</div><div class="s-desc">Alertes + erreurs sources</div></div><input class="f-inline" value="editor@signal-ia.fr"></div>
+          <div class="s-row"><div><div class="s-name">Alerte score bas</div><div class="s-desc">Notifier si confiance &lt; 70%</div></div><button class="toggle on" onclick="this.classList.toggle('on')"></button></div>
+          <div class="s-row"><div><div class="s-name">Alerte sources en erreur</div><div class="s-desc">Notifier immédiatement</div></div><button class="toggle on" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+      </div>
+    </div>
+    <div style="padding-top:16px;display:flex;gap:10px;">
+      <button class="btn btn-primary">Sauvegarder les paramètres</button>
+      <button class="btn">Réinitialiser</button>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ── Tab switching ──
+const navItems = document.querySelectorAll('.nav-item[data-tab]');
+const panels = document.querySelectorAll('.tab-panel');
+const titleEl = document.getElementById('main-title');
+const tabTitles = { dashboard:'Tableau de bord', queue:'File d\'attente', editor:'Éditeur', sources:'Sources', settings:'Paramètres' };
+
+function switchTab(id) {
+  navItems.forEach(b => b.classList.remove('active'));
+  panels.forEach(p => p.classList.remove('active'));
+  const btn = document.querySelector('[data-tab="'+id+'"]');
+  const panel = document.getElementById('tab-'+id);
+  if(btn) btn.classList.add('active');
+  if(panel) panel.classList.add('active');
+  titleEl.textContent = tabTitles[id] || id;
+}
+
+navItems.forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
+document.getElementById('btn-see-queue').addEventListener('click', () => switchTab('queue'));
+document.getElementById('btn-new').addEventListener('click', () => {
+  document.getElementById('edit-title').value = '';
+  document.getElementById('edit-body').value = '';
+  document.getElementById('edit-chapo').value = '';
+  document.getElementById('ai-score').textContent = '—';
+  document.getElementById('ai-score').style.color = 'var(--ink-faint)';
+  document.getElementById('ai-warn').textContent = '';
+  document.getElementById('edit-time').textContent = 'Nouvel article';
+  switchTab('editor');
+});
+
+// ── Queue filter ──
+document.querySelectorAll('.filter-btn').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}));
+
+// ── Queue actions ──
+let qCount = 7;
+function updateCount(delta) {
+  qCount = Math.max(0, qCount + delta);
+  document.getElementById('queue-badge').textContent = qCount;
+  document.getElementById('stat-queue').textContent = qCount;
+}
+function validateRow(btn) {
+  const row = btn.closest('.q-row');
+  row.classList.add('removing');
+  setTimeout(() => { row.remove(); updateCount(-1); }, 300);
+}
+function rejectRow(btn) {
+  const row = btn.closest('.q-row');
+  row.style.background = 'oklch(0.72 0.20 20 / 0.07)';
+  row.classList.add('removing');
+  setTimeout(() => { row.remove(); updateCount(-1); }, 350);
+}
+function editRow(btn, title, score) {
+  document.getElementById('edit-title').value = title;
+  const s = parseInt(score);
+  const el = document.getElementById('ai-score');
+  el.textContent = score;
+  el.style.color = s >= 85 ? 'var(--ok)' : s >= 75 ? 'var(--warn)' : 'var(--err)';
+  const warn = document.getElementById('ai-warn');
+  warn.textContent = s < 80 ? '⚠ Score moyen — relecture approfondie recommandée' : s >= 90 ? '✓ Confiance élevée' : '';
+  warn.style.color = s < 80 ? 'var(--warn)' : 'var(--ok)';
+  const now = new Date(); 
+  document.getElementById('edit-time').textContent = now.getHours()+':'+String(now.getMinutes()).padStart(2,'0')+' — depuis queue';
+  switchTab('editor');
+}
+
+// ── Activity chart ──
+const chartData = [0,0,0,0,0,0,1,2,3,4,2,5,7,4,6,4,3,4,5,6,0,0,0,0];
+const chartEl = document.getElementById('chart');
+const maxV = Math.max(...chartData);
+for(let i=6; i<=20; i++){
+  const v = chartData[i];
+  const pct = maxV > 0 ? (v / maxV) * 100 : 0;
+  const wrap = document.createElement('div');
+  wrap.className = 'bwrap';
+  const bar = document.createElement('div');
+  bar.className = 'bar';
+  bar.style.height = Math.max(4, pct) + '%';
+  if(i === 18) bar.classList.add('ok-bar');
+  const lbl = document.createElement('span');
+  lbl.className = 'bar-lbl';
+  lbl.textContent = String(i).padStart(2,'0')+'h';
+  wrap.appendChild(bar);
+  wrap.appendChild(lbl);
+  chartEl.appendChild(wrap);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+feat: terminal editorial redesign from maquette
+
+Full restyle following maquette/ (Claude design mockups):
+- Dark ink base (oklch), electric chartreuse accent, Instrument Serif
+  display + Instrument Sans body + IBM Plex Mono for all data/UI
+- globals.css rewritten: same class API (nb-card, nb-btn, nb-pill, field,
+  prose-article) reskinned, so admin and secondary pages follow for free
+- New primitives: section-head (numbered rules), meta/kicker, breaking
+  marquee bar, feed-item timeline, shared-border cards grid, essentiel box,
+  numbered sources list, drop cap on first paragraph
+- layout.tsx: live topbar, serif masthead, mono nav, 4-col deep footer
+- Home rebuilt to match maquette: lead with chapo, "also" row, 24h feed in
+  two columns, inverted accent tutos section, most read + explore
+- Article page: breadcrumb, full-width hero, sticky sidebar (related +
+  newsletter), numbered sources, reading progress kept
+- Legacy v3 color vars aliased to new palette for untouched components

@@ -15,7 +15,7 @@ export function ShareButtons({ title, url }: { title: string; url: string }) {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="font-display text-xs font-bold uppercase tracking-wider">Partager :</span>
+      <span className="meta uppercase">Partager —</span>
       <a
         href={`https://x.com/intent/tweet?text=${encoded.title}&url=${encoded.url}`}
         target="_blank"
