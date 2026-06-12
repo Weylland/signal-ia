@@ -33,7 +33,7 @@ export default function AdminLoginPage() {
   return (
     <div className="mx-auto mt-16 max-w-sm">
       <h1 className="font-display text-2xl font-semibold">Administration</h1>
-      <form onSubmit={handleSubmit} className="card mt-6 flex flex-col gap-4 p-6">
+      <form onSubmit={handleSubmit} className="nb-card mt-6 flex flex-col gap-4 p-6">
         <label className="text-sm font-medium" htmlFor="password">
           Mot de passe
         </label>
@@ -47,7 +47,7 @@ export default function AdminLoginPage() {
           required
         />
         {error && <p className="text-sm text-red-700">{error}</p>}
-        <button type="submit" className="btn btn-primary" disabled={loading}>
+        <button type="submit" className="nb-btn nb-btn-primary" disabled={loading}>
           {loading ? "Connexion..." : "Se connecter"}
         </button>
       </form>

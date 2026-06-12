@@ -43,3 +43,10 @@ next-env.d.ts
 # pipeline
 /data/raw/
 !.env.example
+
+# base de donnees et uploads
+database.sqlite
+database.sqlite-journal
+database.sqlite-wal
+database.sqlite-shm
+/public/uploads/

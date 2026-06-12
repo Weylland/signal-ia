@@ -27,17 +27,16 @@ export default async function TagPage({ params }: PageProps<"/tags/[tag]">) {
 
   return (
     <div>
-      <Link href="/" className="text-sm text-muted transition-colors hover:text-accent-deep">
+      <Link href="/" className="nb-navlink text-sm font-semibold">
         ← Toutes les actualités
       </Link>
-      <h1 className="mb-8 mt-4 font-display text-3xl font-semibold sm:text-4xl">
-        <span className="text-accent">#</span>
-        {decoded}
-        <span className="ml-3 align-middle text-base font-normal text-muted">
+      <h1 className="mb-8 mt-4 font-display text-3xl font-bold sm:text-4xl">
+        <span className="highlight">#{decoded}</span>
+        <span className="ml-3 align-middle font-sans text-base font-normal">
           {articles.length} article{articles.length > 1 ? "s" : ""}
         </span>
       </h1>
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-7 sm:grid-cols-2 lg:grid-cols-3">
         {articles.map((article, i) => (
           <FadeUp key={article.slug} delay={Math.min(i * 0.06, 0.3)}>
             <ArticleCard article={article} />

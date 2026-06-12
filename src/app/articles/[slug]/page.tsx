@@ -6,6 +6,8 @@ import { getAllArticles, getArticle, formatDate } from "@/lib/articles";
 import { ArticleCard } from "@/components/ArticleCard";
 import { FadeIn, FadeUp } from "@/components/Reveal";
 
+const pillColors = ["var(--sunshine)", "var(--mint)", "var(--sky)", "var(--peach)"];
+
 export async function generateStaticParams() {
   const articles = await getAllArticles();
   return articles.map((article) => ({ slug: article.slug }));
@@ -64,28 +66,33 @@ export default async function ArticlePage({ params }: PageProps<"/articles/[slug
 
       <FadeIn>
         <article className="mx-auto max-w-3xl">
-          <Link href="/" className="text-sm text-muted transition-colors hover:text-accent-deep">
+          <Link href="/" className="nb-navlink text-sm font-semibold">
             ← Toutes les actualités
           </Link>
 
           <header className="mb-8 mt-6">
             <div className="mb-4 flex flex-wrap items-center gap-3">
-              <span className="text-xs font-medium uppercase tracking-wider text-muted">
+              <span className="font-display text-xs font-bold uppercase tracking-wider">
                 {formatDate(article.date)}
               </span>
-              {article.tags.map((tag) => (
-                <Link key={tag} href={`/tags/${encodeURIComponent(tag)}`} className="pill">
+              {article.tags.map((tag, i) => (
+                <Link
+                  key={tag}
+                  href={`/tags/${encodeURIComponent(tag)}`}
+                  className="nb-pill"
+                  style={{ background: pillColors[i % pillColors.length] }}
+                >
                   {tag}
                 </Link>
               ))}
             </div>
-            <h1 className="font-display text-3xl font-semibold leading-tight tracking-tight sm:text-5xl">
-              {article.title}
+            <h1 className="font-display text-3xl font-bold leading-tight tracking-tight sm:text-5xl">
+              <span className="highlight">{article.title}</span>
             </h1>
           </header>
 
           {article.image && (
-            <div className="relative mb-10 aspect-[16/9] overflow-hidden rounded-2xl border border-border">
+            <div className="nb-card relative mb-10 aspect-[16/9] overflow-hidden p-0">
               <Image
                 src={article.image}
                 alt={article.title}
@@ -100,8 +107,8 @@ export default async function ArticlePage({ params }: PageProps<"/articles/[slug
           <div className="prose-article" dangerouslySetInnerHTML={{ __html: article.html }} />
 
           {article.sources.length > 0 && (
-            <footer className="mt-12 rounded-2xl border border-border bg-surface p-6">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted">
+            <footer className="nb-card mt-12 bg-cream-2 p-6">
+              <p className="mb-3 font-display text-xs font-bold uppercase tracking-wider">
                 Pour aller plus loin
               </p>
               <ul className="flex flex-col gap-2">
@@ -111,7 +118,7 @@ export default async function ArticlePage({ params }: PageProps<"/articles/[slug
                       href={source.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sm text-accent-deep underline underline-offset-4 hover:text-accent"
+                      className="nb-navlink text-sm font-semibold"
                     >
                       {source.name} ↗
                     </a>
@@ -126,9 +133,11 @@ export default async function ArticlePage({ params }: PageProps<"/articles/[slug
       {related.length > 0 && (
         <section className="mx-auto mt-16 max-w-5xl">
           <FadeUp>
-            <h2 className="mb-6 font-display text-2xl font-semibold">À lire ensuite</h2>
+            <h2 className="mb-6 font-display text-2xl font-bold">
+              <span className="highlight-peach">À lire ensuite</span>
+            </h2>
           </FadeUp>
-          <div className="grid gap-6 sm:grid-cols-3">
+          <div className="grid gap-7 sm:grid-cols-3">
             {related.map((a, i) => (
               <FadeUp key={a.slug} delay={i * 0.08}>
                 <ArticleCard article={a} />

@@ -1,60 +1,36 @@
 # signal·ia — site de veille IA et robotique
 
-Site de news IA en français, alimenté chaque jour par un pipeline automatisé,
-avec interface d'administration complète.
+Site de news IA en français avec base SQLite, admin complet type WordPress,
+et pipeline de publication automatisé.
 
 ## Fonctionnalités
 
-- **Site public** : home magazine (à la une + grille avec images), pages articles,
-  pages par tag, à propos, design chaleureux animé (Fraunces + Motion)
-- **Admin** (`/admin`) : connexion par mot de passe, création / édition / suppression
-  d'articles (Markdown, image, tags), aperçu image
-- **Pipeline quotidien** : scraping RSS → triage + rédaction par LLM (Mistral) → publication
-- **SEO** : sitemap, robots.txt, flux RSS sortant (`/flux.xml`), Open Graph, JSON-LD NewsArticle
-- **Conformité** : mentions légales, politique de confidentialité (RGPD — aucun cookie visiteur,
-  pas de bannière nécessaire)
-- **Sécurité** : headers HTTP (CSP, HSTS, X-Frame-Options...), sessions JWT httpOnly/sameSite strict,
-  rate limiting sur le login, comparaison de mot de passe à temps constant
-
-## Architecture
-
-```
-Sources RSS (TechCrunch AI, Hugging Face Blog, ...)
-        │
-        ▼
-[1. Scraper]  pipeline/scrape.ts           → data/raw/YYYY-MM-DD.json
-        │
-        ▼
-[2. Agent rédacteur]  pipeline/generate.ts → content/articles/*.md (+ image og:image)
-        │
-        ▼
-[3. Site Next.js]  src/app/                SSG + admin dynamique
-        │
-        ▼
-[4. Automatisation]  .github/workflows/daily.yml (cron 07:00 UTC)
-```
-
-### Structure
-
-```
-pipeline/            Scripts standalone (scrape, generate, og, backfill-images)
-content/articles/    Articles Markdown (source du site, committés)
-data/raw/            Données brutes scraper (gitignored)
-src/app/             Pages publiques + admin + API
-src/lib/articles.ts  Lecture/écriture des articles
-src/lib/auth.ts      Sessions JWT (jose)
-src/proxy.ts         Protection /admin et /api/admin
-```
+- **Site public** : home magazine néo-brutaliste (à la une, grille avec images, tags),
+  pages articles, pages par tag, à propos, animations
+- **Admin** (`/admin`) type WordPress :
+  - tableau de bord avec statistiques (articles, publiés, brouillons, tags)
+  - liste des articles avec recherche et filtre par statut
+  - éditeur visuel (TipTap) : gras, titres, listes, citations, liens — pas de Markdown à écrire
+  - brouillons / publication en un clic
+  - upload d'images (JPEG, PNG, WebP, AVIF — 5 Mo max) ou URL externe
+  - gestion des tags : renommer (fusion automatique), supprimer
+- **Base de données** : SQLite (`database.sqlite` à la racine, créée automatiquement) —
+  zéro service externe. Couche d'accès isolée dans `src/lib/articles.ts` (migration facile
+  vers Postgres si besoin un jour)
+- **Pipeline** : scraping RSS → triage + rédaction LLM (Mistral) → insertion en base
+- **SEO** : sitemap, robots.txt, flux RSS sortant, Open Graph, JSON-LD NewsArticle
+- **Sécurité** : sessions JWT httpOnly, rate limiting login, sanitisation HTML
+  (sanitize-html) sur tout contenu admin, headers CSP/HSTS, uploads validés
+- **Conformité** : mentions légales, politique de confidentialité (RGPD, aucun cookie visiteur)
 
 ## Démarrage
 
 ```bash
 npm install
-cp .env.example .env.local   # puis remplir AUTH_SECRET, ADMIN_PASSWORD
-npm run dev
+cp .env.example .env.local   # remplir AUTH_SECRET et ADMIN_PASSWORD
+npx tsx pipeline/migrate-md-to-db.ts   # une seule fois : importe content/articles/ en base
+npm run dev                  # site sur http://localhost:3000, admin sur /admin
 ```
-
-Variables d'environnement (`.env.local`, voir `.env.example`) :
 
 | Variable | Rôle |
 |---|---|
@@ -63,21 +39,27 @@ Variables d'environnement (`.env.local`, voir `.env.example`) :
 | `NEXT_PUBLIC_SITE_URL` | URL publique (SEO, sitemap, RSS) |
 | `MISTRAL_API_KEY` | Génération d'articles (free tier sur console.mistral.ai) |
 
-## Pipeline
+## Pipeline quotidien
 
 ```bash
-npm run scrape                 # news du jour → data/raw/
-npx tsx pipeline/generate.ts   # triage + rédaction → content/articles/
+npm run pipeline   # scrape + génère + publie en base
 ```
 
-Le workflow GitHub Actions `daily.yml` enchaîne les deux chaque matin et committe
-les nouveaux articles (secret `MISTRAL_API_KEY` requis côté GitHub).
+La base étant locale, le pipeline doit tourner **sur la machine qui héberge le site** :
+- en local : Planificateur de tâches Windows (`npm run pipeline` chaque matin)
+- sur VPS : cron — `0 7 * * * cd /srv/signal-ia && npm run pipeline`
+
+(L'ancien workflow GitHub Actions a été retiré : il committait des fichiers Markdown,
+modèle abandonné au profit de la base SQLite.)
 
 ## Déploiement
 
-- **Vercel** (recommandé pour le site) : importer le repo, définir les variables
-  d'environnement. Note : l'admin écrit sur le filesystem — sur Vercel les
-  modifications admin ne persistent pas entre déploiements ; l'admin est fait pour
-  un hébergement Node persistant (VPS, Synology...) ou un usage local, le contenu
-  étant versionné par git.
-- **VPS / Synology** : `npm run build && npm start` — admin pleinement fonctionnel.
+Hébergement Node persistant requis (VPS, machine locale) :
+
+```bash
+npm run build && npm start
+```
+
+Penser à sauvegarder `database.sqlite` et `public/uploads/` (non versionnés).
+Le dossier `content/articles/` est l'archive des anciens articles Markdown,
+déjà importés en base — il ne sert plus au site.

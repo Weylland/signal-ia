@@ -23,6 +23,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ["better-sqlite3"],
   images: {
     remotePatterns: [{ protocol: "https", hostname: "**" }],
   },

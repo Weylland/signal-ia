@@ -1,22 +1,22 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Fraunces } from "next/font/google";
+import { Inter, Space_Grotesk, Fraunces } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-space-grotesk",
   subsets: ["latin"],
 });
 
 const fraunces = Fraunces({
   variable: "--font-fraunces",
   subsets: ["latin"],
-  axes: ["opsz", "SOFT", "WONK"],
+  style: ["italic", "normal"],
 });
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
@@ -47,70 +47,74 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
-      className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} h-full antialiased`}
+      className={`${inter.variable} ${spaceGrotesk.variable} ${fraunces.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <header className="sticky top-0 z-20 border-b border-border bg-background/85 backdrop-blur-md">
+        <header className="sticky top-0 z-20 border-b-[2.5px] border-ink bg-cream">
           <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
-            <Link href="/" className="font-display text-2xl font-semibold tracking-tight">
-              signal<span className="text-accent">·</span>ia
+            <Link
+              href="/"
+              className="font-display text-2xl font-bold tracking-tight"
+            >
+              <span className="mr-1 inline-block border-[2.5px] border-ink bg-sunshine px-1.5 shadow-[2px_2px_0_var(--ink)]">
+                S
+              </span>
+              signal·ia
             </Link>
-            <nav className="flex items-center gap-6 text-sm font-medium">
-              <Link href="/" className="link-underline">
+            <nav className="flex items-center gap-6 text-sm font-semibold">
+              <Link href="/" className="nb-navlink">
                 Accueil
               </Link>
-              <Link href="/a-propos" className="link-underline">
+              <Link href="/a-propos" className="nb-navlink">
                 À propos
               </Link>
+              <a href="/flux.xml" className="nb-btn hidden px-3 py-1.5 text-xs sm:inline-flex">
+                RSS
+              </a>
             </nav>
           </div>
         </header>
 
         <main className="mx-auto w-full max-w-6xl flex-1 px-5 py-10">{children}</main>
 
-        <footer className="mt-16 border-t border-border bg-surface">
+        <footer className="border-t-[2.5px] border-ink bg-cream-2">
           <div className="mx-auto grid max-w-6xl gap-10 px-5 py-12 sm:grid-cols-3">
             <div>
-              <p className="font-display text-xl font-semibold">
-                signal<span className="text-accent">·</span>ia
+              <p className="font-display text-xl font-bold">
+                <span className="mr-1 inline-block border-2 border-ink bg-sunshine px-1 text-sm shadow-[2px_2px_0_var(--ink)]">
+                  S
+                </span>
+                signal·ia
               </p>
-              <p className="mt-3 max-w-xs text-sm leading-relaxed text-muted">
+              <p className="mt-3 max-w-xs text-sm leading-relaxed">
                 L&apos;essentiel de l&apos;actualité de l&apos;intelligence artificielle et de la
                 robotique, chaque matin.
               </p>
             </div>
             <div className="text-sm">
-              <p className="mb-3 font-semibold">Navigation</p>
-              <ul className="flex flex-col gap-2 text-muted">
-                <li>
-                  <Link href="/" className="hover:text-accent-deep">Accueil</Link>
-                </li>
-                <li>
-                  <Link href="/a-propos" className="hover:text-accent-deep">À propos</Link>
-                </li>
-                <li>
-                  <a href="/flux.xml" className="hover:text-accent-deep">Flux RSS</a>
-                </li>
+              <p className="mb-3 font-display font-bold">Navigation</p>
+              <ul className="flex flex-col gap-2">
+                <li><Link href="/" className="nb-navlink">Accueil</Link></li>
+                <li><Link href="/a-propos" className="nb-navlink">À propos</Link></li>
+                <li><a href="/flux.xml" className="nb-navlink">Flux RSS</a></li>
               </ul>
             </div>
             <div className="text-sm">
-              <p className="mb-3 font-semibold">Informations</p>
-              <ul className="flex flex-col gap-2 text-muted">
+              <p className="mb-3 font-display font-bold">Informations</p>
+              <ul className="flex flex-col gap-2">
                 <li>
-                  <Link href="/mentions-legales" className="hover:text-accent-deep">
-                    Mentions légales
-                  </Link>
+                  <Link href="/mentions-legales" className="nb-navlink">Mentions légales</Link>
                 </li>
                 <li>
-                  <Link href="/confidentialite" className="hover:text-accent-deep">
+                  <Link href="/confidentialite" className="nb-navlink">
                     Politique de confidentialité
                   </Link>
                 </li>
               </ul>
             </div>
           </div>
-          <div className="border-t border-border">
-            <p className="mx-auto max-w-6xl px-5 py-5 text-xs text-muted">
+          <div className="border-t-2 border-ink">
+            <p className="mx-auto max-w-6xl px-5 py-4 text-xs">
               © {new Date().getFullYear()} signal·ia. Tous droits réservés.
             </p>
           </div>

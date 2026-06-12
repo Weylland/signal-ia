@@ -1,9 +1,10 @@
-import { mkdir, readFile, writeFile, readdir } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { marked } from "marked";
 import type { RawItem } from "./scrape";
 import { fetchOgImage } from "./og";
+import { createArticle, getAllArticles } from "../src/lib/articles";
 
-const ARTICLES_DIR = path.join(process.cwd(), "content", "articles");
 const RAW_DIR = path.join(process.cwd(), "data", "raw");
 const MISTRAL_API_URL = "https://api.mistral.ai/v1/chat/completions";
 const MODEL = "mistral-small-latest";
@@ -117,15 +118,14 @@ async function main() {
     process.exit(1);
   }
 
-  await mkdir(ARTICLES_DIR, { recursive: true });
-  const existing = await readdir(ARTICLES_DIR);
+  const existing = await getAllArticles({ includeDrafts: true });
 
   console.log(`Triage de ${items.length} items...`);
   const { selection } = await triage(items);
 
   for (const selected of selection.slice(0, MAX_ARTICLES_PER_DAY)) {
-    const slug = `${today}-${slugify(selected.title)}`;
-    if (existing.some((f) => f.startsWith(slug))) {
+    const slugBase = `${today}-${slugify(selected.title)}`;
+    if (existing.some((a) => a.slug.startsWith(slugBase))) {
       console.log(`— déjà publié : ${selected.title}`);
       continue;
     }
@@ -135,20 +135,16 @@ async function main() {
     const sources = items.filter((item) => selected.links.includes(item.link));
     const image = sources.length > 0 ? await fetchOgImage(sources[0].link) : null;
 
-    const frontmatter = [
-      "---",
-      `title: ${JSON.stringify(selected.title)}`,
-      `date: ${JSON.stringify(new Date().toISOString())}`,
-      `excerpt: ${JSON.stringify(selected.reason)}`,
-      `tags: ${JSON.stringify(selected.tags)}`,
-      ...(image ? [`image: ${JSON.stringify(image)}`] : []),
-      `sources: ${JSON.stringify(sources.map((s) => ({ name: s.sourceName, url: s.link })))}`,
-      "---",
-      "",
-    ].join("\n");
-
-    await writeFile(path.join(ARTICLES_DIR, `${slug}.md`), frontmatter + body.trim() + "\n", "utf-8");
-    console.log(`✓ content/articles/${slug}.md`);
+    const slug = await createArticle({
+      title: selected.title,
+      excerpt: selected.reason,
+      tags: selected.tags,
+      image,
+      html: await marked.parse(body.trim()),
+      published: true,
+      sources: sources.map((s) => ({ name: s.sourceName, url: s.link })),
+    });
+    console.log(`✓ publié en base : ${slug}`);
   }
 
   console.log("\nGénération terminée.");

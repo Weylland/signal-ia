@@ -1,89 +1,122 @@
-import { readFile, readdir, writeFile, unlink, mkdir } from "node:fs/promises";
-import path from "node:path";
-import matter from "gray-matter";
-import { marked } from "marked";
-
-const ARTICLES_DIR = path.join(process.cwd(), "content", "articles");
+import { getDb } from "./db";
 
 export type ArticleMeta = {
+  id: number;
   slug: string;
   title: string;
   date: string;
   excerpt: string;
   tags: string[];
   image: string | null;
+  published: boolean;
   sources: { name: string; url: string }[];
 };
 
 export type Article = ArticleMeta & {
   html: string;
-  markdown: string;
 };
 
-function toMeta(slug: string, data: Record<string, unknown>): ArticleMeta {
+type ArticleRow = {
+  id: number;
+  slug: string;
+  title: string;
+  excerpt: string;
+  content_html: string;
+  image: string | null;
+  sources: string;
+  published: number;
+  date: string;
+};
+
+function rowToMeta(row: ArticleRow): ArticleMeta {
+  const db = getDb();
+  const tags = db
+    .prepare(
+      `SELECT t.name FROM tags t
+       JOIN article_tags at ON at.tag_id = t.id
+       WHERE at.article_id = ? ORDER BY t.name`
+    )
+    .all(row.id) as { name: string }[];
+
   return {
-    slug,
-    title: (data.title as string) ?? slug,
-    date: (data.date as string) ?? new Date().toISOString(),
-    excerpt: (data.excerpt as string) ?? "",
-    tags: (data.tags as string[]) ?? [],
-    image: (data.image as string) ?? null,
-    sources: (data.sources as { name: string; url: string }[]) ?? [],
+    id: row.id,
+    slug: row.slug,
+    title: row.title,
+    date: row.date,
+    excerpt: row.excerpt,
+    tags: tags.map((t) => t.name),
+    image: row.image,
+    published: row.published === 1,
+    sources: JSON.parse(row.sources),
   };
 }
 
-export async function getAllArticles(): Promise<ArticleMeta[]> {
-  let files: string[];
-  try {
-    files = await readdir(ARTICLES_DIR);
-  } catch {
-    return [];
+export async function getAllArticles(options?: {
+  includeDrafts?: boolean;
+  search?: string;
+}): Promise<ArticleMeta[]> {
+  const db = getDb();
+  const clauses: string[] = [];
+  const params: unknown[] = [];
+
+  if (!options?.includeDrafts) {
+    clauses.push("published = 1");
+  }
+  if (options?.search) {
+    clauses.push("(title LIKE ? OR excerpt LIKE ? OR content_html LIKE ?)");
+    const like = `%${options.search}%`;
+    params.push(like, like, like);
   }
 
-  const articles = await Promise.all(
-    files
-      .filter((file) => file.endsWith(".md"))
-      .map(async (file) => {
-        const raw = await readFile(path.join(ARTICLES_DIR, file), "utf-8");
-        const { data } = matter(raw);
-        return toMeta(file.replace(/\.md$/, ""), data);
-      })
-  );
+  const where = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
+  const rows = db
+    .prepare(`SELECT * FROM articles ${where} ORDER BY date DESC`)
+    .all(...params) as ArticleRow[];
 
-  return articles.sort((a, b) => b.date.localeCompare(a.date));
+  return rows.map(rowToMeta);
 }
 
 export async function getArticlesByTag(tag: string): Promise<ArticleMeta[]> {
-  const articles = await getAllArticles();
-  return articles.filter((article) => article.tags.includes(tag));
+  const db = getDb();
+  const rows = db
+    .prepare(
+      `SELECT a.* FROM articles a
+       JOIN article_tags at ON at.article_id = a.id
+       JOIN tags t ON t.id = at.tag_id
+       WHERE t.name = ? AND a.published = 1
+       ORDER BY a.date DESC`
+    )
+    .all(tag) as ArticleRow[];
+  return rows.map(rowToMeta);
 }
 
-export async function getAllTags(): Promise<{ tag: string; count: number }[]> {
-  const articles = await getAllArticles();
-  const counts = new Map<string, number>();
-  for (const article of articles) {
-    for (const tag of article.tags) {
-      counts.set(tag, (counts.get(tag) ?? 0) + 1);
-    }
-  }
-  return [...counts.entries()]
-    .map(([tag, count]) => ({ tag, count }))
-    .sort((a, b) => b.count - a.count);
+export async function getAllTags(options?: {
+  includeDrafts?: boolean;
+}): Promise<{ tag: string; count: number }[]> {
+  const db = getDb();
+  const publishedFilter = options?.includeDrafts ? "" : "AND a.published = 1";
+  const rows = db
+    .prepare(
+      `SELECT t.name AS tag, COUNT(a.id) AS count FROM tags t
+       LEFT JOIN article_tags at ON at.tag_id = t.id
+       LEFT JOIN articles a ON a.id = at.article_id ${publishedFilter}
+       GROUP BY t.id ORDER BY count DESC, t.name`
+    )
+    .all() as { tag: string; count: number }[];
+  return rows;
 }
 
-export async function getArticle(slug: string): Promise<Article | null> {
-  if (slug.includes("/") || slug.includes("\\") || slug.includes("..")) return null;
-  try {
-    const raw = await readFile(path.join(ARTICLES_DIR, `${slug}.md`), "utf-8");
-    const { data, content } = matter(raw);
-    return {
-      ...toMeta(slug, data),
-      markdown: content,
-      html: await marked.parse(content),
-    };
-  } catch {
-    return null;
-  }
+export async function getArticle(
+  slug: string,
+  options?: { includeDrafts?: boolean }
+): Promise<Article | null> {
+  const db = getDb();
+  const row = db.prepare("SELECT * FROM articles WHERE slug = ?").get(slug) as
+    | ArticleRow
+    | undefined;
+  if (!row) return null;
+  if (!row.published && !options?.includeDrafts) return null;
+  return { ...rowToMeta(row), html: row.content_html };
 }
 
 export type ArticleInput = {
@@ -91,7 +124,8 @@ export type ArticleInput = {
   excerpt: string;
   tags: string[];
   image: string | null;
-  markdown: string;
+  html: string;
+  published: boolean;
   date?: string;
   sources?: { name: string; url: string }[];
 };
@@ -106,31 +140,137 @@ export function slugify(title: string): string {
     .slice(0, 80);
 }
 
-export async function saveArticle(slug: string, input: ArticleInput): Promise<void> {
-  if (slug.includes("/") || slug.includes("\\") || slug.includes("..")) {
-    throw new Error("Slug invalide");
+function setTags(articleId: number, tags: string[]): void {
+  const db = getDb();
+  db.prepare("DELETE FROM article_tags WHERE article_id = ?").run(articleId);
+  const insertTag = db.prepare("INSERT OR IGNORE INTO tags (name) VALUES (?)");
+  const getTag = db.prepare("SELECT id FROM tags WHERE name = ?");
+  const link = db.prepare("INSERT INTO article_tags (article_id, tag_id) VALUES (?, ?)");
+  for (const tag of tags) {
+    const name = tag.trim().toLowerCase();
+    if (!name) continue;
+    insertTag.run(name);
+    const { id } = getTag.get(name) as { id: number };
+    link.run(articleId, id);
   }
-  await mkdir(ARTICLES_DIR, { recursive: true });
-  const frontmatter = {
-    title: input.title,
-    date: input.date ?? new Date().toISOString(),
-    excerpt: input.excerpt,
-    tags: input.tags,
-    ...(input.image ? { image: input.image } : {}),
-    sources: input.sources ?? [],
-  };
-  await writeFile(
-    path.join(ARTICLES_DIR, `${slug}.md`),
-    matter.stringify(input.markdown.trim() + "\n", frontmatter),
-    "utf-8"
+  db.prepare(
+    "DELETE FROM tags WHERE id NOT IN (SELECT DISTINCT tag_id FROM article_tags)"
+  ).run();
+}
+
+export async function createArticle(input: ArticleInput): Promise<string> {
+  const db = getDb();
+  const date = input.date ?? new Date().toISOString();
+  let slug = `${date.slice(0, 10)}-${slugify(input.title)}`;
+  let suffix = 1;
+  while (db.prepare("SELECT 1 FROM articles WHERE slug = ?").get(slug)) {
+    slug = `${date.slice(0, 10)}-${slugify(input.title)}-${++suffix}`;
+  }
+
+  const result = db
+    .prepare(
+      `INSERT INTO articles (slug, title, excerpt, content_html, image, sources, published, date)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      slug,
+      input.title,
+      input.excerpt,
+      input.html,
+      input.image,
+      JSON.stringify(input.sources ?? []),
+      input.published ? 1 : 0,
+      date
+    );
+
+  setTags(Number(result.lastInsertRowid), input.tags);
+  return slug;
+}
+
+export async function updateArticle(slug: string, input: ArticleInput): Promise<void> {
+  const db = getDb();
+  const row = db.prepare("SELECT id, date, sources FROM articles WHERE slug = ?").get(slug) as
+    | { id: number; date: string; sources: string }
+    | undefined;
+  if (!row) throw new Error("Article introuvable");
+
+  db.prepare(
+    `UPDATE articles SET title = ?, excerpt = ?, content_html = ?, image = ?, sources = ?,
+     published = ?, date = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+     WHERE id = ?`
+  ).run(
+    input.title,
+    input.excerpt,
+    input.html,
+    input.image,
+    JSON.stringify(input.sources ?? JSON.parse(row.sources)),
+    input.published ? 1 : 0,
+    input.date ?? row.date,
+    row.id
   );
+
+  setTags(row.id, input.tags);
 }
 
 export async function deleteArticle(slug: string): Promise<void> {
-  if (slug.includes("/") || slug.includes("\\") || slug.includes("..")) {
-    throw new Error("Slug invalide");
+  const db = getDb();
+  db.prepare("DELETE FROM articles WHERE slug = ?").run(slug);
+  db.prepare(
+    "DELETE FROM tags WHERE id NOT IN (SELECT DISTINCT tag_id FROM article_tags)"
+  ).run();
+}
+
+export async function renameTag(oldName: string, newName: string): Promise<void> {
+  const db = getDb();
+  const clean = newName.trim().toLowerCase();
+  if (!clean) throw new Error("Nom de tag invalide");
+  const existing = db.prepare("SELECT id FROM tags WHERE name = ?").get(clean) as
+    | { id: number }
+    | undefined;
+  const old = db.prepare("SELECT id FROM tags WHERE name = ?").get(oldName) as
+    | { id: number }
+    | undefined;
+  if (!old) throw new Error("Tag introuvable");
+
+  if (existing && existing.id !== old.id) {
+    db.prepare("UPDATE OR IGNORE article_tags SET tag_id = ? WHERE tag_id = ?").run(
+      existing.id,
+      old.id
+    );
+    db.prepare("DELETE FROM article_tags WHERE tag_id = ?").run(old.id);
+    db.prepare("DELETE FROM tags WHERE id = ?").run(old.id);
+  } else {
+    db.prepare("UPDATE tags SET name = ? WHERE id = ?").run(clean, old.id);
   }
-  await unlink(path.join(ARTICLES_DIR, `${slug}.md`));
+}
+
+export async function deleteTag(name: string): Promise<void> {
+  const db = getDb();
+  db.prepare("DELETE FROM tags WHERE name = ?").run(name);
+}
+
+export async function getStats(): Promise<{
+  total: number;
+  published: number;
+  drafts: number;
+  tags: number;
+}> {
+  const db = getDb();
+  const counts = db
+    .prepare(
+      `SELECT COUNT(*) AS total,
+              SUM(CASE WHEN published = 1 THEN 1 ELSE 0 END) AS published
+       FROM articles`
+    )
+    .get() as { total: number; published: number | null };
+  const tagCount = db.prepare("SELECT COUNT(*) AS c FROM tags").get() as { c: number };
+  const published = counts.published ?? 0;
+  return {
+    total: counts.total,
+    published,
+    drafts: counts.total - published,
+    tags: tagCount.c,
+  };
 }
 
 export function formatDate(iso: string): string {

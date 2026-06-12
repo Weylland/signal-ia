@@ -35,7 +35,7 @@ export default function AProposPage() {
         </div>
         <Link
           href="/"
-          className="btn btn-primary mt-10"
+          className="nb-btn nb-btn-primary mt-10"
         >
           Voir les actualités
         </Link>

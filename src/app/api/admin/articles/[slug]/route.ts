@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { saveArticle, deleteArticle, getArticle } from "@/lib/articles";
+import { updateArticle, deleteArticle, getArticle } from "@/lib/articles";
+import { parseInput } from "@/lib/article-input";
 
 export async function PUT(request: NextRequest, ctx: RouteContext<"/api/admin/articles/[slug]">) {
   const { slug } = await ctx.params;
-  const existing = await getArticle(slug);
+  const existing = await getArticle(slug, { includeDrafts: true });
   if (!existing) {
     return NextResponse.json({ error: "Article introuvable" }, { status: 404 });
   }
@@ -16,40 +17,24 @@ export async function PUT(request: NextRequest, ctx: RouteContext<"/api/admin/ar
     return NextResponse.json({ error: "Requête invalide" }, { status: 400 });
   }
 
-  const title = typeof body.title === "string" && body.title.trim() ? body.title.trim() : existing.title;
-  const markdown =
-    typeof body.markdown === "string" && body.markdown.trim() ? body.markdown.trim() : existing.markdown;
+  const input = parseInput(body);
+  if (!input) {
+    return NextResponse.json({ error: "Titre et contenu obligatoires" }, { status: 400 });
+  }
 
-  await saveArticle(slug, {
-    title,
-    markdown,
-    excerpt: typeof body.excerpt === "string" ? body.excerpt.trim() : existing.excerpt,
-    tags: Array.isArray(body.tags)
-      ? body.tags.filter((t): t is string => typeof t === "string" && t.length > 0)
-      : existing.tags,
-    image:
-      typeof body.image === "string"
-        ? body.image.startsWith("http")
-          ? body.image
-          : null
-        : existing.image,
-    date: existing.date,
-    sources: existing.sources,
-  });
-
-  revalidatePath("/");
-  revalidatePath(`/articles/${slug}`);
+  await updateArticle(slug, { ...input, date: existing.date, sources: input.sources ?? existing.sources });
+  revalidatePath("/", "layout");
   return NextResponse.json({ ok: true, slug });
 }
 
 export async function DELETE(_request: NextRequest, ctx: RouteContext<"/api/admin/articles/[slug]">) {
   const { slug } = await ctx.params;
-  const existing = await getArticle(slug);
+  const existing = await getArticle(slug, { includeDrafts: true });
   if (!existing) {
     return NextResponse.json({ error: "Article introuvable" }, { status: 404 });
   }
 
   await deleteArticle(slug);
-  revalidatePath("/");
+  revalidatePath("/", "layout");
   return NextResponse.json({ ok: true });
 }
