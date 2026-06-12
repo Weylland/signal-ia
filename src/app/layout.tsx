@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Space_Grotesk, Fraunces } from "next/font/google";
 import Link from "next/link";
+import { NewsletterForm } from "@/components/NewsletterForm";
 import "./globals.css";
 
 const inter = Inter({
@@ -61,12 +62,21 @@ export default function RootLayout({
               </span>
               signal·ia
             </Link>
-            <nav className="flex items-center gap-6 text-sm font-semibold">
+            <nav className="flex items-center gap-4 text-sm font-semibold sm:gap-6">
               <Link href="/" className="nb-navlink">
-                Accueil
+                Actu
               </Link>
-              <Link href="/a-propos" className="nb-navlink">
-                À propos
+              <Link href="/tutos" className="nb-navlink">
+                Tutos
+              </Link>
+              <Link href="/glossaire" className="nb-navlink hidden sm:inline">
+                Glossaire
+              </Link>
+              <Link href="/cette-semaine" className="nb-navlink hidden md:inline">
+                Cette semaine
+              </Link>
+              <Link href="/recherche" className="nb-navlink" aria-label="Recherche">
+                🔍
               </Link>
               <a href="/flux.xml" className="nb-btn hidden px-3 py-1.5 text-xs sm:inline-flex">
                 RSS
@@ -94,13 +104,23 @@ export default function RootLayout({
             <div className="text-sm">
               <p className="mb-3 font-display font-bold">Navigation</p>
               <ul className="flex flex-col gap-2">
-                <li><Link href="/" className="nb-navlink">Accueil</Link></li>
+                <li><Link href="/" className="nb-navlink">Actu</Link></li>
+                <li><Link href="/tutos" className="nb-navlink">Tutos</Link></li>
+                <li><Link href="/glossaire" className="nb-navlink">Glossaire</Link></li>
+                <li><Link href="/cette-semaine" className="nb-navlink">Cette semaine</Link></li>
+                <li><Link href="/recherche" className="nb-navlink">Recherche</Link></li>
+                <li><Link href="/sources" className="nb-navlink">Nos sources</Link></li>
                 <li><Link href="/a-propos" className="nb-navlink">À propos</Link></li>
                 <li><a href="/flux.xml" className="nb-navlink">Flux RSS</a></li>
               </ul>
             </div>
             <div className="text-sm">
-              <p className="mb-3 font-display font-bold">Informations</p>
+              <p className="mb-3 font-display font-bold">Newsletter</p>
+              <p className="mb-3 text-xs leading-relaxed">
+                Le récap de la semaine, un email le dimanche, rien d&apos;autre.
+              </p>
+              <NewsletterForm />
+              <p className="mb-3 mt-6 font-display font-bold">Informations</p>
               <ul className="flex flex-col gap-2">
                 <li>
                   <Link href="/mentions-legales" className="nb-navlink">Mentions légales</Link>

@@ -1,5 +1,7 @@
 import { getDb } from "./db";
 
+export type ArticleType = "news" | "tuto";
+
 export type ArticleMeta = {
   id: number;
   slug: string;
@@ -10,6 +12,11 @@ export type ArticleMeta = {
   image: string | null;
   published: boolean;
   sources: { name: string; url: string }[];
+  type: ArticleType;
+  tldr: string[];
+  views: number;
+  breaking: boolean;
+  scheduledAt: string | null;
 };
 
 export type Article = ArticleMeta & {
@@ -26,7 +33,20 @@ type ArticleRow = {
   sources: string;
   published: number;
   date: string;
+  type: string;
+  tldr: string;
+  views: number;
+  breaking_until: string | null;
+  scheduled_at: string | null;
 };
+
+function safeJson<T>(raw: string, fallback: T): T {
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+}
 
 function rowToMeta(row: ArticleRow): ArticleMeta {
   const db = getDb();
@@ -47,20 +67,41 @@ function rowToMeta(row: ArticleRow): ArticleMeta {
     tags: tags.map((t) => t.name),
     image: row.image,
     published: row.published === 1,
-    sources: JSON.parse(row.sources),
+    sources: safeJson(row.sources, []),
+    type: row.type === "tuto" ? "tuto" : "news",
+    tldr: safeJson(row.tldr, []),
+    views: row.views,
+    breaking: row.breaking_until !== null && row.breaking_until > new Date().toISOString(),
+    scheduledAt: row.scheduled_at,
   };
+}
+
+export function publishDueScheduledArticles(): void {
+  const db = getDb();
+  db.prepare(
+    `UPDATE articles SET published = 1, scheduled_at = NULL,
+     date = scheduled_at, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+     WHERE published = 0 AND scheduled_at IS NOT NULL AND scheduled_at <= ?`
+  ).run(new Date().toISOString());
 }
 
 export async function getAllArticles(options?: {
   includeDrafts?: boolean;
   search?: string;
+  type?: ArticleType;
+  limit?: number;
 }): Promise<ArticleMeta[]> {
   const db = getDb();
+  publishDueScheduledArticles();
   const clauses: string[] = [];
   const params: unknown[] = [];
 
   if (!options?.includeDrafts) {
     clauses.push("published = 1");
+  }
+  if (options?.type) {
+    clauses.push("type = ?");
+    params.push(options.type);
   }
   if (options?.search) {
     clauses.push("(title LIKE ? OR excerpt LIKE ? OR content_html LIKE ?)");
@@ -69,11 +110,57 @@ export async function getAllArticles(options?: {
   }
 
   const where = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
+  const limit = options?.limit ? `LIMIT ${Math.floor(options.limit)}` : "";
   const rows = db
-    .prepare(`SELECT * FROM articles ${where} ORDER BY date DESC`)
+    .prepare(`SELECT * FROM articles ${where} ORDER BY date DESC ${limit}`)
     .all(...params) as ArticleRow[];
 
   return rows.map(rowToMeta);
+}
+
+export async function getBreakingArticles(): Promise<ArticleMeta[]> {
+  const db = getDb();
+  const rows = db
+    .prepare(
+      `SELECT * FROM articles
+       WHERE published = 1 AND breaking_until IS NOT NULL AND breaking_until > ?
+       ORDER BY date DESC`
+    )
+    .all(new Date().toISOString()) as ArticleRow[];
+  return rows.map(rowToMeta);
+}
+
+export async function getMostViewedArticles(limit = 5): Promise<ArticleMeta[]> {
+  const db = getDb();
+  const rows = db
+    .prepare(
+      `SELECT * FROM articles WHERE published = 1 AND views > 0
+       ORDER BY views DESC, date DESC LIMIT ?`
+    )
+    .all(limit) as ArticleRow[];
+  return rows.map(rowToMeta);
+}
+
+export async function getRelatedArticles(slug: string, limit = 3): Promise<ArticleMeta[]> {
+  const db = getDb();
+  const rows = db
+    .prepare(
+      `SELECT a.*, COUNT(*) AS shared FROM articles a
+       JOIN article_tags at ON at.article_id = a.id
+       WHERE at.tag_id IN (
+         SELECT at2.tag_id FROM article_tags at2
+         JOIN articles a2 ON a2.id = at2.article_id WHERE a2.slug = ?
+       )
+       AND a.slug != ? AND a.published = 1
+       GROUP BY a.id ORDER BY shared DESC, a.date DESC LIMIT ?`
+    )
+    .all(slug, slug, limit) as ArticleRow[];
+  return rows.map(rowToMeta);
+}
+
+export function incrementViews(slug: string): void {
+  const db = getDb();
+  db.prepare("UPDATE articles SET views = views + 1 WHERE slug = ? AND published = 1").run(slug);
 }
 
 export async function getArticlesByTag(tag: string): Promise<ArticleMeta[]> {
@@ -111,6 +198,7 @@ export async function getArticle(
   options?: { includeDrafts?: boolean }
 ): Promise<Article | null> {
   const db = getDb();
+  publishDueScheduledArticles();
   const row = db.prepare("SELECT * FROM articles WHERE slug = ?").get(slug) as
     | ArticleRow
     | undefined;
@@ -128,6 +216,11 @@ export type ArticleInput = {
   published: boolean;
   date?: string;
   sources?: { name: string; url: string }[];
+  type?: ArticleType;
+  tldr?: string[];
+  breakingUntil?: string | null;
+  scheduledAt?: string | null;
+  score?: number | null;
 };
 
 export function slugify(title: string): string {
@@ -169,8 +262,10 @@ export async function createArticle(input: ArticleInput): Promise<string> {
 
   const result = db
     .prepare(
-      `INSERT INTO articles (slug, title, excerpt, content_html, image, sources, published, date)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO articles
+       (slug, title, excerpt, content_html, image, sources, published, date,
+        type, tldr, breaking_until, scheduled_at, score)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       slug,
@@ -180,7 +275,12 @@ export async function createArticle(input: ArticleInput): Promise<string> {
       input.image,
       JSON.stringify(input.sources ?? []),
       input.published ? 1 : 0,
-      date
+      date,
+      input.type ?? "news",
+      JSON.stringify(input.tldr ?? []),
+      input.breakingUntil ?? null,
+      input.scheduledAt ?? null,
+      input.score ?? null
     );
 
   setTags(Number(result.lastInsertRowid), input.tags);
@@ -189,23 +289,38 @@ export async function createArticle(input: ArticleInput): Promise<string> {
 
 export async function updateArticle(slug: string, input: ArticleInput): Promise<void> {
   const db = getDb();
-  const row = db.prepare("SELECT id, date, sources FROM articles WHERE slug = ?").get(slug) as
-    | { id: number; date: string; sources: string }
+  const row = db
+    .prepare("SELECT id, date, sources, type, tldr, breaking_until, scheduled_at FROM articles WHERE slug = ?")
+    .get(slug) as
+    | {
+        id: number;
+        date: string;
+        sources: string;
+        type: string;
+        tldr: string;
+        breaking_until: string | null;
+        scheduled_at: string | null;
+      }
     | undefined;
   if (!row) throw new Error("Article introuvable");
 
   db.prepare(
     `UPDATE articles SET title = ?, excerpt = ?, content_html = ?, image = ?, sources = ?,
-     published = ?, date = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+     published = ?, date = ?, type = ?, tldr = ?, breaking_until = ?, scheduled_at = ?,
+     updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
      WHERE id = ?`
   ).run(
     input.title,
     input.excerpt,
     input.html,
     input.image,
-    JSON.stringify(input.sources ?? JSON.parse(row.sources)),
+    JSON.stringify(input.sources ?? safeJson(row.sources, [])),
     input.published ? 1 : 0,
     input.date ?? row.date,
+    input.type ?? row.type,
+    JSON.stringify(input.tldr ?? safeJson(row.tldr, [])),
+    input.breakingUntil === undefined ? row.breaking_until : input.breakingUntil,
+    input.scheduledAt === undefined ? row.scheduled_at : input.scheduledAt,
     row.id
   );
 
@@ -254,15 +369,19 @@ export async function getStats(): Promise<{
   published: number;
   drafts: number;
   tags: number;
+  views: number;
+  tutos: number;
 }> {
   const db = getDb();
   const counts = db
     .prepare(
       `SELECT COUNT(*) AS total,
-              SUM(CASE WHEN published = 1 THEN 1 ELSE 0 END) AS published
+              SUM(CASE WHEN published = 1 THEN 1 ELSE 0 END) AS published,
+              SUM(views) AS views,
+              SUM(CASE WHEN type = 'tuto' THEN 1 ELSE 0 END) AS tutos
        FROM articles`
     )
-    .get() as { total: number; published: number | null };
+    .get() as { total: number; published: number | null; views: number | null; tutos: number | null };
   const tagCount = db.prepare("SELECT COUNT(*) AS c FROM tags").get() as { c: number };
   const published = counts.published ?? 0;
   return {
@@ -270,7 +389,14 @@ export async function getStats(): Promise<{
     published,
     drafts: counts.total - published,
     tags: tagCount.c,
+    views: counts.views ?? 0,
+    tutos: counts.tutos ?? 0,
   };
+}
+
+export function readingTimeMinutes(html: string): number {
+  const words = html.replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean).length;
+  return Math.max(1, Math.round(words / 200));
 }
 
 export function formatDate(iso: string): string {

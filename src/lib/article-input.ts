@@ -28,5 +28,13 @@ export function parseInput(body: Record<string, unknown>): ArticleInput | null {
             typeof (s as Record<string, unknown>).url === "string"
         )
       : undefined,
+    type: body.type === "tuto" ? "tuto" : "news",
+    tldr: Array.isArray(body.tldr)
+      ? body.tldr
+          .filter((t): t is string => typeof t === "string" && t.trim().length > 0)
+          .slice(0, 3)
+      : [],
+    scheduledAt:
+      typeof body.scheduledAt === "string" && body.scheduledAt ? body.scheduledAt : null,
   };
 }

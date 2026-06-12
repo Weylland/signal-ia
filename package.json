@@ -7,9 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "scrape": "tsx pipeline/scrape.ts",
-    "generate": "tsx pipeline/generate.ts",
-    "pipeline": "tsx pipeline/scrape.ts && tsx pipeline/generate.ts"
+    "pipeline": "tsx pipeline/run.ts"
   },
   "dependencies": {
     "@tiptap/extension-link": "^3.26.1",

@@ -13,6 +13,9 @@ type EditorProps = {
     image: string | null;
     html: string;
     published: boolean;
+    type: "news" | "tuto";
+    tldr: string[];
+    scheduledAt: string | null;
   };
 };
 
@@ -23,11 +26,20 @@ export function ArticleEditor({ slug, initial }: EditorProps) {
   const [tags, setTags] = useState(initial?.tags.join(", ") ?? "");
   const [image, setImage] = useState(initial?.image ?? "");
   const [html, setHtml] = useState(initial?.html ?? "");
+  const [type, setType] = useState<"news" | "tuto">(initial?.type ?? "news");
+  const [tldr, setTldr] = useState<string[]>([
+    initial?.tldr[0] ?? "",
+    initial?.tldr[1] ?? "",
+    initial?.tldr[2] ?? "",
+  ]);
+  const [scheduledAt, setScheduledAt] = useState(
+    initial?.scheduledAt ? initial.scheduledAt.slice(0, 16) : ""
+  );
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  async function save(published: boolean) {
+  async function save(published: boolean, schedule = false) {
     setSaving(true);
     setError(null);
 
@@ -37,6 +49,10 @@ export function ArticleEditor({ slug, initial }: EditorProps) {
       html,
       published,
       image: image.trim() || null,
+      type,
+      tldr: tldr.map((t) => t.trim()).filter(Boolean),
+      scheduledAt:
+        schedule && scheduledAt ? new Date(scheduledAt).toISOString() : null,
       tags: tags
         .split(",")
         .map((t) => t.trim())
@@ -95,6 +111,19 @@ export function ArticleEditor({ slug, initial }: EditorProps) {
 
   return (
     <div className="flex flex-col gap-5">
+      <div className="flex gap-2">
+        {(["news", "tuto"] as const).map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => setType(t)}
+            className={`nb-btn text-sm ${type === t ? "bg-[var(--sunshine)]" : ""}`}
+          >
+            {t === "news" ? "📰 Actu" : "🎓 Tuto"}
+          </button>
+        ))}
+      </div>
+
       <div>
         <label className="mb-1.5 block text-sm font-bold" htmlFor="title">
           Titre
@@ -120,6 +149,25 @@ export function ArticleEditor({ slug, initial }: EditorProps) {
           value={excerpt}
           onChange={(e) => setExcerpt(e.target.value)}
         />
+      </div>
+
+      <div>
+        <label className="mb-1.5 block text-sm font-bold">
+          L&apos;essentiel en 3 points (affiché en haut de l&apos;article, facultatif)
+        </label>
+        <div className="flex flex-col gap-2">
+          {tldr.map((point, i) => (
+            <input
+              key={i}
+              className="field"
+              value={point}
+              placeholder={`Point clé ${i + 1}`}
+              onChange={(e) =>
+                setTldr((prev) => prev.map((p, j) => (j === i ? e.target.value : p)))
+              }
+            />
+          ))}
+        </div>
       </div>
 
       <div>
@@ -195,6 +243,28 @@ export function ArticleEditor({ slug, initial }: EditorProps) {
         >
           Enregistrer en brouillon
         </button>
+        <div className="flex items-center gap-2">
+          <input
+            type="datetime-local"
+            className="field w-auto text-sm"
+            value={scheduledAt}
+            onChange={(e) => setScheduledAt(e.target.value)}
+          />
+          <button
+            type="button"
+            onClick={() => save(false, true)}
+            className="nb-btn text-sm"
+            disabled={saving || !title || !html || !scheduledAt}
+            title="L'article restera en brouillon jusqu'à cette date, puis sera publié automatiquement"
+          >
+            🕐 Planifier
+          </button>
+        </div>
+        {slug && (
+          <a href={`/admin/articles/${slug}/apercu`} target="_blank" className="nb-btn text-sm">
+            👁 Aperçu
+          </a>
+        )}
         {slug && (
           <button
             type="button"

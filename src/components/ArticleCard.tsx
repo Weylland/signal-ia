@@ -24,9 +24,15 @@ export function ArticleCard({ article }: { article: ArticleMeta }) {
         )}
       </div>
       <div className="flex flex-1 flex-col p-5">
-        <span className="font-display text-xs font-bold uppercase tracking-wider">
-          {formatDate(article.date)}
-        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-display text-xs font-bold uppercase tracking-wider">
+            {formatDate(article.date)}
+          </span>
+          {article.breaking && (
+            <span className="nb-pill bg-[var(--peach)]">🔴 À chaud</span>
+          )}
+          {article.type === "tuto" && <span className="nb-pill bg-[var(--sky)]">🎓 Tuto</span>}
+        </div>
         <h2 className="mt-2 font-display text-xl font-bold leading-snug">{article.title}</h2>
         <p className="mt-2 line-clamp-3 text-sm leading-relaxed">{article.excerpt}</p>
         <div className="mt-auto flex flex-wrap gap-2 pt-4">

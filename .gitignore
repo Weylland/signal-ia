@@ -50,3 +50,4 @@ database.sqlite-journal
 database.sqlite-wal
 database.sqlite-shm
 /public/uploads/
+pipeline.log

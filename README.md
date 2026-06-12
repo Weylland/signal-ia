@@ -1,34 +1,37 @@
-# signal·ia — site de veille IA et robotique
+# signal·ia — veille IA et robotique en français
 
-Site de news IA en français avec base SQLite, admin complet type WordPress,
-et pipeline de publication automatisé.
+Site de news + tutos IA avec base SQLite, admin complet type WordPress,
+et pipeline de publication temps quasi réel.
 
 ## Fonctionnalités
 
-- **Site public** : home magazine néo-brutaliste (à la une, grille avec images, tags),
-  pages articles, pages par tag, à propos, animations
+- **Site public** : home magazine néo-brutaliste (à la une, bandeau breaking, fil des
+  dernières 24 h, plus lus), pages articles enrichies (TL;DR « l'essentiel en 3 points »,
+  temps de lecture, barre de progression, partage, articles liés), section **Tutos**,
+  **glossaire IA**, récap **Cette semaine**, **recherche**, page sources, newsletter
 - **Admin** (`/admin`) type WordPress :
-  - tableau de bord avec statistiques (articles, publiés, brouillons, tags)
-  - liste des articles avec recherche et filtre par statut
-  - éditeur visuel (TipTap) : gras, titres, listes, citations, liens — pas de Markdown à écrire
-  - brouillons / publication en un clic
-  - upload d'images (JPEG, PNG, WebP, AVIF — 5 Mo max) ou URL externe
-  - gestion des tags : renommer (fusion automatique), supprimer
-- **Base de données** : SQLite (`database.sqlite` à la racine, créée automatiquement) —
-  zéro service externe. Couche d'accès isolée dans `src/lib/articles.ts` (migration facile
-  vers Postgres si besoin un jour)
-- **Pipeline** : scraping RSS → triage + rédaction LLM (Mistral) → insertion en base
-- **SEO** : sitemap, robots.txt, flux RSS sortant, Open Graph, JSON-LD NewsArticle
-- **Sécurité** : sessions JWT httpOnly, rate limiting login, sanitisation HTML
-  (sanitize-html) sur tout contenu admin, headers CSP/HSTS, uploads validés
-- **Conformité** : mentions légales, politique de confidentialité (RGPD, aucun cookie visiteur)
+  - tableau de bord : stats (articles, vues, tutos, abonnés), statut du pipeline
+  - éditeur visuel (TipTap), type actu/tuto, TL;DR, brouillons, **publication planifiée**, aperçu
+  - gestion des sources RSS (ajout, activation, santé des flux)
+  - réglages du site : identité, seuils du pipeline, réseaux sociaux, maintenance,
+    emplacements pub (désactivés par défaut)
+  - journal du pipeline (chaque passage : items vus, retenus, articles créés)
+- **Pipeline temps quasi réel** : toutes les 30 min — scraping RSS (11 sources) →
+  scoring LLM 0-10 de chaque news → breaking (≥ 8) publié immédiatement avec badge
+  « À chaud » → file d'attente pour le reste → déduplication multi-sources → rédaction
+  française (Mistral) avec TL;DR
+- **Base de données** : SQLite (`database.sqlite`, créée et migrée automatiquement) —
+  zéro service externe
+- **SEO** : sitemap, robots.txt, flux RSS sortant, Open Graph, JSON-LD (NewsArticle,
+  TechArticle, DefinedTermSet)
+- **Sécurité** : sessions JWT httpOnly, rate limiting, sanitize-html, headers CSP/HSTS
+- **Conformité** : RGPD sans cookie visiteur (compteur de vues anonyme, pas de tracker)
 
 ## Démarrage
 
 ```bash
 npm install
-cp .env.example .env.local   # remplir AUTH_SECRET et ADMIN_PASSWORD
-npx tsx pipeline/migrate-md-to-db.ts   # une seule fois : importe content/articles/ en base
+cp .env.example .env.local   # remplir les variables
 npm run dev                  # site sur http://localhost:3000, admin sur /admin
 ```
 
@@ -36,21 +39,25 @@ npm run dev                  # site sur http://localhost:3000, admin sur /admin
 |---|---|
 | `AUTH_SECRET` | Signature des sessions admin (32+ caractères aléatoires) |
 | `ADMIN_PASSWORD` | Mot de passe de `/admin` |
-| `NEXT_PUBLIC_SITE_URL` | URL publique (SEO, sitemap, RSS) |
-| `MISTRAL_API_KEY` | Génération d'articles (free tier sur console.mistral.ai) |
+| `NEXT_PUBLIC_SITE_URL` | URL publique (SEO, sitemap, RSS, partage) |
+| `MISTRAL_API_KEY` | Scoring + rédaction des articles (free tier sur console.mistral.ai) |
 
-## Pipeline quotidien
+## Pipeline
 
 ```bash
-npm run pipeline   # scrape + génère + publie en base
+npm run pipeline   # un passage : scrape → score → rédige → publie
 ```
 
-La base étant locale, le pipeline doit tourner **sur la machine qui héberge le site** :
-- en local : Planificateur de tâches Windows (`npm run pipeline` chaque matin)
-- sur VPS : cron — `0 7 * * * cd /srv/signal-ia && npm run pipeline`
+Le pipeline tourne **sur la machine qui héberge le site** :
 
-(L'ancien workflow GitHub Actions a été retiré : il committait des fichiers Markdown,
-modèle abandonné au profit de la base SQLite.)
+- **Windows (local)** : une tâche planifiée `signal-ia-pipeline` le lance toutes les 30 min
+  (logs dans `pipeline.log`). La gérer : `schtasks /Query /TN signal-ia-pipeline`,
+  la supprimer : `schtasks /Delete /TN signal-ia-pipeline /F`
+- **VPS** : cron — `*/30 * * * * cd /srv/signal-ia && npm run pipeline >> pipeline.log 2>&1`
+
+Les seuils (breaking, file d'attente, articles max/jour) se règlent dans
+**/admin/reglages**, les sources RSS aussi. Chaque passage est consultable dans
+**/admin/pipeline**.
 
 ## Déploiement
 

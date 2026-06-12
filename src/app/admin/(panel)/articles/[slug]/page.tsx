@@ -23,6 +23,9 @@ export default async function EditArticlePage({
           image: article.image,
           html: article.html,
           published: article.published,
+          type: article.type,
+          tldr: article.tldr,
+          scheduledAt: article.scheduledAt,
         }}
       />
     </div>
