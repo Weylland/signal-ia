@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 
 export async function POST(request: NextRequest) {
-  const secret = request.headers.get("x-admin-secret");
-  if (secret !== process.env.CLAUDE_API_KEY) {
+  const expected = process.env.CLAUDE_API_KEY;
+  const fromHeader = request.headers.get("x-admin-secret");
+  const fromQuery = request.nextUrl.searchParams.get("key");
+  if (!expected || (fromHeader !== expected && fromQuery !== expected)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
