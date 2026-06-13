@@ -20,7 +20,8 @@ function addColumnIfMissing(
 export function getDb(): Database.Database {
   if (db) return db;
 
-  db = new Database(path.join(process.cwd(), "database.sqlite"));
+  const dbPath = process.env.DATABASE_PATH ?? path.join(process.cwd(), "database.sqlite");
+  db = new Database(dbPath);
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
 
