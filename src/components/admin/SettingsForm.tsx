@@ -157,6 +157,32 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
           <label className="flex items-center gap-3 text-sm font-semibold">
             <input
               type="checkbox"
+              checked={settings.requireApproval}
+              onChange={(e) => set("requireApproval", e.target.checked)}
+            />
+            Approbation manuelle — les articles scorés ≥ seuil passent en file de modération au lieu d&apos;être auto-publiés
+          </label>
+          <label className="flex flex-col gap-1 text-sm font-semibold">
+            Blacklist mots-clés (un par ligne, insensible à la casse)
+            <textarea
+              className="field min-h-20 font-mono text-xs"
+              placeholder={"crypto\nnft\nblockchain"}
+              value={settings.blacklistKeywords}
+              onChange={(e) => set("blacklistKeywords", e.target.value)}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm font-semibold">
+            Blacklist domaines sources (un par ligne)
+            <textarea
+              className="field min-h-16 font-mono text-xs"
+              placeholder={"spamsite.com\nbadsource.net"}
+              value={settings.blacklistDomains}
+              onChange={(e) => set("blacklistDomains", e.target.value)}
+            />
+          </label>
+          <label className="flex items-center gap-3 text-sm font-semibold">
+            <input
+              type="checkbox"
               checked={settings.maintenanceMode}
               onChange={(e) => set("maintenanceMode", e.target.checked)}
             />

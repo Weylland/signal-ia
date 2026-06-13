@@ -37,6 +37,8 @@ export const metadata: Metadata = {
   alternates: {
     types: { "application/rss+xml": `${siteUrl}/flux.xml` },
   },
+  manifest: "/manifest.json",
+  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "signal·ia" },
   openGraph: {
     siteName: "signal·ia",
     locale: "fr_FR",
@@ -45,6 +47,7 @@ export const metadata: Metadata = {
 };
 
 const themeInit = `(function(){try{if(localStorage.getItem("theme")==="light")document.documentElement.dataset.theme="light";}catch(e){}})();`;
+const swInit = `if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catch(()=>{})}`;
 
 function Logo({ className = "" }: { className?: string }) {
   return (
@@ -81,6 +84,7 @@ export default async function RootLayout({
     >
       <body className="flex min-h-full flex-col">
         <script dangerouslySetInnerHTML={{ __html: themeInit }} />
+        <script dangerouslySetInnerHTML={{ __html: swInit }} />
 
         <div className="border-b border-line">
           <div className="meta mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-1.5 uppercase">
@@ -112,6 +116,9 @@ export default async function RootLayout({
               <Link href="/cette-semaine" className="mainnav-link">
                 {t.navWeek}
               </Link>
+              <Link href="/trending" className="mainnav-link">
+                {lang === "en" ? "Trending" : "Tendances"}
+              </Link>
             </nav>
             <div className="ml-auto flex items-center gap-3">
               <Link href="/recherche" className="nb-btn px-3 py-1.5 text-xs">
@@ -142,6 +149,7 @@ export default async function RootLayout({
                 <li><Link href="/tutos" className="nb-navlink">{t.navTutos}</Link></li>
                 <li><Link href="/glossaire" className="nb-navlink">{t.navGlossary}</Link></li>
                 <li><Link href="/cette-semaine" className="nb-navlink">{t.navWeek}</Link></li>
+                <li><Link href="/trending" className="nb-navlink">{lang === "en" ? "Trending" : "Tendances"}</Link></li>
               </ul>
             </div>
             <div className="text-sm">

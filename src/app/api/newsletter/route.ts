@@ -1,19 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-
-const attempts = new Map<string, { count: number; reset: number }>();
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";
-  const now = Date.now();
-  const entry = attempts.get(ip);
-  if (entry && now < entry.reset) {
-    if (entry.count >= 5) {
-      return NextResponse.json({ error: "Trop de tentatives" }, { status: 429 });
-    }
-    entry.count++;
-  } else {
-    attempts.set(ip, { count: 1, reset: now + 15 * 60_000 });
+  if (!rateLimit(`newsletter:${ip}`, 3, 15 * 60_000)) {
+    return rateLimitResponse();
   }
 
   let body: Record<string, unknown>;

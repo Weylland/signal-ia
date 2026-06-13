@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getAllArticles, getAllTags, getMostViewedArticles, localizeMeta } from "@/lib/articles";
+import { searchArticlesFts, getAllTags, getMostViewedArticles, localizeMeta } from "@/lib/articles";
 import { getLang, getDict } from "@/lib/i18n";
 import { ArticleCard } from "@/components/ArticleCard";
 import { Pagination, paginate, parsePage } from "@/components/Pagination";
@@ -21,7 +21,7 @@ export default async function RecherchePage({ searchParams }: PageProps<"/recher
   const lang = await getLang();
   const t = getDict(lang);
 
-  const results = query ? await getAllArticles({ search: query }) : [];
+  const results = query ? await searchArticlesFts(query) : [];
   const { slice, totalPages } = paginate(results, page);
 
   const [tags, mostViewed] = query

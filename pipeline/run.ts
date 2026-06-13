@@ -278,17 +278,43 @@ async function main() {
       .all() as PendingRow[];
 
     if (newItems.length > 0) {
-      log(`Scoring de ${newItems.length} items...`);
-      const scores = await scoreNewItems(newItems);
-      const setScore = db.prepare("UPDATE pending_news SET score = ?, status = ? WHERE url = ?");
-      for (const item of newItems) {
-        const score = scores.find((s) => s.url === item.url)?.score ?? 0;
-        const newStatus = score >= settings.queueThreshold ? "queued" : "rejected";
-        setScore.run(score, newStatus, item.url);
-        item.score = score;
+      // Blacklist filtering
+      const blacklistWords = (settings.blacklistKeywords || "")
+        .split("\n").map((s) => s.trim().toLowerCase()).filter(Boolean);
+      const blacklistDomains = (settings.blacklistDomains || "")
+        .split("\n").map((s) => s.trim().toLowerCase()).filter(Boolean);
+
+      const filtered = newItems.filter((item) => {
+        const text = `${item.title} ${item.summary}`.toLowerCase();
+        if (blacklistWords.some((w) => text.includes(w))) return false;
+        try {
+          const domain = new URL(item.url).hostname.toLowerCase();
+          if (blacklistDomains.some((d) => domain.includes(d))) return false;
+        } catch {}
+        return true;
+      });
+
+      const blacklisted = newItems.length - filtered.length;
+      if (blacklisted > 0) {
+        db.prepare("UPDATE pending_news SET status = 'rejected' WHERE status = 'new' AND url IN (" +
+          newItems.filter((i) => !filtered.includes(i)).map(() => "?").join(",") + ")"
+        ).run(...newItems.filter((i) => !filtered.includes(i)).map((i) => i.url));
+        log(`${blacklisted} items filtrés par blacklist`);
       }
-      const queued = newItems.filter((i) => (i.score ?? 0) >= settings.queueThreshold).length;
-      log(`${queued} items retenus, ${newItems.length - queued} rejetés`);
+
+      if (filtered.length > 0) {
+        log(`Scoring de ${filtered.length} items...`);
+        const scores = await scoreNewItems(filtered);
+        const setScore = db.prepare("UPDATE pending_news SET score = ?, status = ? WHERE url = ?");
+        for (const item of filtered) {
+          const score = scores.find((s) => s.url === item.url)?.score ?? 0;
+          const newStatus = score >= settings.queueThreshold ? "queued" : "rejected";
+          setScore.run(score, newStatus, item.url);
+          item.score = score;
+        }
+        const queued = filtered.filter((i) => (i.score ?? 0) >= settings.queueThreshold).length;
+        log(`${queued} items retenus, ${filtered.length - queued} rejetés`);
+      }
     }
 
     const queuedItems = db
@@ -334,13 +360,15 @@ async function main() {
           ? new Date(Date.now() + settings.breakingDurationHours * 3600_000).toISOString()
           : null;
 
+        const shouldPublish = !settings.requireApproval || group.breaking;
+
         const slug = await createArticle({
           title: group.title,
           excerpt: group.angle,
           tags: group.tags,
           image,
           html: await marked.parse(written.markdown.trim()),
-          published: true,
+          published: shouldPublish,
           sources: groupItems.map((s) => ({ name: s.source_name, url: s.url })),
           type: "news",
           tldr: written.tldr,

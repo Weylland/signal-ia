@@ -21,8 +21,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <Link href="/admin/tags" className="nb-navlink">
             ◆ Tags
           </Link>
+          <Link href="/admin/glossaire" className="nb-navlink">
+            ◆ Glossaire
+          </Link>
           <Link href="/admin/pipeline" className="nb-navlink">
             ◆ Pipeline
+          </Link>
+          <Link href="/admin/moderation" className="nb-navlink">
+            ◆ Modération
+          </Link>
+          <Link href="/admin/newsletter" className="nb-navlink">
+            ◆ Newsletter
+          </Link>
+          <Link href="/admin/analytics" className="nb-navlink">
+            ◆ Analytics
           </Link>
           <Link href="/admin/reglages" className="nb-navlink">
             ◆ Réglages

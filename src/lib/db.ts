@@ -122,5 +122,42 @@ export function getDb(): Database.Database {
     "CREATE INDEX IF NOT EXISTS idx_articles_type ON articles(type, published, date DESC)"
   );
 
+  // FTS5 virtual table for fast full-text search
+  db.exec(`
+    CREATE VIRTUAL TABLE IF NOT EXISTS articles_fts USING fts5(
+      slug UNINDEXED,
+      title,
+      excerpt,
+      content_html,
+      tags_text,
+      content='',
+      tokenize='unicode61 remove_diacritics 1'
+    );
+  `);
+
+  // Reactions table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS article_reactions (
+      article_id INTEGER NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+      reaction TEXT NOT NULL CHECK(reaction IN ('useful','fire','think')),
+      count INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (article_id, reaction)
+    );
+  `);
+
+  // View snapshots for trending (daily delta)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS view_snapshots (
+      article_id INTEGER NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+      snapped_at TEXT NOT NULL,
+      views INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (article_id, snapped_at)
+    );
+  `);
+
+  addColumnIfMissing(db, "pending_news", "body_html", "TEXT");
+  addColumnIfMissing(db, "sources", "article_count", "INTEGER NOT NULL DEFAULT 0");
+  addColumnIfMissing(db, "sources", "avg_score", "REAL");
+
   return db;
 }

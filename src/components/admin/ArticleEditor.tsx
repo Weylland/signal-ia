@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { RichTextEditor } from "./RichTextEditor";
 
 type EditorProps = {
@@ -25,10 +25,19 @@ type EditorProps = {
 
 export function ArticleEditor({ slug, initial }: EditorProps) {
   const router = useRouter();
-  const [title, setTitle] = useState(initial?.title ?? "");
-  const [excerpt, setExcerpt] = useState(initial?.excerpt ?? "");
+  const searchParams = useSearchParams();
+  const [title, setTitle] = useState(initial?.title ?? searchParams.get("title") ?? "");
+  const [excerpt, setExcerpt] = useState(initial?.excerpt ?? searchParams.get("excerpt") ?? "");
   const [tags, setTags] = useState(initial?.tags.join(", ") ?? "");
-  const [image, setImage] = useState(initial?.image ?? "");
+  const [image, setImage] = useState(initial?.image ?? searchParams.get("image") ?? "");
+
+  // Pre-fill source from URL import
+  useEffect(() => {
+    const source = searchParams.get("source");
+    if (source && !initial) {
+      // Will show in HTML as a source link placeholder
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [html, setHtml] = useState(initial?.html ?? "");
   const [type, setType] = useState<"news" | "tuto">(initial?.type ?? "news");
   const [tldr, setTldr] = useState<string[]>([
@@ -399,6 +408,22 @@ export function ArticleEditor({ slug, initial }: EditorProps) {
           <a href={`/admin/articles/${slug}/apercu`} target="_blank" className="nb-btn text-sm">
             👁 Aperçu
           </a>
+        )}
+        {slug && (
+          <button
+            type="button"
+            onClick={async () => {
+              const res = await fetch(`/api/admin/articles/${slug}/duplicate`, { method: "POST" });
+              if (res.ok) {
+                const { slug: newSlug } = await res.json() as { slug: string };
+                router.push(`/admin/articles/${newSlug}`);
+              }
+            }}
+            className="nb-btn text-sm"
+            disabled={saving}
+          >
+            ⧉ Dupliquer
+          </button>
         )}
         {slug && (
           <button

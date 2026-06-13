@@ -8,12 +8,15 @@ import {
   readingTimeMinutes,
   localizeMeta,
   formatDate,
+  getReactions,
 } from "@/lib/articles";
 import { getLang, getDict } from "@/lib/i18n";
 import { ArticleCard } from "@/components/ArticleCard";
 import { AdSlot } from "@/components/AdSlot";
 import { ReadingProgress } from "@/components/ReadingProgress";
 import { ShareButtons } from "@/components/ShareButtons";
+import { ReactionBar } from "@/components/ReactionBar";
+import { BookmarkButton } from "@/components/BookmarkButton";
 import { ViewTracker } from "@/components/ViewTracker";
 import { FadeIn, FadeUp } from "@/components/Reveal";
 
@@ -51,6 +54,7 @@ export default async function ArticlePage({ params }: PageProps<"/articles/[slug
   const html = lang === "en" && article.htmlEn ? article.htmlEn : article.html;
   const showFrOnlyNote = lang === "en" && !article.htmlEn;
 
+  const reactions = getReactions(article.id);
   const related = await getRelatedArticles(slug, 4);
   const readingTime = readingTimeMinutes(html);
   const time = new Date(article.date).toLocaleTimeString(lang === "en" ? "en-GB" : "fr-FR", {
@@ -180,12 +184,16 @@ export default async function ArticlePage({ params }: PageProps<"/articles/[slug
             </div>
           )}
 
-          <div className="mt-8 border-t border-line pt-5">
-            <ShareButtons
-              title={loc.title}
-              url={`${siteUrl}/articles/${article.slug}`}
-              labels={{ share: t.share, copy: t.copyLink, copied: t.copied }}
-            />
+          <div className="mt-8 flex flex-col gap-4 border-t border-line pt-5">
+            <ReactionBar slug={slug} initial={reactions} lang={lang} />
+            <div className="flex items-center justify-between gap-4">
+              <ShareButtons
+                title={loc.title}
+                url={`${siteUrl}/articles/${article.slug}`}
+                labels={{ share: t.share, copy: t.copyLink, copied: t.copied }}
+              />
+              <BookmarkButton slug={slug} title={loc.title} lang={lang} />
+            </div>
           </div>
         </article>
 

@@ -324,6 +324,7 @@ export async function createArticle(input: ArticleInput): Promise<string> {
     );
 
   setTags(Number(result.lastInsertRowid), input.tags);
+  indexArticleFts(slug);
   return slug;
 }
 
@@ -365,6 +366,7 @@ export async function updateArticle(slug: string, input: ArticleInput): Promise<
   );
 
   setTags(row.id, input.tags);
+  indexArticleFts(slug);
 }
 
 export async function deleteArticle(slug: string): Promise<void> {
@@ -445,4 +447,94 @@ export function formatDate(iso: string, lang: "fr" | "en" = "fr"): string {
     month: "long",
     year: "numeric",
   });
+}
+
+export function indexArticleFts(slug: string): void {
+  const db = getDb();
+  const row = db.prepare("SELECT id, title, excerpt, content_html FROM articles WHERE slug = ?").get(slug) as
+    | { id: number; title: string; excerpt: string; content_html: string }
+    | undefined;
+  if (!row) return;
+  const tags = db
+    .prepare(`SELECT t.name FROM tags t JOIN article_tags at ON at.tag_id = t.id WHERE at.article_id = ?`)
+    .all(row.id) as { name: string }[];
+  const tagsText = tags.map((t) => t.name).join(" ");
+  db.prepare("INSERT OR REPLACE INTO articles_fts(slug, title, excerpt, content_html, tags_text) VALUES (?, ?, ?, ?, ?)")
+    .run(slug, row.title, row.excerpt, row.content_html.replace(/<[^>]+>/g, " "), tagsText);
+}
+
+export async function searchArticlesFts(query: string): Promise<ArticleMeta[]> {
+  const db = getDb();
+  publishDueScheduledArticles();
+  const escaped = query.replace(/["*]/g, " ").trim();
+  if (!escaped) return [];
+  try {
+    const rows = db.prepare(
+      `SELECT a.* FROM articles a
+       INNER JOIN articles_fts ON articles_fts.slug = a.slug
+       WHERE articles_fts MATCH ? AND a.published = 1
+       ORDER BY rank LIMIT 50`
+    ).all(`"${escaped}"*`) as ArticleRow[];
+    if (rows.length > 0) return rows.map(rowToMeta);
+  } catch {}
+  // Fallback to LIKE if FTS fails or no results
+  const like = `%${escaped}%`;
+  const rows = db.prepare(
+    `SELECT * FROM articles WHERE published = 1 AND (title LIKE ? OR excerpt LIKE ?) ORDER BY date DESC LIMIT 50`
+  ).all(like, like) as ArticleRow[];
+  return rows.map(rowToMeta);
+}
+
+export type Reaction = "useful" | "fire" | "think";
+
+export function getReactions(articleId: number): Record<Reaction, number> {
+  const db = getDb();
+  const rows = db.prepare(
+    "SELECT reaction, count FROM article_reactions WHERE article_id = ?"
+  ).all(articleId) as { reaction: string; count: number }[];
+  const base: Record<Reaction, number> = { useful: 0, fire: 0, think: 0 };
+  for (const r of rows) base[r.reaction as Reaction] = r.count;
+  return base;
+}
+
+export function addReaction(slug: string, reaction: Reaction): void {
+  const db = getDb();
+  const article = db.prepare("SELECT id FROM articles WHERE slug = ? AND published = 1").get(slug) as { id: number } | undefined;
+  if (!article) return;
+  db.prepare(`
+    INSERT INTO article_reactions (article_id, reaction, count) VALUES (?, ?, 1)
+    ON CONFLICT(article_id, reaction) DO UPDATE SET count = count + 1
+  `).run(article.id, reaction);
+}
+
+export async function getTrendingArticles(limit = 10): Promise<ArticleMeta[]> {
+  const db = getDb();
+  const cutoff24h = new Date(Date.now() - 24 * 3600_000).toISOString();
+  const cutoff7d = new Date(Date.now() - 7 * 24 * 3600_000).toISOString();
+  // Articles with most views in last 7 days, boosted if also recent
+  const rows = db.prepare(
+    `SELECT a.* FROM articles a
+     WHERE a.published = 1 AND a.date >= ?
+     ORDER BY a.views DESC, a.date DESC
+     LIMIT ?`
+  ).all(cutoff7d, limit) as ArticleRow[];
+  if (rows.length >= limit) return rows.map(rowToMeta);
+  // Fill with recent articles if not enough
+  const slugs = rows.map((r) => r.slug);
+  const extra = db.prepare(
+    `SELECT * FROM articles WHERE published = 1 AND date >= ? AND slug NOT IN (${slugs.map(() => "?").join(",") || "''"})
+     ORDER BY views DESC, date DESC LIMIT ?`
+  ).all(cutoff24h, ...slugs, limit - rows.length) as ArticleRow[];
+  return [...rows, ...extra].map(rowToMeta);
+}
+
+export function snapshotViews(): void {
+  const db = getDb();
+  const today = new Date().toISOString().slice(0, 10);
+  const rows = db.prepare("SELECT id, views FROM articles WHERE published = 1").all() as { id: number; views: number }[];
+  const insert = db.prepare(
+    "INSERT OR REPLACE INTO view_snapshots (article_id, snapped_at, views) VALUES (?, ?, ?)"
+  );
+  const tx = db.transaction(() => { for (const r of rows) insert.run(r.id, today, r.views); });
+  tx();
 }

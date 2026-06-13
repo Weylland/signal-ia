@@ -15,6 +15,9 @@ export type SiteSettings = {
   maintenanceMode: boolean;
   adsEnabled: boolean;
   adsCode: string;
+  requireApproval: boolean;
+  blacklistKeywords: string;
+  blacklistDomains: string;
 };
 
 export const DEFAULT_SETTINGS: SiteSettings = {
@@ -33,6 +36,9 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   maintenanceMode: false,
   adsEnabled: false,
   adsCode: "",
+  requireApproval: false,
+  blacklistKeywords: "",
+  blacklistDomains: "",
 };
 
 export function getSettings(): SiteSettings {
