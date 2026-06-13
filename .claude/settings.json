@@ -4,7 +4,7 @@
       "type": "sse",
       "url": "https://signal-ia-production.up.railway.app/api/mcp",
       "headers": {
-        "x-api-key": "${SIGNAL_IA_API_KEY}"
+        "x-api-key": "535eea6b6ee19e201ad280a4f2b13acfdc3f23f56330619b2bce28b1aa4e92d6"
       }
     }
   }
