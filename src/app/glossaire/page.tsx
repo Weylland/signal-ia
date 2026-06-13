@@ -47,7 +47,6 @@ export default async function GlossairePage() {
           <p className="mt-4 leading-relaxed text-[var(--ink-dim)]">{t.glossaryIntro}</p>
           <p className="meta mt-3 uppercase">
             <span className="text-[var(--accent)]">{t.terms(entries.length)}</span>
-            {lang === "en" && <span className="ml-4">{t.glossaryFrOnly}</span>}
           </p>
         </header>
       </FadeUp>
@@ -73,17 +72,20 @@ export default async function GlossairePage() {
               <h2>{byLetter.get(letter)!.length} {lang === "en" ? "term(s)" : "terme(s)"}</h2>
             </div>
             <div className="flex flex-col gap-5">
-              {byLetter.get(letter)!.map((entry, i) => (
-                <FadeUp key={entry.id} delay={Math.min(i * 0.03, 0.15)}>
-                  <section id={entry.slug} className="nb-card scroll-mt-24 p-6">
-                    <h3 className="font-display text-xl">{entry.term}</h3>
-                    <div
-                      className="mt-2 text-sm leading-relaxed text-[var(--ink-dim)]"
-                      dangerouslySetInnerHTML={{ __html: entry.definitionHtml }}
-                    />
-                  </section>
-                </FadeUp>
-              ))}
+              {byLetter.get(letter)!.map((entry, i) => {
+                const defHtml = lang === "en" && entry.definitionEnHtml ? entry.definitionEnHtml : entry.definitionHtml;
+                return (
+                  <FadeUp key={entry.id} delay={Math.min(i * 0.03, 0.15)}>
+                    <section id={entry.slug} className="nb-card scroll-mt-24 p-6">
+                      <h3 className="font-display text-xl">{entry.term}</h3>
+                      <div
+                        className="mt-2 text-sm leading-relaxed text-[var(--ink-dim)]"
+                        dangerouslySetInnerHTML={{ __html: defHtml }}
+                      />
+                    </section>
+                  </FadeUp>
+                );
+              })}
             </div>
           </section>
         ))}

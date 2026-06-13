@@ -6,6 +6,7 @@ export type GlossaryEntry = {
   slug: string;
   term: string;
   definitionHtml: string;
+  definitionEnHtml: string | null;
 };
 
 const SEED: { term: string; definition: string }[] = [
@@ -118,12 +119,13 @@ export function getGlossary(): GlossaryEntry[] {
   seedGlossary();
   const rows = db
     .prepare("SELECT * FROM glossary ORDER BY term COLLATE NOCASE")
-    .all() as { id: number; slug: string; term: string; definition_html: string }[];
+    .all() as { id: number; slug: string; term: string; definition_html: string; definition_html_en: string | null }[];
   return rows.map((r) => ({
     id: r.id,
     slug: r.slug,
     term: r.term,
     definitionHtml: r.definition_html,
+    definitionEnHtml: r.definition_html_en ?? null,
   }));
 }
 
