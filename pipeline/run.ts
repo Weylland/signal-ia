@@ -361,6 +361,13 @@ async function main() {
         const groupItems = queuedItems.filter((i) => group.links.includes(i.url));
         const image = groupItems.length > 0 ? await fetchOgImage(groupItems[0].url) : null;
         const maxScore = Math.max(...groupItems.map((i) => i.score ?? 0), 0);
+
+        // Date = date de publication RSS la plus récente du groupe (jamais dans le futur)
+        const now = new Date().toISOString();
+        const rssDates = groupItems.map((i) => i.published_at).filter(Boolean) as string[];
+        const articleDate = rssDates.length > 0
+          ? rssDates.sort().reverse().find((d) => d <= now) ?? now
+          : now;
         const breakingUntil = group.breaking
           ? new Date(Date.now() + settings.breakingDurationHours * 3600_000).toISOString()
           : null;
@@ -379,6 +386,7 @@ async function main() {
           tldr: written.tldr,
           breakingUntil,
           score: maxScore,
+          date: articleDate,
         });
 
         const en = await translateArticle(group.title, group.angle, written.markdown, written.tldr);
