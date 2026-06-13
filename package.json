@@ -23,6 +23,7 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "resend": "^6.12.4",
+    "rss-parser": "^3.13.0",
     "sanitize-html": "^2.17.5"
   },
   "devDependencies": {
@@ -35,7 +36,6 @@
     "@types/sanitize-html": "^2.16.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
-    "rss-parser": "^3.13.0",
     "tailwindcss": "^4",
     "tsx": "^4.22.4",
     "typescript": "^5"
