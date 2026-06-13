@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "signal-ia": {
+      "type": "sse",
+      "url": "https://signal-ia-production.up.railway.app/api/mcp",
+      "headers": {
+        "x-api-key": "${SIGNAL_IA_API_KEY}"
+      }
+    }
+  }
+}
