@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getAllArticles, getStats, formatDate } from "@/lib/articles";
 import { getDb } from "@/lib/db";
+import { PipelineTrigger } from "@/components/admin/PipelineTrigger";
 
 export const dynamic = "force-dynamic";
 
@@ -75,6 +76,10 @@ export default async function AdminDashboard() {
         )}
         <span className="ml-auto text-sm font-semibold">Journal →</span>
       </Link>
+
+      <div className="mt-6">
+        <PipelineTrigger />
+      </div>
 
       <div className="mt-10 flex items-center justify-between">
         <h2 className="font-display text-xl font-bold">Derniers articles</h2>
