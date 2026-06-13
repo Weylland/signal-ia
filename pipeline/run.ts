@@ -56,6 +56,10 @@ function log(line: string): void {
   logLines.push(line);
 }
 
+export async function runPipeline(): Promise<void> {
+  await main();
+}
+
 async function callMistral(
   messages: { role: string; content: string }[],
   json = false
@@ -259,6 +263,7 @@ function countArticlesToday(): number {
 }
 
 async function main() {
+  logLines.length = 0;
   const db = getDb();
   const settings = getSettings();
   const runResult = db.prepare("INSERT INTO pipeline_runs DEFAULT VALUES").run();
@@ -404,8 +409,12 @@ async function main() {
        status = ?, items_new = ?, articles_created = ?, log = ? WHERE id = ?`
     ).run(status, itemsNew, articlesCreated, logLines.join("\n"), runId);
     log(`— Terminé : ${articlesCreated} article(s) créé(s) —`);
-    if (status === "error") process.exit(1);
+    if (status === "error") throw new Error("Pipeline terminé avec des erreurs");
   }
 }
 
-main();
+const isDirectRun =
+  process.argv[1]?.includes("pipeline/run") || process.argv[1]?.includes("pipeline\\run");
+if (isDirectRun) {
+  main().catch(() => process.exit(1));
+}
