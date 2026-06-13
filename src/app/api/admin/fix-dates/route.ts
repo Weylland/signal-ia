@@ -1,13 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 
-export async function POST(request: NextRequest) {
-  const expected = process.env.CLAUDE_API_KEY;
-  const fromHeader = request.headers.get("x-admin-secret");
-  const fromQuery = request.nextUrl.searchParams.get("key");
-  if (!expected || (fromHeader !== expected && fromQuery !== expected)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+export async function POST() {
 
   const db = getDb();
   const now = new Date().toISOString();
