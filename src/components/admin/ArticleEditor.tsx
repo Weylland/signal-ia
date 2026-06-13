@@ -16,6 +16,10 @@ type EditorProps = {
     type: "news" | "tuto";
     tldr: string[];
     scheduledAt: string | null;
+    titleEn?: string | null;
+    excerptEn?: string | null;
+    tldrEn?: string[];
+    htmlEn?: string | null;
   };
 };
 
@@ -35,6 +39,18 @@ export function ArticleEditor({ slug, initial }: EditorProps) {
   const [scheduledAt, setScheduledAt] = useState(
     initial?.scheduledAt ? initial.scheduledAt.slice(0, 16) : ""
   );
+  const [showEn, setShowEn] = useState(false);
+  const [titleEn, setTitleEn] = useState(initial?.titleEn ?? "");
+  const [excerptEn, setExcerptEn] = useState(initial?.excerptEn ?? "");
+  const [tldrEn, setTldrEn] = useState<string[]>([
+    initial?.tldrEn?.[0] ?? "",
+    initial?.tldrEn?.[1] ?? "",
+    initial?.tldrEn?.[2] ?? "",
+  ]);
+  const [htmlEn, setHtmlEn] = useState(initial?.htmlEn ?? "");
+  const [translating, setTranslating] = useState(false);
+  const [enSaving, setEnSaving] = useState(false);
+  const [enMsg, setEnMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -93,6 +109,48 @@ export function ArticleEditor({ slug, initial }: EditorProps) {
       setError(data.error ?? "Erreur lors de l'upload");
     }
     setUploading(false);
+  }
+
+  async function autoTranslate() {
+    if (!slug) return;
+    setTranslating(true);
+    setEnMsg(null);
+    const res = await fetch(`/api/admin/articles/${slug}/translation`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ autoTranslate: true }),
+    });
+    if (res.ok) {
+      const data = await fetch(`/api/admin/articles/${slug}/translation`).then((r) => r.json()) as {
+        titleEn: string; excerptEn: string; tldrEn: string[]; htmlEn: string;
+      };
+      setTitleEn(data.titleEn ?? "");
+      setExcerptEn(data.excerptEn ?? "");
+      setTldrEn([data.tldrEn?.[0] ?? "", data.tldrEn?.[1] ?? "", data.tldrEn?.[2] ?? ""]);
+      setHtmlEn(data.htmlEn ?? "");
+      setEnMsg("Traduction effectuée.");
+    } else {
+      setEnMsg("Erreur lors de la traduction.");
+    }
+    setTranslating(false);
+  }
+
+  async function saveEn() {
+    if (!slug) return;
+    setEnSaving(true);
+    setEnMsg(null);
+    const res = await fetch(`/api/admin/articles/${slug}/translation`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        titleEn: titleEn.trim() || null,
+        excerptEn: excerptEn.trim() || null,
+        tldrEn: tldrEn.map((t) => t.trim()).filter(Boolean),
+        htmlEn: htmlEn.trim() || null,
+      }),
+    });
+    setEnMsg(res.ok ? "Traduction sauvegardée." : "Erreur lors de la sauvegarde.");
+    setEnSaving(false);
   }
 
   async function handleDelete() {
@@ -225,6 +283,83 @@ export function ArticleEditor({ slug, initial }: EditorProps) {
       )}
 
       {error && <p className="border-2 border-ink bg-[var(--peach)] p-3 text-sm font-semibold">{error}</p>}
+
+      {slug && (
+        <div className="border-2 border-ink">
+          <button
+            type="button"
+            onClick={() => setShowEn((v) => !v)}
+            className="flex w-full items-center justify-between px-4 py-3 text-sm font-bold hover:bg-[var(--bg-raised)]"
+          >
+            <span>🇬🇧 Version EN {titleEn ? "✓" : "(non traduit)"}</span>
+            <span>{showEn ? "▲" : "▼"}</span>
+          </button>
+          {showEn && (
+            <div className="flex flex-col gap-4 border-t-2 border-ink p-4">
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={autoTranslate}
+                  disabled={translating}
+                  className="nb-btn nb-btn-primary text-sm"
+                >
+                  {translating ? "Traduction en cours…" : "✨ Traduire via Mistral"}
+                </button>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-bold">Titre EN</label>
+                <input
+                  className="field"
+                  value={titleEn}
+                  onChange={(e) => setTitleEn(e.target.value)}
+                  placeholder="Title in English"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-bold">Chapeau EN</label>
+                <textarea
+                  className="field"
+                  rows={2}
+                  value={excerptEn}
+                  onChange={(e) => setExcerptEn(e.target.value)}
+                  placeholder="Short summary in English"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-bold">L&apos;essentiel EN (3 points)</label>
+                <div className="flex flex-col gap-2">
+                  {tldrEn.map((point, i) => (
+                    <input
+                      key={i}
+                      className="field"
+                      value={point}
+                      placeholder={`Key point ${i + 1}`}
+                      onChange={(e) =>
+                        setTldrEn((prev) => prev.map((p, j) => (j === i ? e.target.value : p)))
+                      }
+                    />
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-bold">Contenu EN</label>
+                <RichTextEditor content={htmlEn} onChange={setHtmlEn} />
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={saveEn}
+                  disabled={enSaving}
+                  className="nb-btn text-sm"
+                >
+                  {enSaving ? "…" : "Sauvegarder traduction EN"}
+                </button>
+                {enMsg && <span className="text-sm">{enMsg}</span>}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-3 border-t-2 border-ink pt-5">
         <button

@@ -26,6 +26,10 @@ export default async function EditArticlePage({
           type: article.type,
           tldr: article.tldr,
           scheduledAt: article.scheduledAt,
+          titleEn: article.titleEn,
+          excerptEn: article.excerptEn,
+          tldrEn: article.tldrEn,
+          htmlEn: article.htmlEn,
         }}
       />
     </div>
