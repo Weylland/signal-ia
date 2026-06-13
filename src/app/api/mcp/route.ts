@@ -7,9 +7,11 @@ const encoder = new TextEncoder();
 const sessions = new Map<string, NextJsTransport>();
 
 function checkApiKey(request: NextRequest): boolean {
-  const key = request.headers.get("x-api-key");
   const expected = process.env.CLAUDE_API_KEY;
-  return !!expected && key === expected;
+  if (!expected) return false;
+  const fromHeader = request.headers.get("x-api-key");
+  const fromQuery = request.nextUrl.searchParams.get("key");
+  return fromHeader === expected || fromQuery === expected;
 }
 
 export async function GET(request: NextRequest) {
