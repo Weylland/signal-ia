@@ -31,9 +31,12 @@ export async function GET(request: NextRequest) {
         console.error("[mcp] connect error:", e)
       );
 
-      // Send endpoint event so the client knows where to POST
+      // Send endpoint event so the client knows where to POST.
+      // Propagate the auth key so the follow-up POST is authorized too.
+      const key = request.nextUrl.searchParams.get("key");
+      const keyParam = key ? `&key=${encodeURIComponent(key)}` : "";
       controller.enqueue(
-        encoder.encode(`event: endpoint\ndata: /api/mcp?sessionId=${sessionId}\n\n`)
+        encoder.encode(`event: endpoint\ndata: /api/mcp?sessionId=${sessionId}${keyParam}\n\n`)
       );
     },
     cancel() {
