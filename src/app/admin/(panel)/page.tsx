@@ -5,6 +5,15 @@ import { PipelineTrigger } from "@/components/admin/PipelineTrigger";
 
 export const dynamic = "force-dynamic";
 
+function nextCronMinutes(): number {
+  const intervalMin = parseInt(process.env.PIPELINE_INTERVAL_MIN ?? "30", 10);
+  const now = new Date();
+  const current = now.getMinutes();
+  const nextMark = Math.ceil((current + 1) / intervalMin) * intervalMin;
+  const diff = nextMark - current;
+  return diff <= 0 ? intervalMin : diff;
+}
+
 type RunRow = {
   started_at: string;
   status: string;
@@ -38,6 +47,8 @@ export default async function AdminDashboard() {
     { label: "Vues totales", value: stats.views, color: "var(--cream-2)" },
     { label: "Abonnés newsletter", value: subscriberCount, color: "var(--cream-2)" },
   ];
+
+  const nextIn = nextCronMinutes();
 
   return (
     <div>
@@ -74,7 +85,8 @@ export default async function AdminDashboard() {
         {queueCount > 0 && (
           <span className="text-sm font-semibold">· {queueCount} news en file d&apos;attente</span>
         )}
-        <span className="ml-auto text-sm font-semibold">Journal →</span>
+        <span className="ml-auto text-sm text-ink/60">Prochain passage dans {nextIn} min</span>
+        <span className="text-sm font-semibold">Journal →</span>
       </Link>
 
       <div className="mt-6">
