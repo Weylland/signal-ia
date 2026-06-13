@@ -74,8 +74,6 @@ export default async function GlossairePage() {
         byLetter={byLetter}
         lang={lang}
         placeholder={t.glossaryFilterPlaceholder}
-        noResult={t.glossaryNoResult}
-        termLabel={t.terms}
       />
     </div>
   );

@@ -104,7 +104,18 @@ export default async function RootLayout({
         <header className="border-b border-line">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-8 gap-y-3 px-5 py-4">
             <Logo className="text-3xl sm:text-4xl" />
-            <NavMenu t={t} lang={lang} />
+            <NavMenu
+              labels={{
+                news: t.navNews,
+                latest: lang === "en" ? "Latest" : "Dernières actus",
+                allNews: t.navAllNews,
+                week: t.navWeek,
+                trending: t.navTrending,
+                tutos: t.navTutos,
+                glossary: t.navGlossary,
+                search: t.navSearch,
+              }}
+            />
             <div className="ml-auto flex items-center gap-3">
               <a href="/flux.xml" className="nb-btn hidden px-3 py-1.5 text-xs sm:inline-flex">
                 RSS

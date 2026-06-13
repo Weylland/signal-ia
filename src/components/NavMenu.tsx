@@ -1,18 +1,25 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import type { Dict, Lang } from "@/lib/i18n";
 
-export function NavMenu({ t, lang }: { t: Dict; lang: Lang }) {
+type NavLabels = {
+  news: string;
+  latest: string;
+  allNews: string;
+  week: string;
+  trending: string;
+  tutos: string;
+  glossary: string;
+  search: string;
+};
+
+export function NavMenu({ labels }: { labels: NavLabels }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
 
   return (
     <nav className="order-3 flex w-full items-center gap-5 overflow-x-auto sm:order-none sm:w-auto sm:gap-7">
-      {/* Actu avec dropdown */}
       <div
-        ref={ref}
         className="relative"
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
@@ -22,7 +29,7 @@ export function NavMenu({ t, lang }: { t: Dict; lang: Lang }) {
           onClick={() => setOpen((o) => !o)}
           aria-expanded={open}
         >
-          {t.navNews}
+          {labels.news}
           <span className="text-[10px] opacity-60">▾</span>
         </button>
         {open && (
@@ -32,36 +39,36 @@ export function NavMenu({ t, lang }: { t: Dict; lang: Lang }) {
               className="block px-4 py-2.5 text-sm font-medium hover:bg-[var(--accent)] hover:text-[var(--on-accent)]"
               onClick={() => setOpen(false)}
             >
-              {lang === "en" ? "Latest" : "Dernières actus"}
+              {labels.latest}
             </Link>
             <Link
               href="/actus"
               className="block px-4 py-2.5 text-sm font-medium hover:bg-[var(--accent)] hover:text-[var(--on-accent)]"
               onClick={() => setOpen(false)}
             >
-              {t.navAllNews}
+              {labels.allNews}
             </Link>
             <Link
               href="/cette-semaine"
               className="block px-4 py-2.5 text-sm font-medium hover:bg-[var(--accent)] hover:text-[var(--on-accent)]"
               onClick={() => setOpen(false)}
             >
-              {t.navWeek}
+              {labels.week}
             </Link>
             <Link
               href="/trending"
               className="block px-4 py-2.5 text-sm font-medium hover:bg-[var(--accent)] hover:text-[var(--on-accent)]"
               onClick={() => setOpen(false)}
             >
-              {t.navTrending}
+              {labels.trending}
             </Link>
           </div>
         )}
       </div>
 
-      <Link href="/tutos" className="mainnav-link">{t.navTutos}</Link>
-      <Link href="/glossaire" className="mainnav-link">{t.navGlossary}</Link>
-      <Link href="/recherche" className="mainnav-link">{t.navSearch}</Link>
+      <Link href="/tutos" className="mainnav-link">{labels.tutos}</Link>
+      <Link href="/glossaire" className="mainnav-link">{labels.glossary}</Link>
+      <Link href="/recherche" className="mainnav-link">{labels.search}</Link>
     </nav>
   );
 }

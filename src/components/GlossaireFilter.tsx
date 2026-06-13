@@ -18,11 +18,13 @@ type Props = {
   byLetter: Record<string, Entry[]>;
   lang: Lang;
   placeholder: string;
-  noResult: (q: string) => string;
-  termLabel: (n: number) => string;
 };
 
-export function GlossaireFilter({ entries, letters, byLetter, lang, placeholder, noResult, termLabel }: Props) {
+export function GlossaireFilter({ entries, letters, byLetter, lang, placeholder }: Props) {
+  const noResult = (q: string) =>
+    lang === "en" ? `No term found for "${q}"` : `Aucun terme trouvé pour « ${q} »`;
+  const termLabel = (n: number) =>
+    lang === "en" ? `${n} terms` : `${n} termes`;
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
 
