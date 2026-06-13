@@ -113,10 +113,12 @@ export default async function RootLayout({
                 trending: t.navTrending,
                 tutos: t.navTutos,
                 glossary: t.navGlossary,
-                search: t.navSearch,
               }}
             />
             <div className="ml-auto flex items-center gap-3">
+              <Link href="/recherche" className="nb-btn px-3 py-1.5 text-xs">
+                {t.navSearch}
+              </Link>
               <a href="/flux.xml" className="nb-btn hidden px-3 py-1.5 text-xs sm:inline-flex">
                 RSS
               </a>
