@@ -112,6 +112,10 @@ export function getDb(): Database.Database {
   addColumnIfMissing(db, "articles", "views", "INTEGER NOT NULL DEFAULT 0");
   addColumnIfMissing(db, "articles", "tldr", "TEXT NOT NULL DEFAULT '[]'");
   addColumnIfMissing(db, "articles", "scheduled_at", "TEXT");
+  addColumnIfMissing(db, "articles", "title_en", "TEXT");
+  addColumnIfMissing(db, "articles", "excerpt_en", "TEXT");
+  addColumnIfMissing(db, "articles", "content_html_en", "TEXT");
+  addColumnIfMissing(db, "articles", "tldr_en", "TEXT");
 
   db.exec(
     "CREATE INDEX IF NOT EXISTS idx_articles_type ON articles(type, published, date DESC)"

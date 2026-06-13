@@ -17,10 +17,14 @@ export type ArticleMeta = {
   views: number;
   breaking: boolean;
   scheduledAt: string | null;
+  titleEn: string | null;
+  excerptEn: string | null;
+  tldrEn: string[];
 };
 
 export type Article = ArticleMeta & {
   html: string;
+  htmlEn: string | null;
 };
 
 type ArticleRow = {
@@ -38,6 +42,10 @@ type ArticleRow = {
   views: number;
   breaking_until: string | null;
   scheduled_at: string | null;
+  title_en: string | null;
+  excerpt_en: string | null;
+  content_html_en: string | null;
+  tldr_en: string | null;
 };
 
 function safeJson<T>(raw: string, fallback: T): T {
@@ -73,6 +81,27 @@ function rowToMeta(row: ArticleRow): ArticleMeta {
     views: row.views,
     breaking: row.breaking_until !== null && row.breaking_until > new Date().toISOString(),
     scheduledAt: row.scheduled_at,
+    titleEn: row.title_en,
+    excerptEn: row.excerpt_en,
+    tldrEn: row.tldr_en ? safeJson(row.tldr_en, []) : [],
+  };
+}
+
+/* Vue localisée d'un article : EN si disponible, sinon FR (translated = false) */
+export function localizeMeta(article: ArticleMeta, lang: "fr" | "en") {
+  if (lang === "en" && article.titleEn) {
+    return {
+      title: article.titleEn,
+      excerpt: article.excerptEn ?? article.excerpt,
+      tldr: article.tldrEn.length > 0 ? article.tldrEn : article.tldr,
+      translated: true,
+    };
+  }
+  return {
+    title: article.title,
+    excerpt: article.excerpt,
+    tldr: article.tldr,
+    translated: lang === "fr",
   };
 }
 
@@ -204,7 +233,18 @@ export async function getArticle(
     | undefined;
   if (!row) return null;
   if (!row.published && !options?.includeDrafts) return null;
-  return { ...rowToMeta(row), html: row.content_html };
+  return { ...rowToMeta(row), html: row.content_html, htmlEn: row.content_html_en };
+}
+
+export function setArticleTranslation(
+  slug: string,
+  en: { title: string; excerpt: string; html: string; tldr: string[] }
+): void {
+  const db = getDb();
+  db.prepare(
+    `UPDATE articles SET title_en = ?, excerpt_en = ?, content_html_en = ?, tldr_en = ?
+     WHERE slug = ?`
+  ).run(en.title, en.excerpt, en.html, JSON.stringify(en.tldr), slug);
 }
 
 export type ArticleInput = {
@@ -399,8 +439,8 @@ export function readingTimeMinutes(html: string): number {
   return Math.max(1, Math.round(words / 200));
 }
 
-export function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("fr-FR", {
+export function formatDate(iso: string, lang: "fr" | "en" = "fr"): string {
+  return new Date(iso).toLocaleDateString(lang === "en" ? "en-GB" : "fr-FR", {
     day: "numeric",
     month: "long",
     year: "numeric",

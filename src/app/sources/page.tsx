@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getSources } from "@/lib/sources";
+import { getLang, getDict } from "@/lib/i18n";
 import { FadeUp } from "@/components/Reveal";
 
 export const dynamic = "force-dynamic";
@@ -12,28 +13,27 @@ export const metadata: Metadata = {
 
 export default async function SourcesPage() {
   const sources = getSources({ activeOnly: true });
+  const lang = await getLang();
+  const t = getDict(lang);
 
   return (
     <div className="mx-auto max-w-3xl">
       <FadeUp>
         <header className="mb-10">
-          <h1 className="font-display text-4xl font-bold tracking-tight">
-            <span className="highlight">Nos sources</span>
-          </h1>
-          <p className="mt-4 leading-relaxed">
-            signal·ia surveille en continu une sélection de médias et blogs spécialisés reconnus.
-            Chaque article cite ses sources — tu peux toujours remonter à l&apos;information
-            d&apos;origine.
+          <h1 className="font-display text-4xl tracking-tight sm:text-5xl">{t.sourcesTitle}</h1>
+          <p className="mt-4 leading-relaxed text-[var(--ink-dim)]">{t.sourcesIntro}</p>
+          <p className="meta mt-3 uppercase text-[var(--accent)]">
+            {t.sourcesActive(sources.length)}
           </p>
         </header>
       </FadeUp>
 
       <div className="grid gap-4 sm:grid-cols-2">
         {sources.map((source, i) => (
-          <FadeUp key={source.id} delay={Math.min(i * 0.04, 0.25)}>
-            <div className="nb-card p-5">
-              <p className="font-display font-bold">{source.name}</p>
-              <p className="mt-1 truncate text-xs text-ink/50">
+          <FadeUp key={source.id} delay={Math.min(i * 0.04, 0.25)} className="h-full">
+            <div className="nb-card h-full p-5">
+              <p className="font-display text-lg">{source.name}</p>
+              <p className="meta mt-1 truncate">
                 {new URL(source.url).hostname.replace(/^www\./, "")}
               </p>
             </div>

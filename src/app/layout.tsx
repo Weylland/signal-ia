@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Instrument_Serif, Instrument_Sans, IBM_Plex_Mono } from "next/font/google";
 import Link from "next/link";
 import { NewsletterForm } from "@/components/NewsletterForm";
+import { ThemeToggle, LangSwitcher } from "@/components/TopbarControls";
+import { getLang, getDict } from "@/lib/i18n";
 import "./globals.css";
 
 const instrumentSerif = Instrument_Serif({
@@ -42,21 +44,29 @@ export const metadata: Metadata = {
   },
 };
 
+const themeInit = `(function(){try{if(localStorage.getItem("theme")==="light")document.documentElement.dataset.theme="light";}catch(e){}})();`;
+
 function Logo({ className = "" }: { className?: string }) {
   return (
-    <Link href="/" className={`font-display leading-none tracking-tight whitespace-nowrap ${className}`}>
+    <Link
+      href="/"
+      className={`font-display leading-none tracking-tight whitespace-nowrap ${className}`}
+    >
       signal<span className="text-[var(--accent)]">·</span>
       <span className="italic">ia</span>
     </Link>
   );
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const today = new Date().toLocaleDateString("fr-FR", {
+  const lang = await getLang();
+  const t = getDict(lang);
+
+  const today = new Date().toLocaleDateString(lang === "en" ? "en-GB" : "fr-FR", {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -65,17 +75,24 @@ export default function RootLayout({
 
   return (
     <html
-      lang="fr"
+      lang={lang}
       className={`${instrumentSans.variable} ${instrumentSerif.variable} ${plexMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col">
+        <script dangerouslySetInnerHTML={{ __html: themeInit }} />
+
         <div className="border-b border-line">
-          <div className="meta mx-auto flex max-w-6xl justify-between gap-4 px-5 py-1.5 uppercase">
+          <div className="meta mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-1.5 uppercase">
             <span>
               <span className="live-dot" />
-              Édition continue — {today}
+              {t.topbarEdition} — {today}
             </span>
-            <span className="hidden sm:inline">Veille IA · FR</span>
+            <span className="flex items-center gap-4">
+              <span className="hidden sm:inline">{t.topbarTag}</span>
+              <ThemeToggle />
+              <LangSwitcher lang={lang} />
+            </span>
           </div>
         </div>
 
@@ -84,21 +101,21 @@ export default function RootLayout({
             <Logo className="text-3xl sm:text-4xl" />
             <nav className="order-3 flex w-full items-center gap-5 overflow-x-auto sm:order-none sm:w-auto sm:gap-7">
               <Link href="/" className="mainnav-link">
-                Actu
+                {t.navNews}
               </Link>
               <Link href="/tutos" className="mainnav-link">
-                Tutos
+                {t.navTutos}
               </Link>
               <Link href="/glossaire" className="mainnav-link">
-                Glossaire
+                {t.navGlossary}
               </Link>
               <Link href="/cette-semaine" className="mainnav-link">
-                Cette semaine
+                {t.navWeek}
               </Link>
             </nav>
             <div className="ml-auto flex items-center gap-3">
               <Link href="/recherche" className="nb-btn px-3 py-1.5 text-xs">
-                Rechercher
+                {t.navSearch}
               </Link>
               <a href="/flux.xml" className="nb-btn hidden px-3 py-1.5 text-xs sm:inline-flex">
                 RSS
@@ -114,45 +131,49 @@ export default function RootLayout({
             <div>
               <Logo className="text-2xl" />
               <p className="mt-3 max-w-xs text-sm leading-relaxed text-[var(--ink-dim)]">
-                Média français de veille IA. L&apos;essentiel de l&apos;actualité de
-                l&apos;intelligence artificielle et de la robotique, en continu.
+                {t.footerDesc}
               </p>
             </div>
             <div className="text-sm">
-              <p className="meta mb-4 font-semibold uppercase">Rubriques</p>
+              <p className="meta mb-4 font-semibold uppercase">{t.footerSections}</p>
               <ul className="flex flex-col gap-2 text-[var(--ink-dim)]">
-                <li><Link href="/" className="nb-navlink">Actu</Link></li>
-                <li><Link href="/tutos" className="nb-navlink">Tutos</Link></li>
-                <li><Link href="/glossaire" className="nb-navlink">Glossaire</Link></li>
-                <li><Link href="/cette-semaine" className="nb-navlink">Cette semaine</Link></li>
+                <li><Link href="/" className="nb-navlink">{t.navNews}</Link></li>
+                <li><Link href="/actus" className="nb-navlink">{t.navAllNews}</Link></li>
+                <li><Link href="/tutos" className="nb-navlink">{t.navTutos}</Link></li>
+                <li><Link href="/glossaire" className="nb-navlink">{t.navGlossary}</Link></li>
+                <li><Link href="/cette-semaine" className="nb-navlink">{t.navWeek}</Link></li>
               </ul>
             </div>
             <div className="text-sm">
-              <p className="meta mb-4 font-semibold uppercase">Suivre</p>
+              <p className="meta mb-4 font-semibold uppercase">{t.footerFollow}</p>
               <ul className="flex flex-col gap-2 text-[var(--ink-dim)]">
-                <li><Link href="/recherche" className="nb-navlink">Recherche</Link></li>
-                <li><Link href="/sources" className="nb-navlink">Nos sources</Link></li>
-                <li><Link href="/a-propos" className="nb-navlink">À propos</Link></li>
-                <li><a href="/flux.xml" className="nb-navlink">Flux RSS</a></li>
+                <li><Link href="/recherche" className="nb-navlink">{t.footerSearch}</Link></li>
+                <li><Link href="/sources" className="nb-navlink">{t.footerSources}</Link></li>
+                <li><Link href="/a-propos" className="nb-navlink">{t.footerAbout}</Link></li>
+                <li><a href="/flux.xml" className="nb-navlink">{t.footerRss}</a></li>
               </ul>
             </div>
             <div className="text-sm">
-              <p className="meta mb-4 font-semibold uppercase">Newsletter</p>
+              <p className="meta mb-4 font-semibold uppercase">{t.newsletterTitle}</p>
               <p className="mb-3 text-xs leading-relaxed text-[var(--ink-dim)]">
-                Le récap de la semaine, un email le dimanche, rien d&apos;autre.
+                {t.newsletterPitch}
               </p>
-              <NewsletterForm />
+              <NewsletterForm
+                labels={{ subscribe: t.subscribe, subscribed: t.subscribed, error: t.emailError }}
+              />
             </div>
           </div>
           <div className="border-t border-line">
             <div className="meta mx-auto flex max-w-6xl flex-wrap justify-between gap-x-5 gap-y-2 px-5 py-4 uppercase">
-              <span>© {new Date().getFullYear()} signal·ia — Tous droits réservés</span>
+              <span>
+                © {new Date().getFullYear()} signal·ia — {t.footerRights}
+              </span>
               <span className="flex gap-4">
                 <Link href="/mentions-legales" className="hover:text-[var(--accent)]">
-                  Mentions légales
+                  {t.footerLegal}
                 </Link>
                 <Link href="/confidentialite" className="hover:text-[var(--accent)]">
-                  Confidentialité
+                  {t.footerPrivacy}
                 </Link>
               </span>
             </div>

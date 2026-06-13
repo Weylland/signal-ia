@@ -2,7 +2,19 @@
 
 import { useState } from "react";
 
-export function NewsletterForm() {
+type Labels = {
+  subscribe: string;
+  subscribed: string;
+  error: string;
+};
+
+const defaults: Labels = {
+  subscribe: "S'inscrire",
+  subscribed: "✓ Inscription enregistrée, merci !",
+  error: "Erreur — vérifie l'adresse.",
+};
+
+export function NewsletterForm({ labels = defaults }: { labels?: Labels }) {
   const [email, setEmail] = useState("");
   const [state, setState] = useState<"idle" | "ok" | "error">("idle");
 
@@ -18,7 +30,7 @@ export function NewsletterForm() {
   }
 
   if (state === "ok") {
-    return <p className="text-sm font-semibold">✓ Inscription enregistrée, merci !</p>;
+    return <p className="text-sm font-semibold">{labels.subscribed}</p>;
   }
 
   return (
@@ -30,14 +42,12 @@ export function NewsletterForm() {
         onChange={(e) => setEmail(e.target.value)}
         placeholder="ton@email.fr"
         className="field w-auto flex-1 text-sm"
-        aria-label="Adresse email"
+        aria-label="Email"
       />
       <button type="submit" className="nb-btn nb-btn-primary px-3 py-1.5 text-sm">
-        S&apos;inscrire
+        {labels.subscribe}
       </button>
-      {state === "error" && (
-        <p className="w-full text-xs font-semibold">Erreur — vérifie l&apos;adresse.</p>
-      )}
+      {state === "error" && <p className="w-full text-xs font-semibold">{labels.error}</p>}
     </form>
   );
 }

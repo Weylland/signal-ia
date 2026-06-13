@@ -5,35 +5,39 @@ import {
   getAllTags,
   getBreakingArticles,
   getMostViewedArticles,
+  localizeMeta,
   formatDate,
   type ArticleMeta,
 } from "@/lib/articles";
 import { getSettings } from "@/lib/settings";
+import { getLang, getDict, type Lang, type Dict } from "@/lib/i18n";
 import { ArticleCard } from "@/components/ArticleCard";
 import { AdSlot } from "@/components/AdSlot";
 import { FadeIn, FadeUp } from "@/components/Reveal";
 
 export const dynamic = "force-dynamic";
 
-function hourLabel(iso: string): string {
+function hourLabel(iso: string, lang: Lang): string {
   const date = new Date(iso);
+  const locale = lang === "en" ? "en-GB" : "fr-FR";
   const isToday = date.toDateString() === new Date().toDateString();
   if (isToday) {
-    return date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    return date.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
   }
-  return date.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
+  return date.toLocaleDateString(locale, { day: "2-digit", month: "2-digit" });
 }
 
-function FeedItem({ article }: { article: ArticleMeta }) {
+function FeedItem({ article, lang, t }: { article: ArticleMeta; lang: Lang; t: Dict }) {
+  const loc = localizeMeta(article, lang);
   return (
     <div className="feed-item">
-      <time>{hourLabel(article.date)}</time>
+      <time>{hourLabel(article.date, lang)}</time>
       <span className={`nb-pill ${article.breaking ? "tag--hot" : ""}`}>
-        {article.breaking ? "À chaud" : (article.tags[0] ?? "actu")}
+        {article.breaking ? t.breaking : (article.tags[0] ?? t.news)}
       </span>
       <span className="t">
         <Link href={`/articles/${article.slug}`} className="transition-colors">
-          {article.title}
+          {loc.title}
         </Link>
       </span>
     </div>
@@ -42,14 +46,14 @@ function FeedItem({ article }: { article: ArticleMeta }) {
 
 export default async function Home() {
   const settings = getSettings();
+  const lang = await getLang();
+  const t = getDict(lang);
 
   if (settings.maintenanceMode) {
     return (
       <div className="mx-auto max-w-md py-20 text-center">
-        <p className="font-display text-4xl">On revient vite.</p>
-        <p className="mt-4 text-[var(--ink-dim)]">
-          Le site est en maintenance. Repasse dans quelques minutes.
-        </p>
+        <p className="font-display text-4xl">{t.maintenanceTitle}</p>
+        <p className="mt-4 text-[var(--ink-dim)]">{t.maintenanceBody}</p>
       </div>
     );
   }
@@ -63,30 +67,37 @@ export default async function Home() {
   ]);
 
   if (articles.length === 0 && tutos.length === 0) {
-    return <p className="text-sm">Aucun article publié pour l&apos;instant.</p>;
+    return <p className="text-sm">{t.noArticles}</p>;
   }
 
   const [featured, second, third, ...rest] = articles;
+  const featuredLoc = featured ? localizeMeta(featured, lang) : null;
   const also = [second, third].filter(Boolean) as ArticleMeta[];
   const dayAgo = new Date(Date.now() - 24 * 3600_000).toISOString();
   const last24h = articles.filter((a) => a.date >= dayAgo);
   const feedSplit = Math.ceil(Math.min(last24h.length, 10) / 2);
+  const grid = rest.slice(0, 9);
 
   return (
     <div className="flex flex-col gap-12">
       {breaking.length > 0 && (
-        <div className="breaking-bar -mx-5 -mt-10" role="region" aria-label="À chaud">
+        <div className="breaking-bar -mx-5 -mt-10" role="region" aria-label={t.breaking}>
           <div className="label">
-            <span className="blink" />À chaud
+            <span className="blink" />
+            {t.breaking}
           </div>
           <div className="track">
             <div className="reel">
               {[false, true].map((hidden) => (
-                <span key={String(hidden)} aria-hidden={hidden || undefined} className="flex items-center">
+                <span
+                  key={String(hidden)}
+                  aria-hidden={hidden || undefined}
+                  className="flex items-center"
+                >
                   {breaking.map((a) => (
                     <span key={a.slug} className="flex items-center">
                       <Link href={`/articles/${a.slug}`} className="item">
-                        <b>{hourLabel(a.date)}</b> — {a.title}
+                        <b>{hourLabel(a.date, lang)}</b> — {localizeMeta(a, lang).title}
                       </Link>
                       <span className="sep">///</span>
                     </span>
@@ -98,35 +109,32 @@ export default async function Home() {
         </div>
       )}
 
-      {featured && (
+      {featured && featuredLoc && (
         <FadeIn>
           <section className="border-b border-line pb-10">
             <div className="grid items-start gap-8 lg:grid-cols-[7fr_5fr] lg:gap-12">
               <div>
                 <div className="flex flex-wrap items-center gap-3">
                   {featured.tags[0] && <span className="nb-pill tag--hot">{featured.tags[0]}</span>}
-                  <span className="meta uppercase">{formatDate(featured.date)}</span>
+                  <span className="meta uppercase">{formatDate(featured.date, lang)}</span>
                 </div>
                 <h1 className="font-display mt-4 text-4xl leading-[1.04] tracking-tight text-balance sm:text-6xl">
                   <Link
                     href={`/articles/${featured.slug}`}
                     className="transition-colors hover:text-[var(--accent)]"
                   >
-                    {featured.title}
+                    {featuredLoc.title}
                   </Link>
                 </h1>
                 <p className="mt-5 max-w-[56ch] text-lg leading-relaxed text-[var(--ink-dim)]">
-                  {featured.excerpt}
+                  {featuredLoc.excerpt}
                 </p>
                 <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2">
                   {featured.sources.length > 0 && (
-                    <span className="meta uppercase">
-                      {featured.sources.length} source{featured.sources.length > 1 ? "s" : ""} citée
-                      {featured.sources.length > 1 ? "s" : ""}
-                    </span>
+                    <span className="meta uppercase">{t.sourcesCited(featured.sources.length)}</span>
                   )}
                   <Link href={`/articles/${featured.slug}`} className="nb-btn nb-btn-primary">
-                    Lire l&apos;article →
+                    {t.readArticle}
                   </Link>
                 </div>
               </div>
@@ -138,7 +146,7 @@ export default async function Home() {
                   >
                     <Image
                       src={featured.image}
-                      alt={featured.title}
+                      alt={featuredLoc.title}
                       fill
                       priority
                       sizes="(max-width: 1024px) 100vw, 42vw"
@@ -152,16 +160,19 @@ export default async function Home() {
             {also.length > 0 && (
               <div className="mt-9 grid gap-5 border-t border-line pt-6 sm:grid-cols-2">
                 {also.map((a) => (
-                  <article key={a.slug} className="sm:border-l sm:border-line sm:pl-5 sm:first:border-l-0 sm:first:pl-0">
+                  <article
+                    key={a.slug}
+                    className="sm:border-l sm:border-line sm:pl-5 sm:first:border-l-0 sm:first:pl-0"
+                  >
                     <span className="meta uppercase">
-                      {hourLabel(a.date)} · {a.tags[0] ?? "actu"}
+                      {hourLabel(a.date, lang)} · {a.tags[0] ?? t.news}
                     </span>
                     <h3 className="font-display mt-2 text-xl leading-snug text-balance">
                       <Link
                         href={`/articles/${a.slug}`}
                         className="transition-colors hover:text-[var(--accent)]"
                       >
-                        {a.title}
+                        {localizeMeta(a, lang).title}
                       </Link>
                     </h3>
                   </article>
@@ -179,20 +190,20 @@ export default async function Home() {
           <section>
             <div className="section-head">
               <span className="idx">01</span>
-              <h2>Les dernières 24 h</h2>
+              <h2>{t.last24h}</h2>
               <Link href="/cette-semaine" className="more">
-                Fil complet →
+                {t.fullFeed}
               </Link>
             </div>
             <div className="grid gap-x-12 lg:grid-cols-2">
               <div>
                 {last24h.slice(0, feedSplit).map((a) => (
-                  <FeedItem key={a.slug} article={a} />
+                  <FeedItem key={a.slug} article={a} lang={lang} t={t} />
                 ))}
               </div>
               <div>
                 {last24h.slice(feedSplit, 10).map((a) => (
-                  <FeedItem key={a.slug} article={a} />
+                  <FeedItem key={a.slug} article={a} lang={lang} t={t} />
                 ))}
               </div>
             </div>
@@ -204,14 +215,14 @@ export default async function Home() {
         <section>
           <div className="section-head">
             <span className="idx">02</span>
-            <h2>Actu</h2>
-            <Link href="/recherche" className="more">
-              Rechercher →
+            <h2>{t.news}</h2>
+            <Link href="/actus" className="more">
+              {t.navAllNews} →
             </Link>
           </div>
           <div className="cards-grid">
-            {rest.map((article) => (
-              <ArticleCard key={article.slug} article={article} />
+            {grid.map((article) => (
+              <ArticleCard key={article.slug} article={article} lang={lang} />
             ))}
           </div>
         </section>
@@ -224,37 +235,43 @@ export default async function Home() {
           <section className="-mx-5 bg-[var(--accent)] px-5 py-10 text-[var(--on-accent)]">
             <div className="section-head !border-t-[var(--on-accent)]">
               <span className="idx !text-[var(--on-accent)]">03</span>
-              <h2 className="!text-[var(--on-accent)]">Tutos pratiques</h2>
-              <Link href="/tutos" className="more !border-[var(--on-accent)] !text-[var(--on-accent)]">
-                Tous les tutos →
+              <h2 className="!text-[var(--on-accent)]">{t.tutosSection}</h2>
+              <Link
+                href="/tutos"
+                className="more !border-[var(--on-accent)] !text-[var(--on-accent)]"
+              >
+                {t.allTutos}
               </Link>
             </div>
             <p className="font-display -mt-1 mb-8 max-w-[30ch] text-3xl leading-tight sm:text-4xl">
-              Moins de théorie, plus de pratique. Des guides testés, pas à pas.
+              {t.tutosPitch}
             </p>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {tutos.map((tuto) => (
-                <article
-                  key={tuto.slug}
-                  className="flex flex-col border border-[var(--on-accent)] bg-[var(--bg-deep)] text-[var(--ink)] transition-transform hover:-translate-y-0.5"
-                >
-                  <div className="meta flex items-center justify-between gap-2 border-b border-line px-4 py-2.5 uppercase">
-                    <span>Guide</span>
-                    <span className="text-[var(--accent)]">{hourLabel(tuto.date)}</span>
-                  </div>
-                  <div className="flex flex-1 flex-col gap-3 p-4">
-                    <h3 className="font-display text-xl leading-snug text-balance">
-                      <Link
-                        href={`/articles/${tuto.slug}`}
-                        className="transition-colors hover:text-[var(--accent)]"
-                      >
-                        {tuto.title}
-                      </Link>
-                    </h3>
-                    <p className="line-clamp-2 text-sm text-[var(--ink-dim)]">{tuto.excerpt}</p>
-                  </div>
-                </article>
-              ))}
+              {tutos.map((tuto) => {
+                const loc = localizeMeta(tuto, lang);
+                return (
+                  <article
+                    key={tuto.slug}
+                    className="flex flex-col border border-[var(--on-accent)] bg-[var(--bg-deep)] text-[var(--ink)] transition-transform hover:-translate-y-0.5"
+                  >
+                    <div className="meta flex items-center justify-between gap-2 border-b border-line px-4 py-2.5 uppercase">
+                      <span>{t.guide}</span>
+                      <span className="text-[var(--accent)]">{hourLabel(tuto.date, lang)}</span>
+                    </div>
+                    <div className="flex flex-1 flex-col gap-3 p-4">
+                      <h3 className="font-display text-xl leading-snug text-balance">
+                        <Link
+                          href={`/articles/${tuto.slug}`}
+                          className="transition-colors hover:text-[var(--accent)]"
+                        >
+                          {loc.title}
+                        </Link>
+                      </h3>
+                      <p className="line-clamp-2 text-sm text-[var(--ink-dim)]">{loc.excerpt}</p>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           </section>
         </FadeUp>
@@ -266,7 +283,7 @@ export default async function Home() {
             <section>
               <div className="section-head">
                 <span className="idx">04</span>
-                <h2>Les plus lus</h2>
+                <h2>{t.mostRead}</h2>
               </div>
               <ol className="flex flex-col">
                 {mostViewed.map((a, i) => (
@@ -278,7 +295,7 @@ export default async function Home() {
                       href={`/articles/${a.slug}`}
                       className="font-medium transition-colors hover:text-[var(--accent)]"
                     >
-                      {a.title}
+                      {localizeMeta(a, lang).title}
                     </Link>
                   </li>
                 ))}
@@ -292,7 +309,7 @@ export default async function Home() {
             <section>
               <div className="section-head">
                 <span className="idx">→</span>
-                <h2>Explorer</h2>
+                <h2>{t.explore}</h2>
               </div>
               <div className="flex flex-wrap gap-2">
                 {tags.map(({ tag, count }) => (

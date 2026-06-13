@@ -24,6 +24,8 @@
   --err: oklch(0.72 0.2 20);
   --err-dim: oklch(0.72 0.2 20 / 0.14);
 
+  color-scheme: dark;
+
   /* alias héritage v3 (anciens composants) — mappés sur la nouvelle palette */
   --cream: var(--bg-raised);
   --cream-2: var(--bg-deep);
@@ -32,6 +34,27 @@
   --peach: var(--err-dim);
   --mint: var(--ok-dim);
   --sky: var(--accent-dim);
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  --bg: oklch(0.965 0.006 110);
+  --bg-raised: oklch(0.985 0.004 110);
+  --bg-deep: oklch(0.925 0.009 110);
+  --ink: oklch(0.2 0.012 150);
+  --ink-dim: oklch(0.42 0.014 150);
+  --ink-faint: oklch(0.56 0.012 150);
+  --line: oklch(0.87 0.012 130);
+  --line-strong: oklch(0.72 0.014 130);
+  --accent: oklch(0.55 0.17 130);
+  --accent-dim: oklch(0.55 0.17 130 / 0.1);
+  --on-accent: oklch(0.98 0.01 130);
+  --ok: oklch(0.52 0.14 150);
+  --ok-dim: oklch(0.52 0.14 150 / 0.12);
+  --warn: oklch(0.62 0.15 58);
+  --warn-dim: oklch(0.62 0.15 58 / 0.14);
+  --err: oklch(0.52 0.18 20);
+  --err-dim: oklch(0.52 0.18 20 / 0.12);
 }
 
 @theme inline {

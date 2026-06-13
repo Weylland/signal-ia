@@ -16,7 +16,7 @@ try {
   // pas de .env.local : les variables viennent de l'environnement
 }
 import { fetchOgImage } from "./og";
-import { createArticle, getAllArticles } from "../src/lib/articles";
+import { createArticle, getAllArticles, setArticleTranslation } from "../src/lib/articles";
 import { getSettings } from "../src/lib/settings";
 import { getSources, recordFetchResult } from "../src/lib/sources";
 import { getDb } from "../src/lib/db";
@@ -214,6 +214,41 @@ Le tldr résume l'essentiel en 3 phrases courtes et autonomes.`,
   };
 }
 
+async function translateArticle(
+  title: string,
+  excerpt: string,
+  markdown: string,
+  tldr: string[]
+): Promise<{ title: string; excerpt: string; markdown: string; tldr: string[] } | null> {
+  try {
+    const content = await callMistral(
+      [
+        {
+          role: "system",
+          content: `Tu traduis un article de presse du français vers l'anglais. Traduction naturelle et journalistique, pas mot à mot. Conserve la mise en forme Markdown.
+Réponds en JSON strict : {"title": "...", "excerpt": "...", "markdown": "...", "tldr": ["...", "..."]}`,
+        },
+        {
+          role: "user",
+          content: `Titre : ${title}\nChapeau : ${excerpt}\nTL;DR : ${JSON.stringify(tldr)}\n\nArticle :\n${markdown}`,
+        },
+      ],
+      true
+    );
+    const parsed = JSON.parse(content);
+    if (!parsed.title || !parsed.markdown) return null;
+    return {
+      title: parsed.title,
+      excerpt: parsed.excerpt ?? "",
+      markdown: parsed.markdown,
+      tldr: Array.isArray(parsed.tldr) ? parsed.tldr.slice(0, 3) : [],
+    };
+  } catch (error) {
+    log(`✗ traduction EN échouée : ${error instanceof Error ? error.message : error}`);
+    return null;
+  }
+}
+
 function countArticlesToday(): number {
   const db = getDb();
   const today = new Date().toISOString().slice(0, 10);
@@ -313,9 +348,19 @@ async function main() {
           score: maxScore,
         });
 
+        const en = await translateArticle(group.title, group.angle, written.markdown, written.tldr);
+        if (en) {
+          setArticleTranslation(slug, {
+            title: en.title,
+            excerpt: en.excerpt,
+            html: await marked.parse(en.markdown.trim()),
+            tldr: en.tldr,
+          });
+        }
+
         for (const item of groupItems) markDone.run(slug, item.url);
         articlesCreated++;
-        log(`✓ publié : ${slug}`);
+        log(`✓ publié : ${slug}${en ? " (+ EN)" : ""}`);
       }
     } else {
       log("Rien en file d'attente.");

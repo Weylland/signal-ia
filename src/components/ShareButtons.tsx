@@ -2,7 +2,18 @@
 
 import { useState } from "react";
 
-export function ShareButtons({ title, url }: { title: string; url: string }) {
+type Labels = { share: string; copy: string; copied: string };
+const defaults: Labels = { share: "Partager —", copy: "Copier le lien", copied: "✓ Copié" };
+
+export function ShareButtons({
+  title,
+  url,
+  labels = defaults,
+}: {
+  title: string;
+  url: string;
+  labels?: Labels;
+}) {
   const [copied, setCopied] = useState(false);
 
   async function copy() {
@@ -15,7 +26,7 @@ export function ShareButtons({ title, url }: { title: string; url: string }) {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="meta uppercase">Partager —</span>
+      <span className="meta uppercase">{labels.share}</span>
       <a
         href={`https://x.com/intent/tweet?text=${encoded.title}&url=${encoded.url}`}
         target="_blank"
@@ -33,7 +44,7 @@ export function ShareButtons({ title, url }: { title: string; url: string }) {
         LinkedIn
       </a>
       <button onClick={copy} className="nb-btn px-3 py-1.5 text-xs">
-        {copied ? "✓ Copié" : "Copier le lien"}
+        {copied ? labels.copied : labels.copy}
       </button>
     </div>
   );

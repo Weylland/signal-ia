@@ -2,13 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAllTags, getArticlesByTag } from "@/lib/articles";
+import { getLang, getDict } from "@/lib/i18n";
 import { ArticleCard } from "@/components/ArticleCard";
+import { Pagination, paginate, parsePage } from "@/components/Pagination";
 import { FadeUp } from "@/components/Reveal";
 
-export async function generateStaticParams() {
-  const tags = await getAllTags();
-  return tags.map(({ tag }) => ({ tag }));
-}
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: PageProps<"/tags/[tag]">): Promise<Metadata> {
   const { tag } = await params;
@@ -19,30 +18,67 @@ export async function generateMetadata({ params }: PageProps<"/tags/[tag]">): Pr
   };
 }
 
-export default async function TagPage({ params }: PageProps<"/tags/[tag]">) {
+export default async function TagPage({ params, searchParams }: PageProps<"/tags/[tag]">) {
   const { tag } = await params;
+  const sp = await searchParams;
   const decoded = decodeURIComponent(tag);
+  const page = parsePage(sp.page);
+  const lang = await getLang();
+  const t = getDict(lang);
+
   const articles = await getArticlesByTag(decoded);
   if (articles.length === 0) notFound();
+  const { slice, totalPages } = paginate(articles, page);
+
+  const otherTags = (await getAllTags()).filter(({ tag: name }) => name !== decoded).slice(0, 12);
 
   return (
     <div>
-      <Link href="/" className="nb-navlink text-sm font-semibold">
-        ← Toutes les actualités
-      </Link>
-      <h1 className="mb-8 mt-4 font-display text-3xl font-bold sm:text-4xl">
-        <span className="highlight">#{decoded}</span>
-        <span className="ml-3 align-middle font-sans text-base font-normal">
-          {articles.length} article{articles.length > 1 ? "s" : ""}
-        </span>
-      </h1>
-      <div className="grid gap-7 sm:grid-cols-2 lg:grid-cols-3">
-        {articles.map((article, i) => (
-          <FadeUp key={article.slug} delay={Math.min(i * 0.06, 0.3)}>
-            <ArticleCard article={article} />
+      <FadeUp>
+        <header className="mb-10">
+          <Link href="/" className="meta uppercase transition-colors hover:text-[var(--accent)]">
+            ← {t.navNews}
+          </Link>
+          <h1 className="font-display mt-3 text-4xl tracking-tight sm:text-5xl">
+            <span className="text-[var(--accent)]">#</span>
+            {decoded}
+          </h1>
+          <p className="meta mt-3 uppercase">{t.tagIntro(articles.length, decoded)}</p>
+        </header>
+      </FadeUp>
+
+      <div className="cards-grid">
+        {slice.map((article, i) => (
+          <FadeUp key={article.slug} delay={Math.min(i * 0.05, 0.25)} className="h-full">
+            <ArticleCard article={article} lang={lang} />
           </FadeUp>
         ))}
       </div>
+
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        basePath={`/tags/${encodeURIComponent(decoded)}`}
+        t={t}
+      />
+
+      {otherTags.length > 0 && (
+        <FadeUp>
+          <section className="mt-12">
+            <div className="section-head">
+              <span className="idx">→</span>
+              <h2>{t.otherTags}</h2>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {otherTags.map(({ tag: name, count }) => (
+                <Link key={name} href={`/tags/${encodeURIComponent(name)}`} className="nb-pill">
+                  {name} <span className="ml-1.5 text-[var(--accent)]">{count}</span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        </FadeUp>
+      )}
     </div>
   );
 }
