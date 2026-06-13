@@ -9,15 +9,38 @@ export default async function AdminArticlesPage({
   const params = await searchParams;
   const search = typeof params.q === "string" ? params.q : "";
   const filter = typeof params.statut === "string" ? params.statut : "tous";
+  const perPage = [10, 20, 30].includes(Number(params.par_page))
+    ? Number(params.par_page)
+    : 20;
+  const page = Math.max(1, parseInt(typeof params.page === "string" ? params.page : "1") || 1);
 
   let articles = await getAllArticles({ includeDrafts: true, search: search || undefined });
   if (filter === "publies") articles = articles.filter((a) => a.published);
   if (filter === "brouillons") articles = articles.filter((a) => !a.published);
 
+  const totalPages = Math.max(1, Math.ceil(articles.length / perPage));
+  const currentPage = Math.min(page, totalPages);
+  const slice = articles.slice((currentPage - 1) * perPage, currentPage * perPage);
+
+  function pageHref(p: number) {
+    const qs = new URLSearchParams();
+    if (search) qs.set("q", search);
+    if (filter !== "tous") qs.set("statut", filter);
+    if (perPage !== 20) qs.set("par_page", String(perPage));
+    if (p > 1) qs.set("page", String(p));
+    const s = qs.toString();
+    return `/admin/articles${s ? `?${s}` : ""}`;
+  }
+
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="font-display text-3xl font-bold">Articles</h1>
+        <h1 className="font-display text-3xl font-bold">
+          Articles
+          <span className="ml-3 font-sans text-base font-normal text-[var(--ink-dim)]">
+            {articles.length} au total
+          </span>
+        </h1>
         <Link href="/admin/articles/new" className="nb-btn nb-btn-primary text-sm">
           + Nouvel article
         </Link>
@@ -36,6 +59,11 @@ export default async function AdminArticlesPage({
           <option value="publies">Publiés</option>
           <option value="brouillons">Brouillons</option>
         </select>
+        <select name="par_page" defaultValue={String(perPage)} className="field max-w-36">
+          <option value="10">10 par page</option>
+          <option value="20">20 par page</option>
+          <option value="30">30 par page</option>
+        </select>
         <button type="submit" className="nb-btn text-sm">
           Filtrer
         </button>
@@ -53,7 +81,7 @@ export default async function AdminArticlesPage({
             </tr>
           </thead>
           <tbody className="divide-y-2 divide-ink/10">
-            {articles.map((article) => (
+            {slice.map((article) => (
               <tr key={article.slug}>
                 <td className="px-4 py-3 font-semibold">{article.title}</td>
                 <td className="px-4 py-3">
@@ -89,7 +117,7 @@ export default async function AdminArticlesPage({
                 </td>
               </tr>
             ))}
-            {articles.length === 0 && (
+            {slice.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-4 py-8 text-center">
                   Aucun article trouvé.
@@ -99,6 +127,28 @@ export default async function AdminArticlesPage({
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 && (
+        <nav className="mt-6 flex items-center justify-between gap-4 border-t border-line pt-5">
+          {currentPage > 1 ? (
+            <Link href={pageHref(currentPage - 1)} className="nb-btn text-xs">
+              ← Précédent
+            </Link>
+          ) : (
+            <span />
+          )}
+          <span className="meta uppercase">
+            Page {currentPage} / {totalPages}
+          </span>
+          {currentPage < totalPages ? (
+            <Link href={pageHref(currentPage + 1)} className="nb-btn text-xs">
+              Suivant →
+            </Link>
+          ) : (
+            <span />
+          )}
+        </nav>
+      )}
     </div>
   );
 }

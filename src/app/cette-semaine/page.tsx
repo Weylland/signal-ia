@@ -33,15 +33,36 @@ export default async function CetteSemainePage() {
   return (
     <div className="mx-auto max-w-3xl">
       <FadeUp>
-        <header className="mb-10">
+        <header className="mb-8">
           <h1 className="font-display text-4xl tracking-tight sm:text-5xl">{t.weekTitle}</h1>
           <p className="mt-4 leading-relaxed text-[var(--ink-dim)]">{t.weekIntro}</p>
-          <p className="meta mt-4 flex gap-5 uppercase">
-            <span className="text-[var(--accent)]">{t.weekArticles(articles.length)}</span>
-            {distinctSources > 0 && <span>{t.source(distinctSources)}</span>}
-          </p>
         </header>
       </FadeUp>
+
+      {articles.length > 0 && (
+        <FadeUp delay={0.05}>
+          <div className="mb-10 grid grid-cols-3 divide-x-2 divide-ink border-2 border-ink shadow-[4px_4px_0_var(--ink)]">
+            <div className="p-5 text-center">
+              <p className="font-display text-4xl font-bold text-[var(--accent)]">
+                {articles.length}
+              </p>
+              <p className="meta mt-1 uppercase">{lang === "en" ? "Articles" : "Articles"}</p>
+            </div>
+            <div className="p-5 text-center">
+              <p className="font-display text-4xl font-bold text-[var(--accent)]">
+                {days.length}
+              </p>
+              <p className="meta mt-1 uppercase">{lang === "en" ? "Days" : "Jours"}</p>
+            </div>
+            <div className="p-5 text-center">
+              <p className="font-display text-4xl font-bold text-[var(--accent)]">
+                {distinctSources}
+              </p>
+              <p className="meta mt-1 uppercase">{lang === "en" ? "Sources" : "Sources"}</p>
+            </div>
+          </div>
+        </FadeUp>
+      )}
 
       {days.length === 0 ? (
         <p className="nb-card max-w-md p-6 text-sm">{t.weekEmpty}</p>

@@ -30,15 +30,20 @@ export function BookmarkButton({ slug, title, lang }: { slug: string; title: str
     setSaved(!exists);
   }
 
+  const label = saved
+    ? (lang === "en" ? "Saved" : "Sauvegardé")
+    : (lang === "en" ? "Save" : "Sauvegarder");
+
   return (
     <button
       type="button"
       onClick={toggle}
-      aria-label={saved ? (lang === "en" ? "Remove bookmark" : "Retirer des favoris") : (lang === "en" ? "Bookmark" : "Sauvegarder")}
-      className="meta shrink-0 transition-colors hover:text-[var(--accent)]"
-      title={saved ? (lang === "en" ? "Remove bookmark" : "Retirer des favoris") : (lang === "en" ? "Add to bookmarks" : "Ajouter aux favoris")}
+      aria-label={label}
+      title={label}
+      className={`meta flex shrink-0 items-center gap-1 transition-colors hover:text-[var(--accent)] ${saved ? "text-[var(--accent)]" : ""}`}
     >
-      {saved ? "★" : "☆"}
+      <span className="text-sm">{saved ? "★" : "☆"}</span>
+      <span className="hidden sm:inline">{label}</span>
     </button>
   );
 }

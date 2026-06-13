@@ -162,5 +162,16 @@ export function getDb(): Database.Database {
   addColumnIfMissing(db, "sources", "article_count", "INTEGER NOT NULL DEFAULT 0");
   addColumnIfMissing(db, "sources", "avg_score", "REAL");
 
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS contact_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      message TEXT NOT NULL,
+      read INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    );
+  `);
+
   return db;
 }

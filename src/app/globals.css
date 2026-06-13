@@ -393,7 +393,7 @@ a.nb-pill:hover {
   display: flex;
   flex: none;
   align-items: center;
-  animation: reel 38s linear infinite;
+  animation: reel 80s linear infinite;
 }
 .breaking-bar .track:hover .reel {
   animation-play-state: paused;

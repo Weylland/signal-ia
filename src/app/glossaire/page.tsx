@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getGlossary } from "@/lib/glossary";
 import { getLang, getDict } from "@/lib/i18n";
 import { FadeUp } from "@/components/Reveal";
+import { GlossaireFilter } from "@/components/GlossaireFilter";
 
 export const dynamic = "force-dynamic";
 
@@ -16,12 +17,13 @@ export default async function GlossairePage() {
   const lang = await getLang();
   const t = getDict(lang);
 
-  const byLetter = new Map<string, typeof entries>();
+  const byLetterMap = new Map<string, typeof entries>();
   for (const entry of entries) {
     const letter = entry.term[0].toUpperCase();
-    byLetter.set(letter, [...(byLetter.get(letter) ?? []), entry]);
+    byLetterMap.set(letter, [...(byLetterMap.get(letter) ?? []), entry]);
   }
-  const letters = [...byLetter.keys()].sort();
+  const letters = [...byLetterMap.keys()].sort();
+  const byLetter = Object.fromEntries(byLetterMap);
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -51,45 +53,30 @@ export default async function GlossairePage() {
         </header>
       </FadeUp>
 
-      <FadeUp>
-        <nav
-          className="mb-10 flex flex-wrap gap-1.5 border-y border-line py-3"
-          aria-label="Index alphabétique"
-        >
-          {letters.map((letter) => (
-            <a key={letter} href={`#lettre-${letter}`} className="nb-btn px-2.5 py-1 text-xs">
-              {letter}
-            </a>
-          ))}
-        </nav>
-      </FadeUp>
+      {letters.length > 0 && (
+        <FadeUp>
+          <nav
+            className="mb-6 flex flex-wrap gap-1.5 border-y border-line py-3"
+            aria-label="Index alphabétique"
+          >
+            {letters.map((letter) => (
+              <a key={letter} href={`#lettre-${letter}`} className="nb-btn px-2.5 py-1 text-xs">
+                {letter}
+              </a>
+            ))}
+          </nav>
+        </FadeUp>
+      )}
 
-      <div className="flex flex-col gap-12">
-        {letters.map((letter) => (
-          <section key={letter} id={`lettre-${letter}`} className="scroll-mt-24">
-            <div className="section-head">
-              <span className="idx">{letter}</span>
-              <h2>{byLetter.get(letter)!.length} {lang === "en" ? "term(s)" : "terme(s)"}</h2>
-            </div>
-            <div className="flex flex-col gap-5">
-              {byLetter.get(letter)!.map((entry, i) => {
-                const defHtml = lang === "en" && entry.definitionEnHtml ? entry.definitionEnHtml : entry.definitionHtml;
-                return (
-                  <FadeUp key={entry.id} delay={Math.min(i * 0.03, 0.15)}>
-                    <section id={entry.slug} className="nb-card scroll-mt-24 p-6">
-                      <h3 className="font-display text-xl">{entry.term}</h3>
-                      <div
-                        className="mt-2 text-sm leading-relaxed text-[var(--ink-dim)]"
-                        dangerouslySetInnerHTML={{ __html: defHtml }}
-                      />
-                    </section>
-                  </FadeUp>
-                );
-              })}
-            </div>
-          </section>
-        ))}
-      </div>
+      <GlossaireFilter
+        entries={entries}
+        letters={letters}
+        byLetter={byLetter}
+        lang={lang}
+        placeholder={t.glossaryFilterPlaceholder}
+        noResult={t.glossaryNoResult}
+        termLabel={t.terms}
+      />
     </div>
   );
 }

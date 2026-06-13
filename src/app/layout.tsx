@@ -3,6 +3,7 @@ import { Instrument_Serif, Instrument_Sans, IBM_Plex_Mono } from "next/font/goog
 import Link from "next/link";
 import { NewsletterForm } from "@/components/NewsletterForm";
 import { ThemeToggle, LangSwitcher } from "@/components/TopbarControls";
+import { NavMenu } from "@/components/NavMenu";
 import { getLang, getDict } from "@/lib/i18n";
 import "./globals.css";
 
@@ -103,27 +104,8 @@ export default async function RootLayout({
         <header className="border-b border-line">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-8 gap-y-3 px-5 py-4">
             <Logo className="text-3xl sm:text-4xl" />
-            <nav className="order-3 flex w-full items-center gap-5 overflow-x-auto sm:order-none sm:w-auto sm:gap-7">
-              <Link href="/" className="mainnav-link">
-                {t.navNews}
-              </Link>
-              <Link href="/tutos" className="mainnav-link">
-                {t.navTutos}
-              </Link>
-              <Link href="/glossaire" className="mainnav-link">
-                {t.navGlossary}
-              </Link>
-              <Link href="/cette-semaine" className="mainnav-link">
-                {t.navWeek}
-              </Link>
-              <Link href="/trending" className="mainnav-link">
-                {lang === "en" ? "Trending" : "Tendances"}
-              </Link>
-            </nav>
+            <NavMenu t={t} lang={lang} />
             <div className="ml-auto flex items-center gap-3">
-              <Link href="/recherche" className="nb-btn px-3 py-1.5 text-xs">
-                {t.navSearch}
-              </Link>
               <a href="/flux.xml" className="nb-btn hidden px-3 py-1.5 text-xs sm:inline-flex">
                 RSS
               </a>
@@ -158,6 +140,7 @@ export default async function RootLayout({
                 <li><Link href="/recherche" className="nb-navlink">{t.footerSearch}</Link></li>
                 <li><Link href="/sources" className="nb-navlink">{t.footerSources}</Link></li>
                 <li><Link href="/a-propos" className="nb-navlink">{t.footerAbout}</Link></li>
+                <li><Link href="/contact" className="nb-navlink">{t.footerContact}</Link></li>
                 <li><a href="/flux.xml" className="nb-navlink">{t.footerRss}</a></li>
               </ul>
             </div>
