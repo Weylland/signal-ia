@@ -11,6 +11,8 @@ type NavLabels = {
   trending: string;
   tutos: string;
   glossary: string;
+  sources: string;
+  about: string;
 };
 
 export function NavMenu({ labels }: { labels: NavLabels }) {
@@ -35,12 +37,9 @@ export function NavMenu({ labels }: { labels: NavLabels }) {
 
   return (
     <nav className="order-3 flex w-full items-center gap-5 overflow-x-auto sm:order-none sm:w-auto sm:gap-7">
-      <div
-        ref={ref}
-        className="relative"
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
-      >
+      {/* Le survol est géré en CSS pur (group-hover) → fiable, sans timing JS.
+          Le clic sur le caret gère le tactile via l'état `open`. */}
+      <div ref={ref} className="group relative">
         <span className="flex items-center">
           <Link href="/actus" className="mainnav-link">
             {labels.news}
@@ -55,27 +54,29 @@ export function NavMenu({ labels }: { labels: NavLabels }) {
             <span className="text-[10px] opacity-60">▾</span>
           </button>
         </span>
-        {open && (
-          // pt-2 fait le pont sous le bouton : pas de zone morte qui referme au survol
-          <div className="absolute left-0 top-full z-50 pt-2">
-            <div className="min-w-[190px] border-2 border-ink bg-[var(--bg)] shadow-[4px_4px_0_var(--ink)]">
-              {items.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="block px-4 py-2.5 text-sm font-medium hover:bg-[var(--accent)] hover:text-[var(--on-accent)]"
-                  onClick={() => setOpen(false)}
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </div>
+        {/* pt-2 fait le pont sous le bouton sans zone morte ; hidden + group-hover:block */}
+        <div
+          className={`absolute left-0 top-full z-50 pt-2 ${open ? "block" : "hidden"} group-hover:block`}
+        >
+          <div className="min-w-[190px] border-2 border-ink bg-[var(--bg)] shadow-[4px_4px_0_var(--ink)]">
+            {items.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="block px-4 py-2.5 text-sm font-medium hover:bg-[var(--accent)] hover:text-[var(--on-accent)]"
+                onClick={() => setOpen(false)}
+              >
+                {item.label}
+              </Link>
+            ))}
           </div>
-        )}
+        </div>
       </div>
 
       <Link href="/tutos" className="mainnav-link">{labels.tutos}</Link>
       <Link href="/glossaire" className="mainnav-link">{labels.glossary}</Link>
+      <Link href="/sources" className="mainnav-link">{labels.sources}</Link>
+      <Link href="/a-propos" className="mainnav-link">{labels.about}</Link>
     </nav>
   );
 }

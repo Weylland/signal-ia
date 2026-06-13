@@ -113,6 +113,8 @@ export default async function RootLayout({
                 trending: t.navTrending,
                 tutos: t.navTutos,
                 glossary: t.navGlossary,
+                sources: t.footerSources,
+                about: t.footerAbout,
               }}
             />
             <div className="ml-auto flex items-center gap-3">
