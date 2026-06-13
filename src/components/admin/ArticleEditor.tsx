@@ -184,7 +184,7 @@ export function ArticleEditor({ slug, initial }: EditorProps) {
             key={t}
             type="button"
             onClick={() => setType(t)}
-            className={`nb-btn text-sm ${type === t ? "bg-[var(--sunshine)]" : ""}`}
+            className={`nb-btn text-sm ${type === t ? "nb-btn-primary" : "opacity-50"}`}
           >
             {t === "news" ? "📰 Actu" : "🎓 Tuto"}
           </button>
