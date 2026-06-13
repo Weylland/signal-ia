@@ -1,12 +1,7 @@
-"use client";
-
-import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 
 type NavLabels = {
   news: string;
-  latest: string;
-  allNews: string;
   week: string;
   trending: string;
   tutos: string;
@@ -16,67 +11,23 @@ type NavLabels = {
 };
 
 export function NavMenu({ labels }: { labels: NavLabels }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    function onPointerDown(e: PointerEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("pointerdown", onPointerDown);
-    return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, [open]);
-
-  const items = [
-    { href: "/", label: labels.latest },
-    { href: "/actus", label: labels.allNews },
+  const links = [
+    { href: "/actus", label: labels.news },
     { href: "/cette-semaine", label: labels.week },
     { href: "/trending", label: labels.trending },
+    { href: "/tutos", label: labels.tutos },
+    { href: "/glossaire", label: labels.glossary },
+    { href: "/sources", label: labels.sources },
+    { href: "/a-propos", label: labels.about },
   ];
 
   return (
-    <nav className="order-3 flex w-full items-center gap-5 overflow-x-auto sm:order-none sm:w-auto sm:gap-7">
-      {/* Le survol est géré en CSS pur (group-hover) → fiable, sans timing JS.
-          Le clic sur le caret gère le tactile via l'état `open`. */}
-      <div ref={ref} className="group relative">
-        <span className="flex items-center">
-          <Link href="/actus" className="mainnav-link">
-            {labels.news}
-          </Link>
-          <button
-            type="button"
-            className="mainnav-link px-1"
-            onClick={() => setOpen((o) => !o)}
-            aria-expanded={open}
-            aria-label={labels.news}
-          >
-            <span className="text-[10px] opacity-60">▾</span>
-          </button>
-        </span>
-        {/* pt-2 fait le pont sous le bouton sans zone morte ; hidden + group-hover:block */}
-        <div
-          className={`absolute left-0 top-full z-50 pt-2 ${open ? "block" : "hidden"} group-hover:block`}
-        >
-          <div className="min-w-[190px] border-2 border-ink bg-[var(--bg)] shadow-[4px_4px_0_var(--ink)]">
-            {items.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="block px-4 py-2.5 text-sm font-medium hover:bg-[var(--accent)] hover:text-[var(--on-accent)]"
-                onClick={() => setOpen(false)}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <Link href="/tutos" className="mainnav-link">{labels.tutos}</Link>
-      <Link href="/glossaire" className="mainnav-link">{labels.glossary}</Link>
-      <Link href="/sources" className="mainnav-link">{labels.sources}</Link>
-      <Link href="/a-propos" className="mainnav-link">{labels.about}</Link>
+    <nav className="order-3 flex w-full items-center gap-5 overflow-x-auto sm:order-none sm:w-auto sm:gap-6">
+      {links.map((link) => (
+        <Link key={link.href} href={link.href} className="mainnav-link whitespace-nowrap">
+          {link.label}
+        </Link>
+      ))}
     </nav>
   );
 }

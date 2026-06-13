@@ -107,13 +107,11 @@ export default async function RootLayout({
             <NavMenu
               labels={{
                 news: t.navNews,
-                latest: lang === "en" ? "Latest" : "Dernières actus",
-                allNews: t.navAllNews,
                 week: t.navWeek,
                 trending: t.navTrending,
                 tutos: t.navTutos,
                 glossary: t.navGlossary,
-                sources: t.footerSources,
+                sources: lang === "en" ? "Sources" : "Sources",
                 about: t.footerAbout,
               }}
             />
