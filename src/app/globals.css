@@ -124,6 +124,7 @@
   --color-accent: var(--ac);
   --font-sans: var(--ff-h);
   --font-display: var(--ff-h);
+  --font-serif: var(--ff-b);
   --font-mono: var(--ff-m);
   --radius: 0px;
 }

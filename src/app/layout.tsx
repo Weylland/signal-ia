@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 import { Space_Grotesk, Lora, JetBrains_Mono } from "next/font/google";
 import Link from "next/link";
 import { NewsletterForm } from "@/components/NewsletterForm";
-import { ThemeToggle, LangSwitcher } from "@/components/TopbarControls";
-import { NavMenu } from "@/components/NavMenu";
-import { MobileMenu } from "@/components/MobileMenu";
+import { SiteHeader } from "@/components/SiteHeader";
+import { Ticker, type TickerItem } from "@/components/Ticker";
 import { CommandPalette } from "@/components/CommandPalette";
+import { getBreakingArticles, localizeMeta } from "@/lib/articles";
 import { getLang, getDict } from "@/lib/i18n";
 import "./globals.css";
 
@@ -72,28 +72,35 @@ export default async function RootLayout({
 }>) {
   const lang = await getLang();
   const t = getDict(lang);
+  const locale = lang === "en" ? "en-GB" : "fr-FR";
 
-  const today = new Date().toLocaleDateString(lang === "en" ? "en-GB" : "fr-FR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-
-  // Liste partagée par le menu burger et la command palette
-  const pages = [
-    { href: "/", label: t.home },
+  // Liens de la nav principale (header desktop + drawer mobile)
+  const navLinks = [
     { href: "/actus", label: t.navAllNews },
-    { href: "/cette-semaine", label: t.navWeek },
-    { href: "/trending", label: t.navTrending },
     { href: "/tutos", label: t.navTutos },
     { href: "/glossaire", label: t.navGlossary },
+    { href: "/cette-semaine", label: t.navWeek },
+    { href: "/trending", label: t.navTrending },
     { href: "/sources", label: t.footerSources },
+  ];
+
+  // Liste complète pour la command palette
+  const pages = [
+    { href: "/", label: t.home },
+    ...navLinks,
     { href: "/recherche", label: t.searchTitle },
     { href: "/favoris", label: t.favoritesTitle },
     { href: "/a-propos", label: t.footerAbout },
     { href: "/contact", label: t.contactTitle },
   ];
+
+  // Ticker d'alertes (breaking)
+  const breaking = await getBreakingArticles();
+  const tickerItems: TickerItem[] = breaking.map((a) => ({
+    slug: a.slug,
+    title: localizeMeta(a, lang).title,
+    time: new Date(a.date).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" }),
+  }));
 
   return (
     <html
@@ -106,108 +113,97 @@ export default async function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: swInit }} />
         <div className="grain-layer" aria-hidden="true" />
 
-        <div className="border-b border-line">
-          <div className="meta mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-1.5 uppercase">
-            <span>
-              <span className="live-dot" />
-              {t.topbarEdition} — {today}
-            </span>
-            <span className="flex items-center gap-4">
-              <span className="hidden sm:inline">{t.topbarTag}</span>
-              <ThemeToggle />
-              <LangSwitcher lang={lang} />
-            </span>
-          </div>
-        </div>
-
-        <header className="border-b border-line">
-          <div className="mx-auto flex max-w-6xl items-center gap-x-8 px-5 py-4">
-            <Logo className="text-3xl sm:text-4xl" />
-            <NavMenu
-              labels={{
-                news: t.navNews,
-                week: t.navWeek,
-                trending: t.navTrending,
-                tutos: t.navTutos,
-                glossary: t.navGlossary,
-                sources: lang === "en" ? "Sources" : "Sources",
-                about: t.footerAbout,
-              }}
-            />
-            <div className="ml-auto flex items-center gap-3">
-              <Link
-                href="/favoris"
-                className="hidden text-lg sm:inline"
-                title={t.favoritesTitle}
-                aria-label={t.favoritesTitle}
-              >
-                ★
-              </Link>
-              <Link href="/recherche" className="nb-btn hidden px-3 py-1.5 text-xs sm:inline-flex">
-                {t.navSearch}
-              </Link>
-              <a href="/flux.xml" className="nb-btn hidden px-3 py-1.5 text-xs sm:inline-flex">
-                RSS
-              </a>
-              <MobileMenu
-                pages={pages}
-                labels={{ menu: t.menu, close: t.close, search: t.navSearch, rss: "RSS" }}
-              />
-            </div>
-          </div>
-        </header>
+        <Ticker items={tickerItems} label={t.breaking} />
+        <SiteHeader
+          links={navLinks}
+          lang={lang}
+          labels={{
+            search: t.navSearch,
+            favorites: t.favoritesTitle,
+            menu: t.menu,
+            close: t.close,
+          }}
+        />
 
         <main className="mx-auto w-full max-w-6xl flex-1 px-5 py-10">{children}</main>
 
-        <footer className="border-t border-line bg-[var(--bg-deep)]">
-          <div className="mx-auto grid max-w-6xl gap-10 px-5 py-12 sm:grid-cols-2 lg:grid-cols-4">
-            <div>
-              <Logo className="text-2xl" />
-              <p className="mt-3 max-w-xs text-sm leading-relaxed text-[var(--ink-dim)]">
-                {t.footerDesc}
-              </p>
+        <footer
+          className="has-scanlines mt-auto border-t border-line"
+          style={{ background: "var(--bg-d)" }}
+        >
+          <div className="wrap" style={{ paddingTop: "var(--s9)", paddingBottom: "var(--s6)" }}>
+            <div className="mb-12 grid gap-12 [grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]">
+              <div className="flex flex-col gap-4">
+                <Logo className="text-[22px]" />
+                <p className="max-w-[220px] font-serif text-sm leading-relaxed text-[var(--ink-d)]">
+                  {t.footerDesc}
+                </p>
+                <p className="flex items-center gap-1.5 font-mono text-[11px] text-[var(--ok)]">
+                  <span className="s-ok" />
+                  {lang === "en" ? "All systems operational" : "Tous systèmes opérationnels"}
+                </p>
+              </div>
+
+              <div>
+                <p className="mb-4 font-mono text-[9px] uppercase tracking-[0.12em] text-[var(--ink-f)]">
+                  {t.footerSections}
+                </p>
+                <div className="flex flex-col gap-3">
+                  {[
+                    [t.navAllNews, "/actus"],
+                    [t.navTutos, "/tutos"],
+                    [t.navGlossary, "/glossaire"],
+                    [t.navWeek, "/cette-semaine"],
+                    [t.navTrending, "/trending"],
+                  ].map(([l, p]) => (
+                    <Link key={p} href={p} className="w-fit text-sm text-[var(--ink-d)] transition-colors hover:text-[var(--ink)]">
+                      {l}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="mb-4 font-mono text-[9px] uppercase tracking-[0.12em] text-[var(--ink-f)]">
+                  {t.footerFollow}
+                </p>
+                <div className="flex flex-col gap-3">
+                  {[
+                    [t.footerAbout, "/a-propos"],
+                    [t.footerSources, "/sources"],
+                    [t.footerContact, "/contact"],
+                    [t.favoritesTitle, "/favoris"],
+                  ].map(([l, p]) => (
+                    <Link key={p} href={p} className="w-fit text-sm text-[var(--ink-d)] transition-colors hover:text-[var(--ink)]">
+                      {l}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="mb-4 font-mono text-[9px] uppercase tracking-[0.12em] text-[var(--ink-f)]">
+                  {t.newsletterTitle}
+                </p>
+                <p className="mb-3 font-serif text-[13px] leading-relaxed text-[var(--ink-d)]">
+                  {t.newsletterPitch}
+                </p>
+                <NewsletterForm
+                  labels={{ subscribe: t.subscribe, subscribed: t.subscribed, error: t.emailError }}
+                />
+              </div>
             </div>
-            <div className="text-sm">
-              <p className="meta mb-4 font-semibold uppercase">{t.footerSections}</p>
-              <ul className="flex flex-col gap-2 text-[var(--ink-dim)]">
-                <li><Link href="/" className="nb-navlink">{t.navNews}</Link></li>
-                <li><Link href="/actus" className="nb-navlink">{t.navAllNews}</Link></li>
-                <li><Link href="/tutos" className="nb-navlink">{t.navTutos}</Link></li>
-                <li><Link href="/glossaire" className="nb-navlink">{t.navGlossary}</Link></li>
-                <li><Link href="/cette-semaine" className="nb-navlink">{t.navWeek}</Link></li>
-                <li><Link href="/trending" className="nb-navlink">{lang === "en" ? "Trending" : "Tendances"}</Link></li>
-              </ul>
-            </div>
-            <div className="text-sm">
-              <p className="meta mb-4 font-semibold uppercase">{t.footerFollow}</p>
-              <ul className="flex flex-col gap-2 text-[var(--ink-dim)]">
-                <li><Link href="/recherche" className="nb-navlink">{t.footerSearch}</Link></li>
-                <li><Link href="/sources" className="nb-navlink">{t.footerSources}</Link></li>
-                <li><Link href="/a-propos" className="nb-navlink">{t.footerAbout}</Link></li>
-                <li><Link href="/contact" className="nb-navlink">{t.footerContact}</Link></li>
-                <li><a href="/flux.xml" className="nb-navlink">{t.footerRss}</a></li>
-              </ul>
-            </div>
-            <div className="text-sm">
-              <p className="meta mb-4 font-semibold uppercase">{t.newsletterTitle}</p>
-              <p className="mb-3 text-xs leading-relaxed text-[var(--ink-dim)]">
-                {t.newsletterPitch}
-              </p>
-              <NewsletterForm
-                labels={{ subscribe: t.subscribe, subscribed: t.subscribed, error: t.emailError }}
-              />
-            </div>
-          </div>
-          <div className="border-t border-line">
-            <div className="meta mx-auto flex max-w-6xl flex-wrap justify-between gap-x-5 gap-y-2 px-5 py-4 uppercase">
-              <span>
+
+            <div className="flex flex-wrap items-center justify-between gap-4 border-t border-line pt-6">
+              <span className="font-mono text-[11px] text-[var(--ink-f)]">
                 © {new Date().getFullYear()} signal·ia — {t.footerRights}
               </span>
-              <span className="flex gap-4">
-                <Link href="/mentions-legales" className="hover:text-[var(--accent)]">
+              <span className="flex gap-5 font-mono text-[11px] text-[var(--ink-f)]">
+                <a href="/flux.xml" className="transition-colors hover:text-[var(--ac)]">RSS ↗</a>
+                <Link href="/mentions-legales" className="transition-colors hover:text-[var(--ac)]">
                   {t.footerLegal}
                 </Link>
-                <Link href="/confidentialite" className="hover:text-[var(--accent)]">
+                <Link href="/confidentialite" className="transition-colors hover:text-[var(--ac)]">
                   {t.footerPrivacy}
                 </Link>
               </span>

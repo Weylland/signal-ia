@@ -3,7 +3,6 @@ import Link from "next/link";
 import {
   getAllArticles,
   getAllTags,
-  getBreakingArticles,
   getMostViewedArticles,
   localizeMeta,
   formatDate,
@@ -58,10 +57,9 @@ export default async function Home() {
     );
   }
 
-  const [articles, tags, breaking, mostViewed, tutos] = await Promise.all([
+  const [articles, tags, mostViewed, tutos] = await Promise.all([
     getAllArticles({ type: "news" }),
     getAllTags(),
-    getBreakingArticles(),
     getMostViewedArticles(4),
     getAllArticles({ type: "tuto", limit: 3 }),
   ]);
@@ -84,35 +82,6 @@ export default async function Home() {
 
   return (
     <div className="flex flex-col gap-12">
-      {breaking.length > 0 && (
-        <div className="breaking-bar -mx-5 -mt-10" role="region" aria-label={t.breaking}>
-          <div className="label">
-            <span className="blink" />
-            {t.breaking}
-          </div>
-          <div className="track">
-            <div className="reel">
-              {[false, true].map((hidden) => (
-                <span
-                  key={String(hidden)}
-                  aria-hidden={hidden || undefined}
-                  className="flex items-center"
-                >
-                  {breaking.map((a) => (
-                    <span key={a.slug} className="flex items-center">
-                      <Link href={`/articles/${a.slug}`} className="item">
-                        <b>{hourLabel(a.date, lang)}</b> — {localizeMeta(a, lang).title}
-                      </Link>
-                      <span className="sep">///</span>
-                    </span>
-                  ))}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
       {featured && featuredLoc && (
         <FadeIn>
           <section className="border-b border-line pb-10">
