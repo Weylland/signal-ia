@@ -77,11 +77,14 @@ export default async function RecherchePage({ searchParams }: PageProps<"/recher
                   <h2>{t.searchHint}</h2>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {tags.map(({ tag, count }) => (
-                    <Link key={tag} href={`/tags/${encodeURIComponent(tag)}`} className="nb-pill">
-                      {tag} <span className="ml-1.5 text-[var(--accent)]">{count}</span>
-                    </Link>
-                  ))}
+                  {tags
+                    .filter((t) => t.count >= 2)
+                    .slice(0, 30)
+                    .map(({ tag, count }) => (
+                      <Link key={tag} href={`/tags/${encodeURIComponent(tag)}`} className="nb-pill">
+                        {tag} <span className="ml-1.5 text-[var(--accent)]">{count}</span>
+                      </Link>
+                    ))}
                 </div>
               </section>
             </FadeUp>

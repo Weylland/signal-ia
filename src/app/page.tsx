@@ -70,6 +70,10 @@ export default async function Home() {
     return <p className="text-sm">{t.noArticles}</p>;
   }
 
+  // On évite le mur de tags : on garde les plus récurrents (≥ 2), plafonné.
+  const recurringTags = tags.filter((t) => t.count >= 2);
+  const exploreTags = (recurringTags.length > 0 ? recurringTags : tags).slice(0, 18);
+
   const [featured, second, third, ...rest] = articles;
   const featuredLoc = featured ? localizeMeta(featured, lang) : null;
   const also = [second, third].filter(Boolean) as ArticleMeta[];
@@ -310,9 +314,10 @@ export default async function Home() {
               <div className="section-head">
                 <span className="idx">→</span>
                 <h2>{t.explore}</h2>
+                <Link href="/recherche" className="more">{t.searchTitle} →</Link>
               </div>
               <div className="flex flex-wrap gap-2">
-                {tags.map(({ tag, count }) => (
+                {exploreTags.map(({ tag, count }) => (
                   <Link key={tag} href={`/tags/${encodeURIComponent(tag)}`} className="nb-pill">
                     {tag} <span className="ml-1.5 text-[var(--accent)]">{count}</span>
                   </Link>
