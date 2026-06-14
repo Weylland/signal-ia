@@ -1,4 +1,5 @@
 import { getDb } from "./db";
+import { cleanHtml } from "./sanitize";
 
 export type ArticleType = "news" | "tuto";
 
@@ -244,7 +245,7 @@ export function setArticleTranslation(
   db.prepare(
     `UPDATE articles SET title_en = ?, excerpt_en = ?, content_html_en = ?, tldr_en = ?
      WHERE slug = ?`
-  ).run(en.title, en.excerpt, en.html, JSON.stringify(en.tldr), slug);
+  ).run(en.title, en.excerpt, cleanHtml(en.html), JSON.stringify(en.tldr), slug);
 }
 
 export type ArticleInput = {
@@ -311,7 +312,7 @@ export async function createArticle(input: ArticleInput): Promise<string> {
       slug,
       input.title,
       input.excerpt,
-      input.html,
+      cleanHtml(input.html),
       input.image,
       JSON.stringify(input.sources ?? []),
       input.published ? 1 : 0,
@@ -353,7 +354,7 @@ export async function updateArticle(slug: string, input: ArticleInput): Promise<
   ).run(
     input.title,
     input.excerpt,
-    input.html,
+    cleanHtml(input.html),
     input.image,
     JSON.stringify(input.sources ?? safeJson(row.sources, [])),
     input.published ? 1 : 0,

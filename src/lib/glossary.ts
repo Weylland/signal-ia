@@ -1,5 +1,6 @@
 import { getDb } from "./db";
 import { slugify } from "./articles";
+import { cleanHtml } from "./sanitize";
 
 export type GlossaryEntry = {
   id: number;
@@ -131,17 +132,18 @@ export function getGlossary(): GlossaryEntry[] {
 
 export function upsertGlossaryEntry(term: string, definitionHtml: string, id?: number): void {
   const db = getDb();
+  const clean = cleanHtml(definitionHtml);
   if (id) {
     db.prepare("UPDATE glossary SET term = ?, definition_html = ? WHERE id = ?").run(
       term.trim(),
-      definitionHtml,
+      clean,
       id
     );
   } else {
     db.prepare("INSERT INTO glossary (slug, term, definition_html) VALUES (?, ?, ?)").run(
       slugify(term),
       term.trim(),
-      definitionHtml
+      clean
     );
   }
 }

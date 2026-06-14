@@ -11,6 +11,7 @@ try {
 
 import { getDb } from "../src/lib/db";
 import { getGlossary } from "../src/lib/glossary";
+import { cleanHtml } from "../src/lib/sanitize";
 
 const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY;
 if (!MISTRAL_API_KEY) {
@@ -48,7 +49,7 @@ async function main() {
   for (const entry of toTranslate) {
     try {
       const enHtml = await translateDefinition(entry.term, entry.definitionHtml);
-      db.prepare("UPDATE glossary SET definition_html_en = ? WHERE id = ?").run(enHtml, entry.id);
+      db.prepare("UPDATE glossary SET definition_html_en = ? WHERE id = ?").run(cleanHtml(enHtml), entry.id);
       console.log(`✓ ${entry.term}`);
       await new Promise((r) => setTimeout(r, 500));
     } catch (err) {

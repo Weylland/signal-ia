@@ -13,7 +13,7 @@ type Labels = {
 
 export function ContactForm({ labels }: { labels: Labels }) {
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
-  const [form, setForm] = useState({ name: "", email: "", message: "" });
+  const [form, setForm] = useState({ name: "", email: "", message: "", website: "" });
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -38,11 +38,25 @@ export function ContactForm({ labels }: { labels: Labels }) {
 
   return (
     <form onSubmit={handleSubmit} className="flex max-w-lg flex-col gap-5">
+      {/* Honeypot anti-bot : invisible pour les humains, ignoré des lecteurs d'écran */}
+      <div className="absolute left-[-9999px]" aria-hidden="true">
+        <label>
+          Ne pas remplir
+          <input
+            type="text"
+            tabIndex={-1}
+            autoComplete="off"
+            value={form.website}
+            onChange={(e) => setForm((f) => ({ ...f, website: e.target.value }))}
+          />
+        </label>
+      </div>
       <div>
         <label className="meta mb-1.5 block uppercase">{labels.name}</label>
         <input
           type="text"
           required
+          maxLength={100}
           value={form.name}
           onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
           className="field w-full"
@@ -53,6 +67,7 @@ export function ContactForm({ labels }: { labels: Labels }) {
         <input
           type="email"
           required
+          maxLength={254}
           value={form.email}
           onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
           className="field w-full"
@@ -63,6 +78,7 @@ export function ContactForm({ labels }: { labels: Labels }) {
         <textarea
           required
           rows={6}
+          maxLength={5000}
           value={form.message}
           onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
           className="field w-full resize-none"

@@ -1,12 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { addReaction, getReactions } from "@/lib/articles";
 import { getDb } from "@/lib/db";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 const REACTION_TYPES = ["useful", "fire", "think"] as const;
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";
-  const { slug, reaction } = await req.json() as { slug: string; reaction: string };
+  // Garde-fou global : max 30 réactions / min / IP, tous slugs confondus
+  if (!rateLimit(`reaction:${ip}`, 30, 60_000)) {
+    return rateLimitResponse();
+  }
+
+  let parsed: { slug?: unknown; reaction?: unknown };
+  try {
+    parsed = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Requête invalide" }, { status: 400 });
+  }
+  const slug = typeof parsed.slug === "string" ? parsed.slug : "";
+  const reaction = typeof parsed.reaction === "string" ? parsed.reaction : "";
+  if (!slug) {
+    return NextResponse.json({ error: "Slug manquant" }, { status: 400 });
+  }
 
   if (!REACTION_TYPES.includes(reaction as typeof REACTION_TYPES[number])) {
     return NextResponse.json({ error: "Réaction invalide" }, { status: 400 });
