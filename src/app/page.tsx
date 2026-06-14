@@ -5,40 +5,45 @@ import {
   getAllTags,
   getMostViewedArticles,
   localizeMeta,
-  formatDate,
+  readingTimeMinutes,
   type ArticleMeta,
 } from "@/lib/articles";
 import { getSettings } from "@/lib/settings";
-import { getLang, getDict, type Lang, type Dict } from "@/lib/i18n";
+import { getLang, getDict, type Lang } from "@/lib/i18n";
 import { ArticleCard } from "@/components/ArticleCard";
+import { ArticleRow } from "@/components/ArticleRow";
+import { CategoryBadge, Tag } from "@/components/Tag";
+import { CoverPattern } from "@/components/CoverPattern";
+import { NewsletterForm } from "@/components/NewsletterForm";
 import { AdSlot } from "@/components/AdSlot";
 import { FadeIn, FadeUp } from "@/components/Reveal";
 
 export const dynamic = "force-dynamic";
 
-function hourLabel(iso: string, lang: Lang): string {
-  const date = new Date(iso);
-  const locale = lang === "en" ? "en-GB" : "fr-FR";
-  const isToday = date.toDateString() === new Date().toDateString();
-  if (isToday) {
-    return date.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
-  }
-  return date.toLocaleDateString(locale, { day: "2-digit", month: "2-digit" });
-}
-
-function FeedItem({ article, lang, t }: { article: ArticleMeta; lang: Lang; t: Dict }) {
-  const loc = localizeMeta(article, lang);
+function SectionHead({
+  label,
+  title,
+  action,
+  href,
+}: {
+  label: string;
+  title: string;
+  action?: string;
+  href?: string;
+}) {
   return (
-    <div className="feed-item">
-      <time>{hourLabel(article.date, lang)}</time>
-      <span className={`nb-pill ${article.breaking ? "tag--hot" : ""}`}>
-        {article.breaking ? t.breaking : (article.tags[0] ?? t.news)}
-      </span>
-      <span className="t">
-        <Link href={`/articles/${article.slug}`} className="transition-colors">
-          {loc.title}
+    <div className="mb-8 flex flex-wrap items-baseline justify-between gap-4">
+      <div className="flex items-center gap-3">
+        <span className="border-l-2 border-[var(--ac)] pl-2 font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--ac)]">
+          {label}
+        </span>
+        <h2 className="text-[22px] font-bold tracking-tight">{title}</h2>
+      </div>
+      {action && href && (
+        <Link href={href} className="font-mono text-[12px] text-[var(--ink-d)] transition-colors hover:text-[var(--ac)]">
+          {action} →
         </Link>
-      </span>
+      )}
     </div>
   );
 }
@@ -47,6 +52,7 @@ export default async function Home() {
   const settings = getSettings();
   const lang = await getLang();
   const t = getDict(lang);
+  const locale = lang === "en" ? "en-GB" : "fr-FR";
 
   if (settings.maintenanceMode) {
     return (
@@ -60,235 +66,177 @@ export default async function Home() {
   const [articles, tags, mostViewed, tutos] = await Promise.all([
     getAllArticles({ type: "news" }),
     getAllTags(),
-    getMostViewedArticles(4),
-    getAllArticles({ type: "tuto", limit: 3 }),
+    getMostViewedArticles(5),
+    getAllArticles({ type: "tuto", limit: 4 }),
   ]);
 
   if (articles.length === 0 && tutos.length === 0) {
     return <p className="text-sm">{t.noArticles}</p>;
   }
 
-  // On évite le mur de tags : on garde les plus récurrents (≥ 2), plafonné.
-  const recurringTags = tags.filter((t) => t.count >= 2);
-  const exploreTags = (recurringTags.length > 0 ? recurringTags : tags).slice(0, 18);
-
-  const [featured, second, third, ...rest] = articles;
+  const [featured, ...rest] = articles;
   const featuredLoc = featured ? localizeMeta(featured, lang) : null;
-  const also = [second, third].filter(Boolean) as ArticleMeta[];
   const dayAgo = new Date(Date.now() - 24 * 3600_000).toISOString();
-  const last24h = articles.filter((a) => a.date >= dayAgo);
-  const feedSplit = Math.ceil(Math.min(last24h.length, 10) / 2);
-  const grid = rest.slice(0, 9);
+  const last24h = articles.filter((a) => a.date >= dayAgo).slice(0, 8);
+  const magArticles = rest.slice(0, 7);
+  const recurringTags = tags.filter((x) => x.count >= 2);
+  const exploreTags = (recurringTags.length > 0 ? recurringTags : tags).slice(0, 16);
+  const distinctSources = new Set(articles.flatMap((a) => a.sources.map((s) => s.name))).size;
 
   return (
-    <div className="flex flex-col gap-12">
+    <div className="flex flex-col gap-16 pb-4">
+      {/* ── Hero ── */}
       {featured && featuredLoc && (
         <FadeIn>
-          <section className="border-b border-line pb-10">
-            <div className="grid items-start gap-8 lg:grid-cols-[7fr_5fr] lg:gap-12">
-              <div>
-                <div className="flex flex-wrap items-center gap-3">
-                  {featured.tags[0] && <span className="nb-pill tag--hot">{featured.tags[0]}</span>}
-                  <span className="meta uppercase">{formatDate(featured.date, lang)}</span>
-                </div>
-                <h1 className="font-display mt-4 text-4xl leading-[1.04] tracking-tight text-balance sm:text-6xl">
-                  <Link
-                    href={`/articles/${featured.slug}`}
-                    className="transition-colors hover:text-[var(--accent)]"
-                  >
-                    {featuredLoc.title}
-                  </Link>
-                </h1>
-                <p className="mt-5 max-w-[56ch] text-lg leading-relaxed text-[var(--ink-dim)]">
-                  {featuredLoc.excerpt}
-                </p>
-                <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2">
-                  {featured.sources.length > 0 && (
-                    <span className="meta uppercase">{t.sourcesCited(featured.sources.length)}</span>
-                  )}
-                  <Link href={`/articles/${featured.slug}`} className="nb-btn nb-btn-primary">
-                    {t.readArticle}
-                  </Link>
-                </div>
-              </div>
-              {featured.image && (
-                <figure className="order-first lg:order-none">
-                  <Link
-                    href={`/articles/${featured.slug}`}
-                    className="relative block aspect-[4/3] overflow-hidden border border-line"
-                  >
-                    <Image
-                      src={featured.image}
-                      alt={featuredLoc.title}
-                      fill
-                      priority
-                      sizes="(max-width: 1024px) 100vw, 42vw"
-                      className="object-cover"
-                    />
-                  </Link>
-                </figure>
+          <Link href={`/articles/${featured.slug}`} className="hero-card group block">
+            <div className="img-vignette has-scanlines relative min-h-[220px] overflow-hidden lg:min-h-full">
+              {featured.image ? (
+                <Image
+                  src={featured.image}
+                  alt={featuredLoc.title}
+                  fill
+                  priority
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                  className="object-cover"
+                />
+              ) : (
+                <CoverPattern seed={featured.slug} label={featured.tags[0] ?? featuredLoc.title} />
               )}
+              <span
+                className="absolute left-3 top-3 z-[4] font-mono text-[9px] font-bold uppercase tracking-[0.1em]"
+                style={{ background: "var(--ac)", color: "var(--on-ac)", padding: "3px 8px" }}
+              >
+                {t.featured}
+              </span>
             </div>
-
-            {also.length > 0 && (
-              <div className="mt-9 grid gap-5 border-t border-line pt-6 sm:grid-cols-2">
-                {also.map((a) => (
-                  <article
-                    key={a.slug}
-                    className="sm:border-l sm:border-line sm:pl-5 sm:first:border-l-0 sm:first:pl-0"
-                  >
-                    <span className="meta uppercase">
-                      {hourLabel(a.date, lang)} · {a.tags[0] ?? t.news}
-                    </span>
-                    <h3 className="font-display mt-2 text-xl leading-snug text-balance">
-                      <Link
-                        href={`/articles/${a.slug}`}
-                        className="transition-colors hover:text-[var(--accent)]"
-                      >
-                        {localizeMeta(a, lang).title}
-                      </Link>
-                    </h3>
-                  </article>
-                ))}
+            <div className="flex flex-col justify-center gap-4 p-6 sm:p-12">
+              <CategoryBadge tags={featured.tags} lang={lang} fallbackText={featuredLoc.title} />
+              <h1 className="text-[clamp(24px,2.4vw,36px)] font-bold leading-[1.12] tracking-[-0.025em] transition-colors group-hover:text-[var(--ac)]">
+                {featuredLoc.title}
+              </h1>
+              <p className="font-serif text-[16px] leading-relaxed text-[var(--ink-d)]">
+                {featuredLoc.excerpt}
+              </p>
+              <div className="flex flex-wrap items-center gap-3 border-t border-line pt-4 font-mono text-[11px] text-[var(--ink-f)]">
+                <span>{new Date(featured.date).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}</span>
+                {featured.sources.length > 0 && (
+                  <span className="text-[var(--ac)]">{t.sourcesCited(featured.sources.length)}</span>
+                )}
+                <span className="ml-auto font-display font-semibold text-[var(--ac)]">{t.readArticle}</span>
               </div>
-            )}
-          </section>
+            </div>
+          </Link>
         </FadeIn>
       )}
 
       <AdSlot position="home-top" />
 
+      {/* ── Digest 24 h ── */}
       {last24h.length > 1 && (
         <FadeUp>
-          <section className="-mx-5 border-y border-line bg-[var(--bg-raised)] px-5 py-10">
-            <div className="section-head">
-              <span className="idx">01</span>
-              <h2>{t.last24h}</h2>
-              <Link href="/cette-semaine" className="more">
-                {t.fullFeed}
-              </Link>
-            </div>
-            <div className="grid gap-x-12 lg:grid-cols-2">
+          <section>
+            <SectionHead label="01" title={t.last24h} action={t.fullFeed} href="/cette-semaine" />
+            <div className="digest-grid">
               <div>
-                {last24h.slice(0, feedSplit).map((a) => (
-                  <FeedItem key={a.slug} article={a} lang={lang} t={t} />
+                {last24h.map((a) => (
+                  <ArticleRow key={a.slug} article={a} lang={lang} />
                 ))}
               </div>
-              <div>
-                {last24h.slice(feedSplit, 10).map((a) => (
-                  <FeedItem key={a.slug} article={a} lang={lang} t={t} />
-                ))}
+              <div className="digest-side flex flex-col gap-5">
+                {exploreTags.length > 0 && (
+                  <div>
+                    <p className="mb-3 font-mono text-[9px] uppercase tracking-[0.12em] text-[var(--ink-f)]">
+                      {t.explore}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {exploreTags.slice(0, 8).map(({ tag }) => (
+                        <Tag key={tag} href={`/tags/${encodeURIComponent(tag)}`}>
+                          {tag}
+                        </Tag>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="grid grid-cols-3 divide-x border border-line" style={{ borderColor: "var(--ln)" }}>
+                  {[
+                    [last24h.length, lang === "en" ? "24h" : "24 h"],
+                    [distinctSources, lang === "en" ? "Sources" : "Sources"],
+                    [tutos.length, "Tutos"],
+                  ].map(([v, l]) => (
+                    <div key={l} className="px-2 py-4 text-center" style={{ borderColor: "var(--ln)" }}>
+                      <p className="text-[26px] font-bold text-[var(--ac)]">{v}</p>
+                      <p className="mt-1 font-mono text-[9px] uppercase tracking-wide text-[var(--ink-f)]">{l}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </section>
         </FadeUp>
       )}
 
-      <FadeUp>
-        <section>
-          <div className="section-head">
-            <span className="idx">02</span>
-            <h2>{t.news}</h2>
-            <Link href="/actus" className="more">
-              {t.navAllNews} →
-            </Link>
-          </div>
-          <div className="cards-grid">
-            {grid.map((article) => (
-              <ArticleCard key={article.slug} article={article} lang={lang} />
-            ))}
-          </div>
-        </section>
-      </FadeUp>
+      {/* ── Grille magazine (bande raised) ── */}
+      {magArticles.length > 0 && (
+        <FadeUp>
+          <section className="band band-alt -mx-5 px-5">
+            <div className="mx-auto max-w-6xl">
+              <SectionHead label="02" title={t.news} action={t.navAllNews} href="/actus" />
+              <div className="mag">
+                {magArticles.map((a, i) => (
+                  <div key={a.slug} className={i === 0 ? "c2" : ""}>
+                    <ArticleCard article={a} lang={lang} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        </FadeUp>
+      )}
 
       <AdSlot position="home-middle" />
 
+      {/* ── Tutos (bande deep) ── */}
       {tutos.length > 0 && (
         <FadeUp>
-          <section className="-mx-5 bg-[var(--accent)] px-5 py-10 text-[var(--on-accent)]">
-            <div className="section-head !border-t-[var(--on-accent)]">
-              <span className="idx !text-[var(--on-accent)]">03</span>
-              <h2 className="!text-[var(--on-accent)]">{t.tutosSection}</h2>
-              <Link
-                href="/tutos"
-                className="more !border-[var(--on-accent)] !text-[var(--on-accent)]"
-              >
-                {t.allTutos}
-              </Link>
-            </div>
-            <p className="font-display -mt-1 mb-8 max-w-[30ch] text-3xl leading-tight sm:text-4xl">
-              {t.tutosPitch}
-            </p>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {tutos.map((tuto) => {
-                const loc = localizeMeta(tuto, lang);
-                return (
-                  <article
-                    key={tuto.slug}
-                    className="flex flex-col border border-[var(--on-accent)] bg-[var(--bg-deep)] text-[var(--ink)] transition-transform hover:-translate-y-0.5"
-                  >
-                    <div className="meta flex items-center justify-between gap-2 border-b border-line px-4 py-2.5 uppercase">
-                      <span>{t.guide}</span>
-                      <span className="text-[var(--accent)]">{hourLabel(tuto.date, lang)}</span>
-                    </div>
-                    <div className="flex flex-1 flex-col gap-3 p-4">
-                      <h3 className="font-display text-xl leading-snug text-balance">
-                        <Link
-                          href={`/articles/${tuto.slug}`}
-                          className="transition-colors hover:text-[var(--accent)]"
-                        >
-                          {loc.title}
-                        </Link>
-                      </h3>
-                      <p className="line-clamp-2 text-sm text-[var(--ink-dim)]">{loc.excerpt}</p>
-                    </div>
-                  </article>
-                );
-              })}
+          <section className="band band-deep -mx-5 px-5">
+            <div className="mx-auto max-w-6xl">
+              <SectionHead label="03" title={t.tutosSection} action={t.allTutos} href="/tutos" />
+              <p className="mb-8 max-w-[34ch] text-[clamp(22px,2.2vw,30px)] font-bold leading-tight">
+                {t.tutosPitch}
+              </p>
+              <div className="flex flex-col gap-3">
+                {tutos.map((tuto, i) => (
+                  <TutoRow key={tuto.slug} tuto={tuto} lang={lang} n={i + 1} guide={t.guide} read={t.readArticle} />
+                ))}
+              </div>
             </div>
           </section>
         </FadeUp>
       )}
 
-      <div className="-mx-5 grid gap-10 border-y border-line bg-[var(--bg-deep)] px-5 py-10 lg:grid-cols-[2fr_1fr]">
+      {/* ── Plus lus + Explorer ── */}
+      <div className="two-col">
         {mostViewed.length > 0 && (
           <FadeUp>
             <section>
-              <div className="section-head">
-                <span className="idx">04</span>
-                <h2>{t.mostRead}</h2>
-              </div>
-              <ol className="flex flex-col">
+              <SectionHead label="04" title={t.mostRead} />
+              <div>
                 {mostViewed.map((a, i) => (
-                  <li key={a.slug} className="flex items-baseline gap-4 border-b border-line py-3">
-                    <span className="font-display text-3xl text-[var(--ink-faint)]">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    <Link
-                      href={`/articles/${a.slug}`}
-                      className="font-medium transition-colors hover:text-[var(--accent)]"
-                    >
-                      {localizeMeta(a, lang).title}
-                    </Link>
-                  </li>
+                  <ArticleRow key={a.slug} article={a} lang={lang} rank={i + 1} />
                 ))}
-              </ol>
+              </div>
             </section>
           </FadeUp>
         )}
-
-        {tags.length > 0 && (
+        {exploreTags.length > 0 && (
           <FadeUp>
             <section>
-              <div className="section-head">
-                <span className="idx">→</span>
-                <h2>{t.explore}</h2>
-                <Link href="/recherche" className="more">{t.searchTitle} →</Link>
-              </div>
+              <SectionHead label="→" title={t.explore} action={t.searchTitle} href="/recherche" />
               <div className="flex flex-wrap gap-2">
                 {exploreTags.map(({ tag, count }) => (
-                  <Link key={tag} href={`/tags/${encodeURIComponent(tag)}`} className="nb-pill">
-                    {tag} <span className="ml-1.5 text-[var(--accent)]">{count}</span>
+                  <Link key={tag} href={`/tags/${encodeURIComponent(tag)}`} className="tag">
+                    {tag}
+                    <span className="ml-1.5 text-[var(--ac)]">{count}</span>
                   </Link>
                 ))}
               </div>
@@ -296,6 +244,69 @@ export default async function Home() {
           </FadeUp>
         )}
       </div>
+
+      {/* ── Newsletter CTA ── */}
+      <FadeUp>
+        <section
+          className="band band-deep dot-bg -mx-5 px-5 text-center"
+          style={{ borderTop: "1px solid var(--ac)" }}
+        >
+          <div className="mx-auto max-w-[560px]">
+            <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--ac)]">
+              {t.newsletterTitle}
+            </p>
+            <h2 className="text-[clamp(26px,3vw,40px)] font-bold leading-tight tracking-tight">
+              {t.newsletterPitch}
+            </h2>
+            <div className="mx-auto mt-6 max-w-sm">
+              <NewsletterForm
+                labels={{ subscribe: t.subscribe, subscribed: t.subscribed, error: t.emailError }}
+              />
+            </div>
+          </div>
+        </section>
+      </FadeUp>
     </div>
+  );
+}
+
+function TutoRow({
+  tuto,
+  lang,
+  n,
+  guide,
+  read,
+}: {
+  tuto: ArticleMeta;
+  lang: Lang;
+  n: number;
+  guide: string;
+  read: string;
+}) {
+  const loc = localizeMeta(tuto, lang);
+  const readMin = readingTimeMinutes(tuto.excerpt + " " + (loc.tldr.join(" ") ?? ""));
+  return (
+    <Link
+      href={`/articles/${tuto.slug}`}
+      className="card-mag group flex items-stretch gap-0"
+      style={{ background: "var(--bg-r)" }}
+    >
+      <span
+        className="flex w-14 shrink-0 items-center justify-center font-mono text-xl font-bold"
+        style={{ background: "var(--bg-d)", color: "var(--ac)" }}
+      >
+        {String(n).padStart(2, "0")}
+      </span>
+      <div className="flex flex-1 flex-col gap-1.5 p-4">
+        <span className="font-mono text-[10px] uppercase tracking-wide text-[var(--ink-f)]">{guide}</span>
+        <h3 className="text-[16px] font-semibold leading-snug transition-colors group-hover:text-[var(--ac)]">
+          {loc.title}
+        </h3>
+        <p className="line-clamp-1 font-serif text-[13px] text-[var(--ink-d)]">{loc.excerpt}</p>
+      </div>
+      <span className="hidden shrink-0 items-center px-5 font-mono text-[11px] text-[var(--ink-f)] sm:flex">
+        {readMin} min · {read}
+      </span>
+    </Link>
   );
 }
