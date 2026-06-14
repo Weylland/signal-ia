@@ -138,8 +138,17 @@ body {
   color: var(--ink);
   font-family: var(--ff-h), "Helvetica Neue", Arial, sans-serif;
   line-height: 1.6;
+  overflow-x: clip;
   -webkit-font-smoothing: antialiased;
   transition: background var(--ds) var(--ease), color var(--ds) var(--ease);
+}
+
+/* Pleine largeur viewport depuis un conteneur contraint (bandes maquette) */
+.fullbleed {
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  margin-left: -50vw;
 }
 
 /* Grain global fixe (signature maquette) */

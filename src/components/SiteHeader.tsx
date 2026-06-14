@@ -70,7 +70,7 @@ export function SiteHeader({ links, lang, labels }: Props) {
         className="has-scanlines sticky top-0 z-[100] border-b border-line"
         style={{ background: "var(--bg-d)", backdropFilter: "blur(8px)" }}
       >
-        <nav className="mx-auto flex h-[52px] max-w-6xl items-center gap-3 px-5">
+        <nav className="mx-auto flex h-[52px] max-w-[1200px] items-center gap-3 px-6">
           <Link href="/" className="flex shrink-0 items-center" aria-label="signal·ia">
             {Logo}
           </Link>

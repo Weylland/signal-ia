@@ -16,7 +16,7 @@ export function ArticleCard({ article, lang = "fr" }: { article: ArticleMeta; la
 
   return (
     <Link href={`/articles/${article.slug}`} className="card-mag flex h-full flex-col overflow-hidden">
-      <div className="img-vignette has-scanlines relative aspect-[16/9] overflow-hidden">
+      <div className="img-vignette has-scanlines relative h-[150px] shrink-0 overflow-hidden">
         {article.image ? (
           <Image
             src={article.image}

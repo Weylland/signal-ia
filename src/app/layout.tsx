@@ -125,7 +125,7 @@ export default async function RootLayout({
           }}
         />
 
-        <main className="mx-auto w-full max-w-6xl flex-1 px-5 py-10">{children}</main>
+        <main className="mx-auto w-full max-w-[1200px] flex-1 px-6 py-10">{children}</main>
 
         <footer
           className="has-scanlines mt-auto border-t border-line"
