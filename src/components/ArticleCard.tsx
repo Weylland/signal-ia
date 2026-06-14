@@ -3,22 +3,20 @@ import Link from "next/link";
 import type { ArticleMeta } from "@/lib/articles";
 import { localizeMeta, readingTimeMinutes } from "@/lib/articles";
 import type { Lang } from "@/lib/i18n";
-import { BookmarkButton } from "./BookmarkButton";
 import { CoverPattern } from "./CoverPattern";
+import { CategoryBadge } from "./Tag";
 
 export function ArticleCard({ article, lang = "fr" }: { article: ArticleMeta; lang?: Lang }) {
   const loc = localizeMeta(article, lang);
   const date = new Date(article.date);
   const locale = lang === "en" ? "en-GB" : "fr-FR";
-  const dateLabel = `${date.toLocaleDateString(locale, { day: "numeric", month: "short" })} · ${date.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}`;
+  const dateLabel = date.toLocaleDateString(locale, { day: "numeric", month: "short" });
   const readMin = readingTimeMinutes(article.excerpt + " " + (loc.tldr.join(" ") ?? ""));
+  const nSources = article.sources.length;
 
   return (
-    <article className="nb-card-hover flex h-full flex-col gap-3.5 bg-transparent p-5">
-      <Link
-        href={`/articles/${article.slug}`}
-        className="relative block aspect-[16/9] overflow-hidden border border-line"
-      >
+    <Link href={`/articles/${article.slug}`} className="card-mag flex h-full flex-col overflow-hidden">
+      <div className="img-vignette has-scanlines relative aspect-[16/9] overflow-hidden">
         {article.image ? (
           <Image
             src={article.image}
@@ -30,36 +28,33 @@ export function ArticleCard({ article, lang = "fr" }: { article: ArticleMeta; la
         ) : (
           <CoverPattern seed={article.slug} label={article.tags[0] ?? loc.title} />
         )}
-      </Link>
-      <div className="flex flex-wrap items-center gap-2">
         {article.breaking && (
-          <span className="nb-pill tag--hot">{lang === "en" ? "Breaking" : "À chaud"}</span>
-        )}
-        {article.type === "tuto" && (
-          <span className="nb-pill tag--hot">{lang === "en" ? "Tutorial" : "Tuto"}</span>
-        )}
-        {article.tags.slice(0, 2).map((tag) => (
-          <span key={tag} className="nb-pill">
-            {tag}
+          <span
+            className="absolute left-2.5 top-2.5 z-[4] font-mono text-[9px] font-bold uppercase tracking-[0.1em]"
+            style={{ background: "var(--ac)", color: "var(--on-ac)", padding: "3px 8px" }}
+          >
+            {lang === "en" ? "Breaking" : "À chaud"}
           </span>
-        ))}
-        <span className="meta uppercase">{dateLabel}</span>
+        )}
       </div>
-      <h3 className="font-display text-2xl leading-tight text-balance">
-        <Link
-          href={`/articles/${article.slug}`}
-          className="transition-colors hover:text-[var(--accent)]"
-        >
-          {loc.title}
-        </Link>
-      </h3>
-      <p className="line-clamp-3 text-sm leading-relaxed text-[var(--ink-dim)]">{loc.excerpt}</p>
-      <div className="meta mt-auto flex items-center justify-between gap-2 pt-1 uppercase">
-        <span>
-          {readMin} min{article.sources.length > 0 && ` · ${article.sources.length} source${article.sources.length > 1 ? "s" : ""}`}
-        </span>
-        <BookmarkButton slug={article.slug} title={loc.title} lang={lang} />
+      <div className="flex flex-1 flex-col gap-3 p-5">
+        <div className="flex items-center gap-2">
+          <CategoryBadge tags={article.tags} lang={lang} fallbackText={loc.title} />
+          <span className="ml-auto font-mono text-[10px] text-[var(--ink-f)]">{dateLabel}</span>
+        </div>
+        <h3 className="text-[15px] font-semibold leading-snug tracking-[-0.01em]">{loc.title}</h3>
+        <p className="line-clamp-3 flex-1 font-serif text-[13px] leading-relaxed text-[var(--ink-d)]">
+          {loc.excerpt}
+        </p>
+        <div className="flex gap-2 font-mono text-[11px] text-[var(--ink-f)]">
+          <span>{readMin} min</span>
+          {nSources > 0 && (
+            <span className="ml-auto text-[var(--ac)]">
+              {nSources} source{nSources > 1 ? "s" : ""}
+            </span>
+          )}
+        </div>
       </div>
-    </article>
+    </Link>
   );
 }

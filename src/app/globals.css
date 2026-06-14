@@ -772,6 +772,26 @@ a.nb-pill:hover {
   background-size: 24px 24px;
 }
 
+/* ── Carte magazine (hover décalé + ombre accent) ── */
+.card-mag {
+  background: var(--bg-r);
+  border: 1px solid var(--ln);
+  transition: transform var(--d), box-shadow var(--d);
+}
+.card-mag:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--sha);
+}
+
+/* ── Ligne d'article (liste) hover ── */
+.row-art {
+  border-bottom: 1px solid var(--ln);
+  transition: padding-left var(--d);
+}
+.row-art:hover {
+  padding-left: var(--s3);
+}
+
 /* ── Tags catégorie ── */
 .tag {
   display: inline-flex; align-items: center;
