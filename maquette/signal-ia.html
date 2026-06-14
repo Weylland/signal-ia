@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>signal·ia — L'essentiel de l'IA, trié, sans bruit</title>
+  <meta name="description" content="Média français de veille IA. Actus sélectionnées et résumées automatiquement, tutos pratiques. Indépendant, sans pub ni traceurs.">
+  <link rel="stylesheet" href="tokens.css">
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <style>
+    /* Prevent flash of unstyled content */
+    #root { min-height: 100vh; }
+    .loading-screen {
+      position: fixed; inset: 0;
+      background: oklch(0.13 0.008 160);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 9998; transition: opacity 0.3s ease;
+    }
+    .loading-screen.done { opacity: 0; pointer-events: none; }
+    .loading-logo {
+      font-family: system-ui, sans-serif;
+      font-weight: 700; font-size: 24px;
+      letter-spacing: -0.03em;
+      color: oklch(0.93 0.008 130);
+    }
+    .loading-logo span { color: oklch(0.91 0.22 127); }
+  </style>
+</head>
+<body>
+  <div class="loading-screen" id="loader">
+    <div class="loading-logo"><span>signal</span>·ia</div>
+  </div>
+  <!-- Grain overlay global — pointer-events:none, non-bloquant -->
+  <div class="grain-layer" aria-hidden="true"></div>
+  <div id="root"></div>
+
+  <script type="text/babel" src="shared.jsx"></script>
+  <script type="text/babel" src="admin-shared.jsx"></script>
+  <script type="text/babel" src="page-home.jsx"></script>
+  <script type="text/babel" src="page-article.jsx"></script>
+  <script type="text/babel" src="pages-public.jsx"></script>
+  <script type="text/babel" src="admin-pages.jsx"></script>
+  <script type="text/babel" src="app.jsx"></script>
+
+  <script>
+    // Restore theme before render to prevent flash
+    (function() {
+      const t = localStorage.getItem('sig-theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', t);
+      if (t === 'light') {
+        document.querySelector('.loading-screen').style.background = 'oklch(0.97 0.006 110)';
+        document.querySelector('.loading-logo').style.color = 'oklch(0.16 0.012 150)';
+      }
+    })();
+
+    // Remove loader after app mounts
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        var loader = document.getElementById('loader');
+        if (loader) { loader.classList.add('done'); setTimeout(function(){ loader.remove(); }, 400); }
+      }, 200);
+    });
+  </script>
+</body>
+</html>
