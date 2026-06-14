@@ -4,6 +4,7 @@ import type { ArticleMeta } from "@/lib/articles";
 import { localizeMeta, readingTimeMinutes } from "@/lib/articles";
 import type { Lang } from "@/lib/i18n";
 import { BookmarkButton } from "./BookmarkButton";
+import { CoverPattern } from "./CoverPattern";
 
 export function ArticleCard({ article, lang = "fr" }: { article: ArticleMeta; lang?: Lang }) {
   const loc = localizeMeta(article, lang);
@@ -14,11 +15,11 @@ export function ArticleCard({ article, lang = "fr" }: { article: ArticleMeta; la
 
   return (
     <article className="nb-card-hover flex h-full flex-col gap-3.5 bg-transparent p-5">
-      {article.image && (
-        <Link
-          href={`/articles/${article.slug}`}
-          className="relative block aspect-[16/9] overflow-hidden border border-line"
-        >
+      <Link
+        href={`/articles/${article.slug}`}
+        className="relative block aspect-[16/9] overflow-hidden border border-line"
+      >
+        {article.image ? (
           <Image
             src={article.image}
             alt={loc.title}
@@ -26,8 +27,10 @@ export function ArticleCard({ article, lang = "fr" }: { article: ArticleMeta; la
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
             className="object-cover"
           />
-        </Link>
-      )}
+        ) : (
+          <CoverPattern seed={article.slug} label={article.tags[0] ?? loc.title} />
+        )}
+      </Link>
       <div className="flex flex-wrap items-center gap-2">
         {article.breaking && (
           <span className="nb-pill tag--hot">{lang === "en" ? "Breaking" : "À chaud"}</span>
