@@ -78,10 +78,28 @@ html {
 }
 
 body {
-  background: var(--bg);
+  /* Fond texturé discret : grille de points très légère (suit le thème) */
+  background-color: var(--bg);
+  background-image: radial-gradient(
+    color-mix(in oklch, var(--ink) 6%, transparent) 1px,
+    transparent 1.5px
+  );
+  background-size: 24px 24px;
+  background-position: -1px -1px;
   color: var(--ink);
   font-family: var(--font-instrument-sans), "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Grain fin fixe, posé sous le contenu — donne du relief sans couleur */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 ::selection {
