@@ -191,7 +191,7 @@ export default async function Home() {
 
       {last24h.length > 1 && (
         <FadeUp>
-          <section>
+          <section className="-mx-5 border-y border-line bg-[var(--bg-raised)] px-5 py-10">
             <div className="section-head">
               <span className="idx">01</span>
               <h2>{t.last24h}</h2>
@@ -281,7 +281,7 @@ export default async function Home() {
         </FadeUp>
       )}
 
-      <div className="grid gap-10 lg:grid-cols-[2fr_1fr]">
+      <div className="-mx-5 grid gap-10 border-y border-line bg-[var(--bg-deep)] px-5 py-10 lg:grid-cols-[2fr_1fr]">
         {mostViewed.length > 0 && (
           <FadeUp>
             <section>
