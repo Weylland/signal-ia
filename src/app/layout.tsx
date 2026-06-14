@@ -4,6 +4,8 @@ import Link from "next/link";
 import { NewsletterForm } from "@/components/NewsletterForm";
 import { ThemeToggle, LangSwitcher } from "@/components/TopbarControls";
 import { NavMenu } from "@/components/NavMenu";
+import { MobileMenu } from "@/components/MobileMenu";
+import { CommandPalette } from "@/components/CommandPalette";
 import { getLang, getDict } from "@/lib/i18n";
 import "./globals.css";
 
@@ -77,6 +79,21 @@ export default async function RootLayout({
     year: "numeric",
   });
 
+  // Liste partagée par le menu burger et la command palette
+  const pages = [
+    { href: "/", label: t.home },
+    { href: "/actus", label: t.navAllNews },
+    { href: "/cette-semaine", label: t.navWeek },
+    { href: "/trending", label: t.navTrending },
+    { href: "/tutos", label: t.navTutos },
+    { href: "/glossaire", label: t.navGlossary },
+    { href: "/sources", label: t.footerSources },
+    { href: "/recherche", label: t.searchTitle },
+    { href: "/favoris", label: t.favoritesTitle },
+    { href: "/a-propos", label: t.footerAbout },
+    { href: "/contact", label: t.contactTitle },
+  ];
+
   return (
     <html
       lang={lang}
@@ -102,7 +119,7 @@ export default async function RootLayout({
         </div>
 
         <header className="border-b border-line">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-8 gap-y-3 px-5 py-4">
+          <div className="mx-auto flex max-w-6xl items-center gap-x-8 px-5 py-4">
             <Logo className="text-3xl sm:text-4xl" />
             <NavMenu
               labels={{
@@ -116,12 +133,24 @@ export default async function RootLayout({
               }}
             />
             <div className="ml-auto flex items-center gap-3">
-              <Link href="/recherche" className="nb-btn px-3 py-1.5 text-xs">
+              <Link
+                href="/favoris"
+                className="hidden text-lg sm:inline"
+                title={t.favoritesTitle}
+                aria-label={t.favoritesTitle}
+              >
+                ★
+              </Link>
+              <Link href="/recherche" className="nb-btn hidden px-3 py-1.5 text-xs sm:inline-flex">
                 {t.navSearch}
               </Link>
               <a href="/flux.xml" className="nb-btn hidden px-3 py-1.5 text-xs sm:inline-flex">
                 RSS
               </a>
+              <MobileMenu
+                pages={pages}
+                labels={{ menu: t.menu, close: t.close, search: t.navSearch, rss: "RSS" }}
+              />
             </div>
           </div>
         </header>
@@ -183,6 +212,14 @@ export default async function RootLayout({
             </div>
           </div>
         </footer>
+
+        <CommandPalette
+          pages={pages}
+          lang={lang}
+          placeholder={t.commandPlaceholder}
+          pagesLabel={t.commandPages}
+          searchLabel={lang === "en" ? "Search" : "Rechercher"}
+        />
       </body>
     </html>
   );

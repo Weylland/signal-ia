@@ -22,7 +22,7 @@ export function NavMenu({ labels }: { labels: NavLabels }) {
   ];
 
   return (
-    <nav className="order-3 flex w-full items-center gap-5 overflow-x-auto sm:order-none sm:w-auto sm:gap-6">
+    <nav className="hidden items-center gap-6 sm:flex">
       {links.map((link) => (
         <Link key={link.href} href={link.href} className="mainnav-link whitespace-nowrap">
           {link.label}
