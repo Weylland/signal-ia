@@ -138,6 +138,12 @@ export function SiteHeader({ links, lang, labels }: Props) {
                 EN
               </button>
             </span>
+            <Link
+              href="/admin"
+              className="hm flex h-11 items-center px-2 font-mono text-[11px] text-[var(--ink-f)] transition-colors hover:text-[var(--ink)]"
+            >
+              admin ↗
+            </Link>
             <button
               onClick={() => setMob(true)}
               className="hd flex h-11 w-11 items-center justify-center text-[22px]"
