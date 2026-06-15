@@ -1,19 +1,20 @@
 import { getSettings } from "@/lib/settings";
-import { getSources } from "@/lib/sources";
 import { SettingsForm } from "@/components/admin/SettingsForm";
-import { SourceManager } from "@/components/admin/SourceManager";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
   const settings = getSettings();
-  const sources = getSources();
 
   return (
     <div>
-      <h1 className="font-display text-3xl font-bold">Réglages</h1>
-      <div className="mt-6 flex flex-col gap-8">
-        <SourceManager sources={sources} />
+      {/* Header */}
+      <div style={{ marginBottom: "var(--s7)" }}>
+        <h1 style={{ fontFamily: "var(--ff-h)", fontSize: 26, fontWeight: 700, letterSpacing: "-.02em" }}>Réglages</h1>
+        <p style={{ fontFamily: "var(--ff-m)", fontSize: 12, color: "var(--ink-f)", marginTop: "var(--s2)" }}>Identité, pipeline et configuration</p>
+      </div>
+
+      <div style={{ maxWidth: 600 }}>
         <SettingsForm initial={settings} />
       </div>
     </div>
