@@ -14,7 +14,7 @@ function getBookmarks(): BookmarkItem[] {
 }
 
 type Props = {
-  labels: { empty: string; remove: string; clear: string };
+  labels: { empty: string; emptyTitle: string; remove: string; explore: string; count: (n: number) => string };
 };
 
 export function FavorisList({ labels }: Props) {
@@ -30,57 +30,46 @@ export function FavorisList({ labels }: Props) {
     setItems(next);
   }
 
-  function clearAll() {
-    localStorage.setItem("bookmarks", "[]");
-    setItems([]);
-  }
-
-  // Évite le flash avant l'hydratation
   if (items === null) return <div className="h-32" />;
 
   if (items.length === 0) {
-    return <p className="nb-card max-w-md p-6 text-sm text-[var(--ink-dim)]">{labels.empty}</p>;
+    return (
+      <div className="flex flex-col items-center gap-4 py-24 text-center">
+        <span className="font-mono text-[48px] text-[var(--ln-h)]">♡</span>
+        <h2 className="text-[20px] font-semibold text-[var(--ink-d)]">{labels.emptyTitle}</h2>
+        <p className="max-w-[320px] font-serif text-[15px] leading-relaxed text-[var(--ink-f)]">
+          {labels.empty}
+        </p>
+        <Link href="/actus" className="btn btn-p mt-3">
+          {labels.explore}
+        </Link>
+      </div>
+    );
   }
 
   return (
     <div>
-      <div className="mb-5 flex items-center justify-between">
-        <p className="meta uppercase text-[var(--accent)]">
-          {items.length} article{items.length > 1 ? "s" : ""}
-        </p>
-        <button
-          type="button"
-          onClick={clearAll}
-          className="meta uppercase text-[var(--ink-dim)] underline transition-colors hover:text-[var(--accent)]"
-        >
-          {labels.clear}
-        </button>
-      </div>
-      <ul className="flex flex-col border-2 border-ink">
+      <p className="mb-5 font-mono text-[11px] uppercase text-[var(--ac)]">{labels.count(items.length)}</p>
+      <div>
         {items.map((item) => (
-          <li
-            key={item.slug}
-            className="flex items-center gap-4 border-b border-line bg-[var(--bg-raised)] px-5 py-4 last:border-b-0"
-          >
-            <span className="text-[var(--accent)]">★</span>
+          <div key={item.slug} className="flex items-center gap-4 border-b border-line py-4">
+            <span className="text-[var(--ac)]">★</span>
             <Link
               href={`/articles/${item.slug}`}
-              className="flex-1 text-sm font-medium transition-colors hover:text-[var(--accent)]"
+              className="flex-1 text-[14px] font-semibold leading-snug transition-colors hover:text-[var(--ac)]"
             >
               {item.title}
             </Link>
             <button
               type="button"
               onClick={() => remove(item.slug)}
-              aria-label={labels.remove}
-              title={labels.remove}
-              className="meta shrink-0 uppercase text-[var(--ink-dim)] transition-colors hover:text-[var(--accent)]"
+              className="btn btn-sm btn-g shrink-0 text-[var(--ink-f)]"
             >
-              ✕
+              × {labels.remove}
             </button>
-          </li>
+          </div>
         ))}
-      </ul>
+      </div>
     </div>
   );
 }

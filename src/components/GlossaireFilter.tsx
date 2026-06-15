@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { FadeUp } from "./Reveal";
 import type { Lang } from "@/lib/i18n";
 
 type Entry = {
@@ -15,87 +14,74 @@ type Entry = {
 type Props = {
   entries: Entry[];
   letters: string[];
-  byLetter: Record<string, Entry[]>;
   lang: Lang;
   placeholder: string;
+  noResult: string;
+  allLabel: string;
 };
 
-export function GlossaireFilter({ entries, letters, byLetter, lang, placeholder }: Props) {
-  const noResult = (q: string) =>
-    lang === "en" ? `No term found for "${q}"` : `Aucun terme trouvé pour « ${q} »`;
-  const termLabel = (n: number) =>
-    lang === "en" ? `${n} terms` : `${n} termes`;
+export function GlossaireFilter({ entries, letters, lang, placeholder, noResult, allLabel }: Props) {
   const [query, setQuery] = useState("");
+  const [letter, setLetter] = useState("");
   const q = query.trim().toLowerCase();
 
-  const filtered = q.length > 0
-    ? entries.filter((e) => e.term.toLowerCase().includes(q))
-    : null;
+  const filtered = entries.filter((e) => {
+    if (letter && e.term[0].toUpperCase() !== letter) return false;
+    if (q && !e.term.toLowerCase().includes(q)) return false;
+    return true;
+  });
 
   return (
     <div>
-      {/* Barre de recherche */}
-      <div className="mb-6">
+      <div className="mb-5 flex flex-wrap items-center gap-3">
         <input
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={placeholder}
-          className="field w-full max-w-sm"
+          className="inp inp-sm w-[260px] max-w-full"
           autoComplete="off"
         />
-      </div>
-
-      {filtered !== null ? (
-        /* Résultats filtrés */
-        filtered.length === 0 ? (
-          <p className="nb-card max-w-md p-6 text-sm text-[var(--ink-dim)]">{noResult(query.trim())}</p>
-        ) : (
-          <div className="flex flex-col gap-5">
-            <p className="meta uppercase">{termLabel(filtered.length)}</p>
-            {filtered.map((entry) => {
-              const defHtml = lang === "en" && entry.definitionEnHtml ? entry.definitionEnHtml : entry.definitionHtml;
-              return (
-                <section key={entry.id} id={entry.slug} className="nb-card scroll-mt-24 p-6">
-                  <h3 className="font-display text-xl">{entry.term}</h3>
-                  <div
-                    className="mt-2 text-sm leading-relaxed text-[var(--ink-dim)]"
-                    dangerouslySetInnerHTML={{ __html: defHtml }}
-                  />
-                </section>
-              );
-            })}
-          </div>
-        )
-      ) : (
-        /* Vue alphabétique */
-        <div className="flex flex-col gap-12">
-          {letters.map((letter) => (
-            <section key={letter} id={`lettre-${letter}`} className="scroll-mt-24">
-              <div className="section-head">
-                <span className="idx">{letter}</span>
-                <h2>{byLetter[letter].length} {lang === "en" ? "term(s)" : "terme(s)"}</h2>
-              </div>
-              <div className="flex flex-col gap-5">
-                {byLetter[letter].map((entry, i) => {
-                  const defHtml = lang === "en" && entry.definitionEnHtml ? entry.definitionEnHtml : entry.definitionHtml;
-                  return (
-                    <FadeUp key={entry.id} delay={Math.min(i * 0.03, 0.15)}>
-                      <section id={entry.slug} className="nb-card scroll-mt-24 p-6">
-                        <h3 className="font-display text-xl">{entry.term}</h3>
-                        <div
-                          className="mt-2 text-sm leading-relaxed text-[var(--ink-dim)]"
-                          dangerouslySetInnerHTML={{ __html: defHtml }}
-                        />
-                      </section>
-                    </FadeUp>
-                  );
-                })}
-              </div>
-            </section>
+        <div className="flex flex-wrap gap-1">
+          <button onClick={() => setLetter("")} className={`btn btn-sm${!letter ? " btn-p" : ""}`}>
+            {allLabel}
+          </button>
+          {letters.map((l) => (
+            <button
+              key={l}
+              onClick={() => setLetter(letter === l ? "" : l)}
+              className={`btn btn-sm${letter === l ? " btn-p" : ""}`}
+            >
+              {l}
+            </button>
           ))}
         </div>
-      )}
+      </div>
+
+      <div className="flex flex-col gap-1">
+        {filtered.map((entry) => {
+          const def = lang === "en" && entry.definitionEnHtml ? entry.definitionEnHtml : entry.definitionHtml;
+          return (
+            <div
+              key={entry.id}
+              id={entry.slug}
+              className="grid scroll-mt-24 items-start gap-5 border border-line p-5 [grid-template-columns:140px_1fr] max-sm:grid-cols-1"
+              style={{ background: "var(--bg-r)" }}
+            >
+              <div className="font-mono text-[16px] font-bold tracking-[-0.01em] text-[var(--ac)]">
+                {entry.term}
+              </div>
+              <div
+                className="font-serif text-[15px] leading-[1.65] text-[var(--ink-d)]"
+                dangerouslySetInnerHTML={{ __html: def }}
+              />
+            </div>
+          );
+        })}
+        {filtered.length === 0 && (
+          <div className="py-12 text-center font-mono text-[13px] text-[var(--ink-f)]">{noResult}</div>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getAllArticles, readingTimeMinutes, getArticle, localizeMeta } from "@/lib/articles";
+import { getAllArticles, localizeMeta, readingTimeMinutes } from "@/lib/articles";
 import { getLang, getDict } from "@/lib/i18n";
-import { ArticleCard } from "@/components/ArticleCard";
-import { Pagination, paginate, parsePage } from "@/components/Pagination";
-import { FadeUp } from "@/components/Reveal";
+import { Tag } from "@/components/Tag";
+import { PageHeader, PageBand } from "@/components/PageShell";
 
 export const dynamic = "force-dynamic";
 
@@ -14,94 +13,86 @@ export const metadata: Metadata = {
     "Tutoriels pratiques pour utiliser l'IA au quotidien : prompts, MCP, agents, outils. En français, sans jargon inutile.",
 };
 
-export default async function TutosPage({ searchParams }: PageProps<"/tutos">) {
-  const params = await searchParams;
-  const page = parsePage(params.page);
+export default async function TutosPage() {
   const lang = await getLang();
   const t = getDict(lang);
-
+  const en = lang === "en";
+  const locale = en ? "en-GB" : "fr-FR";
   const tutos = await getAllArticles({ type: "tuto" });
-  const { slice, totalPages } = paginate(tutos, page);
-
-  const totalMinutes = (
-    await Promise.all(tutos.map(async (tuto) => (await getArticle(tuto.slug))?.html ?? ""))
-  ).reduce((sum, html) => sum + readingTimeMinutes(html), 0);
-
-  const featured = page === 1 && slice.length > 0 ? slice[0] : null;
-  const rest = page === 1 && slice.length > 0 ? slice.slice(1) : slice;
 
   return (
-    <div>
-      <FadeUp>
-        <header className="mb-10 max-w-2xl">
-          <h1 className="font-display text-4xl tracking-tight sm:text-5xl">{t.tutosTitle}</h1>
-          <p className="mt-4 leading-relaxed text-[var(--ink-dim)]">{t.tutosIntro}</p>
-          {tutos.length > 0 && (
-            <p className="meta mt-4 flex gap-5 uppercase">
-              <span className="text-[var(--accent)]">{t.tutosCount(tutos.length)}</span>
-              {totalMinutes > 0 && <span>{t.minTotal(totalMinutes)}</span>}
-            </p>
-          )}
-        </header>
-      </FadeUp>
-
-      {tutos.length === 0 ? (
-        <div className="flex flex-col gap-6">
-          <p className="nb-card max-w-md p-6 text-sm">
-            {t.tutosEmpty}{" "}
-            <Link href="/" className="font-semibold underline">
-              {t.homePage}
-            </Link>
-            .
-          </p>
-          <div className="nb-card max-w-md border-dashed p-6">
-            <p className="meta mb-3 uppercase text-[var(--accent)]">
-              {lang === "en" ? "Coming soon" : "À venir"}
-            </p>
-            <ul className="flex flex-col gap-2 text-sm text-[var(--ink-dim)]">
-              <li>→ {lang === "en" ? "Write better prompts in 10 rules" : "Écrire de meilleurs prompts en 10 règles"}</li>
-              <li>→ {lang === "en" ? "Set up Claude with MCP in 5 minutes" : "Configurer Claude avec MCP en 5 minutes"}</li>
-              <li>→ {lang === "en" ? "Automate your AI watch with n8n" : "Automatiser sa veille IA avec n8n"}</li>
-            </ul>
-          </div>
-        </div>
-      ) : (
-        <>
-          {featured && (
-            <FadeUp className="mb-8">
-              <Link href={`/articles/${featured.slug}`} className="group nb-card-hover block p-6 sm:p-8">
-                <div className="flex flex-wrap items-center gap-2 mb-3">
-                  <span className="nb-pill bg-[var(--accent)] text-[var(--on-accent)]">
-                    {lang === "en" ? "Featured" : "À lire"}
-                  </span>
-                  <span className="meta uppercase">{t.guide}</span>
-                </div>
-                <h2 className="font-display text-2xl leading-snug group-hover:text-[var(--accent)] sm:text-3xl">
-                  {localizeMeta(featured, lang).title}
-                </h2>
-                <p className="mt-3 text-sm leading-relaxed text-[var(--ink-dim)] line-clamp-3">
-                  {localizeMeta(featured, lang).excerpt}
-                </p>
-                <p className="meta mt-4 uppercase text-[var(--accent)]">
-                  {t.readArticle}
-                </p>
+    <div className="-mt-10">
+      <PageHeader
+        title={en ? "Practical tutorials" : "Tutoriels pratiques"}
+        subtitle={en ? "Hand-written guides. Code that actually runs." : "Guides écrits à la main. Du code qui tourne vraiment."}
+      />
+      <PageBand>
+        {tutos.length === 0 ? (
+          <div className="flex flex-col gap-6">
+            <p className="font-serif text-[15px] text-[var(--ink-d)]">
+              {t.tutosEmpty}{" "}
+              <Link href="/" className="text-[var(--ac)] underline">
+                {t.homePage}
               </Link>
-            </FadeUp>
-          )}
-
-          {rest.length > 0 && (
-            <div className="cards-grid">
-              {rest.map((tuto, i) => (
-                <FadeUp key={tuto.slug} delay={Math.min(i * 0.05, 0.25)} className="h-full">
-                  <ArticleCard article={tuto} lang={lang} />
-                </FadeUp>
-              ))}
+              .
+            </p>
+            <div className="border border-dashed border-line p-6" style={{ background: "var(--bg-r)" }}>
+              <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--ac)]">
+                {en ? "Coming soon" : "À venir"}
+              </p>
+              <ul className="flex flex-col gap-2 font-serif text-sm text-[var(--ink-d)]">
+                <li>→ {en ? "Write better prompts in 10 rules" : "Écrire de meilleurs prompts en 10 règles"}</li>
+                <li>→ {en ? "Set up Claude with MCP in 5 minutes" : "Configurer Claude avec MCP en 5 minutes"}</li>
+                <li>→ {en ? "Automate your AI watch with n8n" : "Automatiser sa veille IA avec n8n"}</li>
+              </ul>
             </div>
-          )}
-
-          <Pagination page={page} totalPages={totalPages} basePath="/tutos" t={t} />
-        </>
-      )}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-6">
+            {tutos.map((tuto, i) => {
+              const loc = localizeMeta(tuto, lang);
+              const readMin = readingTimeMinutes(tuto.excerpt + " " + (loc.tldr.join(" ") ?? ""));
+              const date = new Date(tuto.date).toLocaleDateString(locale, {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              });
+              return (
+                <Link
+                  key={tuto.slug}
+                  href={`/articles/${tuto.slug}`}
+                  className="card-mag group grid items-start gap-5 p-6 [grid-template-columns:80px_1fr_auto] max-sm:[grid-template-columns:1fr]"
+                >
+                  <div className="text-center max-sm:text-left">
+                    <div className="font-mono text-[28px] font-bold leading-none text-[var(--ac)]">
+                      {String(i + 1).padStart(2, "0")}
+                    </div>
+                    <div className="mt-1 font-mono text-[10px] text-[var(--ink-f)]">{readMin} min</div>
+                  </div>
+                  <div>
+                    <div className="mb-3 flex flex-wrap items-center gap-2">
+                      <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--ac)]" style={{ border: "1px solid currentColor", padding: "2px 6px" }}>
+                        {t.guide}
+                      </span>
+                      {tuto.tags.slice(0, 3).map((tg) => (
+                        <Tag key={tg}>{tg}</Tag>
+                      ))}
+                    </div>
+                    <h2 className="mb-3 text-[18px] font-semibold leading-snug tracking-[-0.01em] transition-colors group-hover:text-[var(--ac)]">
+                      {loc.title}
+                    </h2>
+                    <p className="font-serif text-[14px] leading-relaxed text-[var(--ink-d)]">{loc.excerpt}</p>
+                    <div className="mt-3 font-mono text-[11px] text-[var(--ink-f)]">{date}</div>
+                  </div>
+                  <div className="whitespace-nowrap pt-1 font-mono text-[12px] text-[var(--ac)] max-sm:hidden">
+                    {en ? "Read →" : "Lire →"}
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </PageBand>
     </div>
   );
 }

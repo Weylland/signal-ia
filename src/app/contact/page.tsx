@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getLang, getDict } from "@/lib/i18n";
-import { FadeUp } from "@/components/Reveal";
 import { ContactForm } from "@/components/ContactForm";
+import { PageHeader, PageBand } from "@/components/PageShell";
 
 export const metadata: Metadata = {
   title: "Contact",
@@ -11,27 +11,30 @@ export const metadata: Metadata = {
 export default async function ContactPage() {
   const lang = await getLang();
   const t = getDict(lang);
+  const en = lang === "en";
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <FadeUp>
-        <header className="mb-8">
-          <h1 className="font-display text-4xl tracking-tight sm:text-5xl">{t.contactTitle}</h1>
-          <p className="mt-4 leading-relaxed text-[var(--ink-dim)]">{t.contactIntro}</p>
-        </header>
-      </FadeUp>
-      <FadeUp delay={0.1}>
+    <div className="-mt-10">
+      <PageHeader narrow title={t.contactTitle} subtitle={t.contactIntro} />
+      <PageBand narrow>
         <ContactForm
           labels={{
-            name: t.contactName,
+            name: en ? "Name / Nickname" : "Prénom / Pseudo",
             email: t.contactEmail,
+            subject: en ? "Subject" : "Sujet",
             message: t.contactMessage,
-            send: t.contactSend,
+            send: en ? "Send message" : "Envoyer le message",
             sent: t.contactSent,
+            sentBody: en ? "Thanks. We usually reply within 48h." : "Merci. Nous répondons généralement sous 48 h.",
             error: t.contactError,
+            note: en ? "No tracker. Your email is never shared." : "Aucun tracker. Votre email n'est jamais partagé.",
+            back: en ? "Back home" : "Retour à l'accueil",
+            subjects: en
+              ? ["Source suggestion", "Factual error", "Editorial question", "Collaboration", "Other"]
+              : ["Suggestion de source", "Erreur factuelle", "Question éditoriale", "Proposition de collaboration", "Autre"],
           }}
         />
-      </FadeUp>
+      </PageBand>
     </div>
   );
 }

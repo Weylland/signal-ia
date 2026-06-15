@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { getGlossary } from "@/lib/glossary";
 import { getLang, getDict } from "@/lib/i18n";
-import { FadeUp } from "@/components/Reveal";
 import { GlossaireFilter } from "@/components/GlossaireFilter";
+import { PageHeader, PageBand } from "@/components/PageShell";
 
 export const dynamic = "force-dynamic";
 
@@ -16,14 +16,9 @@ export default async function GlossairePage() {
   const entries = getGlossary();
   const lang = await getLang();
   const t = getDict(lang);
+  const en = lang === "en";
 
-  const byLetterMap = new Map<string, typeof entries>();
-  for (const entry of entries) {
-    const letter = entry.term[0].toUpperCase();
-    byLetterMap.set(letter, [...(byLetterMap.get(letter) ?? []), entry]);
-  }
-  const letters = [...byLetterMap.keys()].sort();
-  const byLetter = Object.fromEntries(byLetterMap);
+  const letters = [...new Set(entries.map((e) => e.term[0].toUpperCase()))].sort();
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -38,43 +33,22 @@ export default async function GlossairePage() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+    <div className="-mt-10">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <PageHeader
+        title={en ? "AI Glossary" : "Glossaire IA"}
+        subtitle={en ? "The essential terms, explained simply." : "Les termes essentiels, expliqués simplement."}
       />
-      <FadeUp>
-        <header className="mb-8">
-          <h1 className="font-display text-4xl tracking-tight sm:text-5xl">{t.glossaryTitle}</h1>
-          <p className="mt-4 leading-relaxed text-[var(--ink-dim)]">{t.glossaryIntro}</p>
-          <p className="meta mt-3 uppercase">
-            <span className="text-[var(--accent)]">{t.terms(entries.length)}</span>
-          </p>
-        </header>
-      </FadeUp>
-
-      {letters.length > 0 && (
-        <FadeUp>
-          <nav
-            className="mb-6 flex flex-wrap gap-1.5 border-y border-line py-3"
-            aria-label="Index alphabétique"
-          >
-            {letters.map((letter) => (
-              <a key={letter} href={`#lettre-${letter}`} className="nb-btn px-2.5 py-1 text-xs">
-                {letter}
-              </a>
-            ))}
-          </nav>
-        </FadeUp>
-      )}
-
-      <GlossaireFilter
-        entries={entries}
-        letters={letters}
-        byLetter={byLetter}
-        lang={lang}
-        placeholder={t.glossaryFilterPlaceholder}
-      />
+      <PageBand>
+        <GlossaireFilter
+          entries={entries}
+          letters={letters}
+          lang={lang}
+          placeholder={t.glossaryFilterPlaceholder}
+          noResult={en ? "No term found." : "Aucun terme trouvé."}
+          allLabel={en ? "All" : "Tous"}
+        />
+      </PageBand>
     </div>
   );
 }

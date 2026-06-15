@@ -1,136 +1,93 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getTrendingArticles, getAllTags, localizeMeta, formatDate } from "@/lib/articles";
+import { getTrendingArticles, getAllTags } from "@/lib/articles";
+import { categoryFor } from "@/lib/category";
 import { getLang, getDict } from "@/lib/i18n";
 import { ArticleCard } from "@/components/ArticleCard";
-import { FadeIn, FadeUp } from "@/components/Reveal";
+import { PageHeader, PageBand } from "@/components/PageShell";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Trending — signal·ia",
-  description: "Les articles IA les plus lus et les plus réagis de la semaine.",
+  title: "Tendances — signal·ia",
+  description: "Les sujets IA les plus discutés de la semaine.",
 };
 
 export default async function TrendingPage() {
   const lang = await getLang();
-  const t = getDict(lang);
-  const [trending, tags] = await Promise.all([
-    getTrendingArticles(12),
-    getAllTags(),
-  ]);
+  const en = lang === "en";
+  const [trending, tags] = await Promise.all([getTrendingArticles(6), getAllTags()]);
 
-  const hotTags = tags
-    .filter((t) => t.count >= 2)
-    .slice(0, 15);
+  const trends = tags.filter((t) => t.count >= 1).slice(0, 10);
+  const maxCount = Math.max(1, ...trends.map((t) => t.count));
 
   return (
-    <div>
-      <FadeIn>
-        <header className="mb-10 border-b border-line pb-8">
-          <div className="section-head">
-            <span className="idx">↑</span>
-            <h1>{lang === "en" ? "Trending this week" : "Tendances cette semaine"}</h1>
-          </div>
-          <p className="mt-3 max-w-[56ch] text-[var(--ink-dim)]">
-            {lang === "en"
-              ? "The most read and most discussed AI articles over the last 7 days."
-              : "Les articles IA les plus lus et les plus discutés des 7 derniers jours."}
-          </p>
-        </header>
-      </FadeIn>
-
-      {trending.length > 0 ? (
-        <>
-          {/* Top 3 podium */}
-          <FadeUp>
-            <section className="mb-12">
-              <div className="section-head mb-6">
-                <span className="idx">01</span>
-                <h2>{lang === "en" ? "Top articles" : "Top articles"}</h2>
-              </div>
-              <div className="grid gap-5 lg:grid-cols-3">
-                {trending.slice(0, 3).map((article, i) => {
-                  const loc = localizeMeta(article, lang);
-                  return (
-                    <FadeUp key={article.slug} delay={i * 0.07}>
-                      <article className="nb-card flex flex-col gap-3 p-5 h-full">
-                        <div className="flex items-center justify-between">
-                          <span className="font-display text-5xl text-[var(--ink-faint)]">
-                            {String(i + 1).padStart(2, "0")}
-                          </span>
-                          <div className="flex items-center gap-2">
-                            {article.views > 0 && (
-                              <span className="meta uppercase">{article.views} vues</span>
-                            )}
-                            {article.breaking && (
-                              <span className="nb-pill tag--hot">
-                                {lang === "en" ? "Breaking" : "À chaud"}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <h3 className="font-display text-xl leading-snug text-balance">
-                          <Link
-                            href={`/articles/${article.slug}`}
-                            className="transition-colors hover:text-[var(--accent)]"
-                          >
-                            {loc.title}
-                          </Link>
-                        </h3>
-                        <p className="text-sm text-[var(--ink-dim)] line-clamp-2">{loc.excerpt}</p>
-                        <div className="meta mt-auto flex gap-3 pt-2 uppercase">
-                          <span>{formatDate(article.date, lang)}</span>
-                          {article.tags[0] && <span>{article.tags[0]}</span>}
-                        </div>
-                      </article>
-                    </FadeUp>
-                  );
-                })}
-              </div>
-            </section>
-          </FadeUp>
-
-          {/* Rest as cards */}
-          {trending.length > 3 && (
-            <FadeUp>
-              <section className="mb-12">
-                <div className="section-head mb-6">
-                  <span className="idx">02</span>
-                  <h2>{lang === "en" ? "Also popular" : "Aussi populaires"}</h2>
+    <div className="-mt-10">
+      <PageHeader
+        title={en ? "Trending" : "Tendances"}
+        subtitle={
+          en
+            ? "The most discussed topics in the AI ecosystem this week."
+            : "Les sujets les plus discutés cette semaine dans l'écosystème IA."
+        }
+      />
+      <PageBand>
+        <div className="flex flex-col gap-3">
+          {trends.map(({ tag, count }, i) => {
+            const cat = categoryFor([tag], lang, tag);
+            const color = cat.cls
+              ? `var(--c-${cat.cls.replace("t-", "")})`
+              : "var(--ink-f)";
+            return (
+              <Link
+                key={tag}
+                href={`/tags/${encodeURIComponent(tag)}`}
+                className="card-mag flex items-center gap-5 px-5 py-4"
+              >
+                <span className="w-8 shrink-0 text-right font-mono text-[18px] font-bold text-[var(--ln-h)]">
+                  {i + 1}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1 flex items-center gap-3">
+                    <span className="text-[16px] font-semibold">{tag}</span>
+                    {cat.label && <span className={`tag${cat.cls ? " " + cat.cls : ""}`}>{cat.label}</span>}
+                  </div>
+                  <div className="relative h-1.5 overflow-hidden" style={{ background: "var(--bg-d)" }}>
+                    <div
+                      className="absolute left-0 top-0 h-full"
+                      style={{ width: `${(count / maxCount) * 100}%`, background: color }}
+                    />
+                  </div>
                 </div>
-                <div className="cards-grid">
-                  {trending.slice(3).map((article) => (
-                    <ArticleCard key={article.slug} article={article} lang={lang} />
-                  ))}
+                <div className="shrink-0 text-right">
+                  <div className="font-mono text-[13px] font-semibold">{count}</div>
+                  <div className="font-mono text-[11px] text-[var(--ink-f)]">
+                    {en ? "articles" : "articles"}
+                  </div>
                 </div>
-              </section>
-            </FadeUp>
-          )}
-        </>
-      ) : (
-        <p className="text-[var(--ink-dim)]">
-          {lang === "en" ? "Not enough data yet." : "Pas encore assez de données."}
-        </p>
-      )}
+              </Link>
+            );
+          })}
+        </div>
 
-      {hotTags.length > 0 && (
-        <FadeUp>
-          <section className="border-t border-line pt-8">
-            <div className="section-head mb-5">
-              <span className="idx">03</span>
-              <h2>{lang === "en" ? "Trending topics" : "Sujets du moment"}</h2>
+        {trending.length > 0 && (
+          <>
+            <div className="mb-8 mt-16 flex items-center gap-3">
+              <span className="border-l-2 border-[var(--ac)] pl-2 font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--ac)]">
+                {en ? "Popular" : "Populaire"}
+              </span>
+              <h2 className="text-[22px] font-bold tracking-[-0.02em]">
+                {en ? "Most read" : "Les plus lus"}
+              </h2>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {hotTags.map(({ tag, count }) => (
-                <Link key={tag} href={`/tags/${encodeURIComponent(tag)}`} className="nb-pill">
-                  {tag} <span className="ml-1.5 text-[var(--accent)]">{count}</span>
-                </Link>
+            <div className="mag">
+              {trending.map((a) => (
+                <ArticleCard key={a.slug} article={a} lang={lang} />
               ))}
             </div>
-          </section>
-        </FadeUp>
-      )}
+          </>
+        )}
+      </PageBand>
     </div>
   );
 }

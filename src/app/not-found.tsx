@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { getLang, getDict } from "@/lib/i18n";
-import { CoverPattern } from "@/components/CoverPattern";
 
 export default async function NotFound() {
   const lang = await getLang();
@@ -8,29 +7,23 @@ export default async function NotFound() {
   const en = lang === "en";
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col items-center py-10 text-center">
-      <div className="mb-8 w-full max-w-md overflow-hidden border-2 border-ink shadow-[5px_5px_0_var(--ink)]">
-        <div className="aspect-[16/9]">
-          <CoverPattern seed="404-not-found" label="404" />
-        </div>
+    <div className="flex min-h-[60vh] flex-col items-center justify-center px-5 py-24 text-center">
+      <div className="mb-4 font-mono text-[96px] font-bold leading-none tracking-[-0.04em] text-[var(--ln-h)]">
+        404
       </div>
-      <p className="meta uppercase text-[var(--accent)]">404</p>
-      <h1 className="mt-3 font-display text-4xl tracking-tight sm:text-5xl">
+      <h1 className="mb-4 text-[28px] font-bold tracking-[-0.02em]">
         {en ? "Page not found" : "Page introuvable"}
       </h1>
-      <p className="mt-4 max-w-md leading-relaxed text-[var(--ink-dim)]">
+      <p className="mb-8 max-w-[380px] font-serif text-[16px] leading-relaxed text-[var(--ink-d)]">
         {en
-          ? "This page doesn't exist or has moved. The news is still here, though."
-          : "Cette page n'existe pas ou a été déplacée. L'actu, elle, est toujours là."}
+          ? "This page doesn't exist or has moved. Use the navigation or search to find what you're looking for."
+          : "Cette page n'existe pas ou a été déplacée. Utilisez la navigation ou la recherche pour trouver ce que vous cherchez."}
       </p>
-      <div className="mt-8 flex flex-wrap justify-center gap-3">
-        <Link href="/" className="nb-btn nb-btn-primary">
-          {t.home}
+      <div className="flex flex-wrap justify-center gap-3">
+        <Link href="/" className="btn btn-p btn-lg">
+          ← {t.home}
         </Link>
-        <Link href="/recherche" className="nb-btn">
-          {t.searchTitle}
-        </Link>
-        <Link href="/actus" className="nb-btn">
+        <Link href="/actus" className="btn btn-lg">
           {t.navAllNews}
         </Link>
       </div>
