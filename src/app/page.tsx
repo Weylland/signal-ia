@@ -9,6 +9,7 @@ import {
   type ArticleMeta,
 } from "@/lib/articles";
 import { categoryFor } from "@/lib/category";
+import { getSources } from "@/lib/sources";
 import { getLang, getDict, type Lang } from "@/lib/i18n";
 import { ArticleCard } from "@/components/ArticleCard";
 import { ArticleRow } from "@/components/ArticleRow";
@@ -75,7 +76,7 @@ export default async function Home() {
   const magArticles = rest.slice(0, 5);
   const recurringTags = tags.filter((x) => x.count >= 2);
   const exploreTags = (recurringTags.length > 0 ? recurringTags : tags).slice(0, 18);
-  const distinctSources = new Set(articles.flatMap((a) => a.sources.map((s) => s.name))).size;
+  const monitoredSources = getSources({ activeOnly: true }).length;
 
   // Compte par catégorie pour le panneau latéral
   const catMap = new Map<string, { label: string; cls: string; count: number }>();
@@ -93,6 +94,19 @@ export default async function Home() {
 
   return (
     <div className="-mt-10">
+      {/* ── Bandeau valeur ── */}
+      <div className="fullbleed" style={{ borderBottom: "1px solid var(--ln)", background: "var(--bg-d)" }}>
+        <div className="wrap flex items-center justify-center gap-2 py-2.5 text-center">
+          <span className="font-mono text-[11px] leading-relaxed text-[var(--ink-d)]">
+            {en ? "We read " : "On lit "}
+            <span className="font-semibold text-[var(--ac)]">
+              {monitoredSources} {en ? "AI sources" : "sources IA"}
+            </span>
+            {en ? " for you — the essentials in 5 minutes a day." : " pour toi — l'essentiel en 5 minutes par jour."}
+          </span>
+        </div>
+      </div>
+
       {/* ── Hero ── */}
       {featured && featuredLoc && (
         <section className="fullbleed" style={{ padding: "var(--s6) 0 0" }}>
@@ -191,7 +205,7 @@ export default async function Home() {
                     </div>
                     {[
                       [en ? "Articles" : "Articles", String(articles.length)],
-                      [en ? "Active sources" : "Sources actives", String(distinctSources)],
+                      [en ? "Active sources" : "Sources actives", String(monitoredSources)],
                       [en ? "Tutorials" : "Tutos", String(tutos.length)],
                       [en ? "Last 24h" : "Dernières 24 h", String(last24h.length)],
                     ].map(([l, v]) => (
