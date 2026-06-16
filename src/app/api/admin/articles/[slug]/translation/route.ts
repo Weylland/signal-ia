@@ -50,8 +50,6 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
   const body = await req.json() as TranslateBody;
 
   if (body.autoTranslate) {
-    const frText = article.html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-
     const [titleEn, excerptEn, tldrRaw, htmlEn] = await Promise.all([
       mistralTranslate(
         `Translate this French article title to English. Return only the translated title, nothing else.\n\nFrench: ${article.title}`

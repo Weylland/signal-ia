@@ -119,6 +119,7 @@ export function getDb(): Database.Database {
   addColumnIfMissing(db, "articles", "excerpt_en", "TEXT");
   addColumnIfMissing(db, "articles", "content_html_en", "TEXT");
   addColumnIfMissing(db, "articles", "tldr_en", "TEXT");
+  addColumnIfMissing(db, "articles", "difficulty", "TEXT");
   addColumnIfMissing(db, "glossary", "definition_html_en", "TEXT");
 
   db.exec(

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Lang } from "@/lib/i18n";
 
-type PageLink = { href: string; label: string };
+type PageLink = { href: string; label: string; icon?: string };
 
 type Props = {
   pages: PageLink[];
@@ -60,6 +60,7 @@ export function CommandPalette({ pages, lang, placeholder, pagesLabel, searchLab
     ? {
         href: `/recherche?q=${encodeURIComponent(query.trim())}`,
         label: `${searchLabel} ${lang === "en" ? `"${query.trim()}"` : `« ${query.trim()} »`}`,
+        icon: "⌕" as string | undefined,
       }
     : null;
 
@@ -130,12 +131,27 @@ export function CommandPalette({ pages, lang, placeholder, pagesLabel, searchLab
                 borderLeft: i === active ? "2px solid var(--ac)" : "2px solid transparent",
               }}
             >
-              <span className="font-display text-[14px]">{item.label}</span>
+              {"icon" in item && item.icon ? (
+                <span
+                  className="shrink-0 font-mono text-[12px]"
+                  style={{ color: "var(--ac)", width: 20, textAlign: "center" }}
+                >
+                  {item.icon}
+                </span>
+              ) : null}
+              <span className="flex-1 font-display text-[14px]">{item.label}</span>
               {i === active && (
                 <span className="ml-auto font-mono text-[10px] text-[var(--ink-f)]">↵</span>
               )}
             </button>
           ))}
+        </div>
+        <div
+          className="flex gap-5 border-t border-line px-4 py-1.5 font-mono text-[10px] text-[var(--ink-f)]"
+        >
+          <span>↑↓ naviguer</span>
+          <span>↵ ouvrir</span>
+          <span>ESC fermer</span>
         </div>
       </div>
     </div>

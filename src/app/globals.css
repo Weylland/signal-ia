@@ -878,8 +878,8 @@ a.tag:hover { color: var(--ac); border-color: var(--ac); }
 .prose ul li { list-style: disc; margin-bottom: 0.4em; }
 
 /* ── Ticker maquette ── */
-@keyframes tk { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-.tk-t { display: flex; animation: tk 36s linear infinite; white-space: nowrap; }
+@keyframes tk { from { transform: translateX(0); } to { transform: translateX(-25%); } }
+.tk-t { display: flex; animation: tk 80s linear infinite; white-space: nowrap; will-change: transform; }
 .tk-t:hover { animation-play-state: paused; }
 @media (prefers-reduced-motion: reduce) { .tk-t { animation: none; } }
 

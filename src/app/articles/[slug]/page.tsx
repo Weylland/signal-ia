@@ -7,10 +7,10 @@ import {
   getRelatedArticles,
   readingTimeMinutes,
   localizeMeta,
-  formatDate,
   getReactions,
 } from "@/lib/articles";
 import { getLang, getDict } from "@/lib/i18n";
+import { getSettings } from "@/lib/settings";
 import { ArticleCard } from "@/components/ArticleCard";
 import { CategoryBadge, Tag } from "@/components/Tag";
 import { CoverPattern } from "@/components/CoverPattern";
@@ -34,10 +34,12 @@ export async function generateMetadata({
   return {
     title: article.title,
     description: article.excerpt,
+    alternates: { canonical: `${siteUrl}/articles/${slug}` },
     openGraph: {
       title: article.title,
       description: article.excerpt,
       type: "article",
+      url: `${siteUrl}/articles/${slug}`,
       publishedTime: article.date,
       ...(article.image ? { images: [{ url: article.image }] } : {}),
     },
@@ -71,15 +73,26 @@ export default async function ArticlePage({ params }: PageProps<"/articles/[slug
     year: "numeric",
   });
 
+  const { siteName } = getSettings();
+  const articleUrl = `${siteUrl}/articles/${slug}`;
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": article.type === "tuto" ? "TechArticle" : "NewsArticle",
-    headline: article.title,
-    description: article.excerpt,
+    headline: loc.title,
+    description: loc.excerpt,
     datePublished: article.date,
-    inLanguage: "fr",
+    dateModified: article.date,
+    inLanguage: en ? "en" : "fr",
+    mainEntityOfPage: { "@type": "WebPage", "@id": articleUrl },
+    url: articleUrl,
     ...(article.image ? { image: [article.image] } : {}),
-    publisher: { "@type": "Organization", name: "signal·ia" },
+    author: { "@type": "Organization", name: siteName, url: siteUrl },
+    publisher: {
+      "@type": "Organization",
+      name: siteName,
+      url: siteUrl,
+      logo: { "@type": "ImageObject", url: `${siteUrl}/icon-512.png` },
+    },
   };
 
   return (

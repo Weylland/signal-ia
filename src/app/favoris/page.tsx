@@ -22,11 +22,11 @@ export default async function FavorisPage() {
           labels={{
             emptyTitle: en ? "No favorites yet" : "Aucun favori pour l'instant",
             empty: en
-              ? "Tap “Save” on any article to find it back here."
-              : "Cliquez sur « Sauvegarder » dans n'importe quel article pour le retrouver ici.",
+              ? 'Tap "Save" on any article to find it back here.'
+              : "Cliquez sur Sauvegarder dans n'importe quel article pour le retrouver ici.",
             remove: en ? "Remove" : "Retirer",
             explore: en ? "Explore news" : "Explorer les actus",
-            count: (n: number) => `${n} ${en ? `article${n > 1 ? "s" : ""}` : `article${n > 1 ? "s" : ""}`}`,
+            lang: en ? "en" : "fr",
           }}
         />
       </PageBand>

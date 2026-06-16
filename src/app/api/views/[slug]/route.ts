@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { incrementViews } from "@/lib/articles";
-import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function POST(
   request: NextRequest,

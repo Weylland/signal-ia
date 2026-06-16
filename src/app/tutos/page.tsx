@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getAllArticles, localizeMeta, readingTimeMinutes } from "@/lib/articles";
+import { getAllArticles, localizeMeta, readingTimeMinutes, type Difficulty } from "@/lib/articles";
 import { getLang, getDict } from "@/lib/i18n";
 import { Tag } from "@/components/Tag";
 import { PageHeader, PageBand } from "@/components/PageShell";
+import { TutosFilter } from "@/components/TutosFilter";
 
 export const dynamic = "force-dynamic";
 
@@ -13,12 +14,25 @@ export const metadata: Metadata = {
     "Tutoriels pratiques pour utiliser l'IA au quotidien : prompts, MCP, agents, outils. En français, sans jargon inutile.",
 };
 
-export default async function TutosPage() {
+const DIFFICULTIES: { value: Difficulty; labelFr: string; labelEn: string }[] = [
+  { value: "debutant", labelFr: "débutant", labelEn: "beginner" },
+  { value: "intermediaire", labelFr: "intermédiaire", labelEn: "intermediate" },
+  { value: "avance", labelFr: "avancé", labelEn: "advanced" },
+];
+
+export default async function TutosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ difficulty?: string }>;
+}) {
+  const params = await searchParams;
   const lang = await getLang();
   const t = getDict(lang);
   const en = lang === "en";
   const locale = en ? "en-GB" : "fr-FR";
-  const tutos = await getAllArticles({ type: "tuto" });
+
+  const difficulty = DIFFICULTIES.find((d) => d.value === params.difficulty)?.value;
+  const tutos = await getAllArticles({ type: "tuto", difficulty });
 
   return (
     <div className="-mt-10">
@@ -27,6 +41,13 @@ export default async function TutosPage() {
         subtitle={en ? "Hand-written guides. Code that actually runs." : "Guides écrits à la main. Du code qui tourne vraiment."}
       />
       <PageBand>
+        {/* Filtres niveau */}
+        <TutosFilter
+          current={difficulty ?? null}
+          difficulties={DIFFICULTIES.map((d) => ({ value: d.value, label: en ? d.labelEn : d.labelFr }))}
+          allLabel={en ? "All levels" : "Tous niveaux"}
+        />
+
         {tutos.length === 0 ? (
           <div className="flex flex-col gap-6">
             <p className="font-serif text-[15px] text-[var(--ink-d)]">
@@ -57,6 +78,7 @@ export default async function TutosPage() {
                 month: "long",
                 year: "numeric",
               });
+              const diff = DIFFICULTIES.find((d) => d.value === tuto.difficulty);
               return (
                 <Link
                   key={tuto.slug}
@@ -74,6 +96,11 @@ export default async function TutosPage() {
                       <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--ac)]" style={{ border: "1px solid currentColor", padding: "2px 6px" }}>
                         {t.guide}
                       </span>
+                      {diff && (
+                        <span className="font-mono text-[10px] uppercase tracking-[0.06em] text-[var(--ink-f)]" style={{ border: "1px solid var(--ln)", padding: "2px 6px" }}>
+                          {en ? diff.labelEn : diff.labelFr}
+                        </span>
+                      )}
                       {tuto.tags.slice(0, 3).map((tg) => (
                         <Tag key={tg}>{tg}</Tag>
                       ))}

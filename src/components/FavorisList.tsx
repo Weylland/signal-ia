@@ -14,7 +14,7 @@ function getBookmarks(): BookmarkItem[] {
 }
 
 type Props = {
-  labels: { empty: string; emptyTitle: string; remove: string; explore: string; count: (n: number) => string };
+  labels: { empty: string; emptyTitle: string; remove: string; explore: string; lang: "fr" | "en" };
 };
 
 export function FavorisList({ labels }: Props) {
@@ -49,7 +49,10 @@ export function FavorisList({ labels }: Props) {
 
   return (
     <div>
-      <p className="mb-5 font-mono text-[11px] uppercase text-[var(--ac)]">{labels.count(items.length)}</p>
+      <p className="mb-5 font-mono text-[11px] uppercase text-[var(--ac)]">
+        {items.length} article{items.length > 1 ? "s" : ""}
+        {labels.lang === "fr" ? " sauvegardé" + (items.length > 1 ? "s" : "") : " saved"}
+      </p>
       <div>
         {items.map((item) => (
           <div key={item.slug} className="flex items-center gap-4 border-b border-line py-4">

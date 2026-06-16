@@ -1,20 +1,16 @@
-import Link from "next/link";
-import { latestBackup, backupCount, backupDir } from "@/lib/backup";
+import { backupCount, listAllBackups } from "@/lib/backup";
 import { getDb } from "@/lib/db";
-import { statSync, readdirSync } from "node:fs";
-import path from "node:path";
+import { BackupList } from "@/components/admin/BackupList";
 
 export const dynamic = "force-dynamic";
 
 export default function BackupPage() {
-  const latestPath = latestBackup();
   const count = backupCount();
+  const backups = listAllBackups();
   const db = getDb();
   const dbSize = (() => { try { const r = db.prepare("SELECT page_count * page_size AS size FROM pragma_page_count(), pragma_page_size()").get() as { size: number }; return r.size; } catch { return 0; } })();
 
-  const latest = latestPath
-    ? (() => { try { const st = statSync(latestPath); return { name: path.basename(latestPath), size: st.size, mtime: st.mtimeMs }; } catch { return null; } })()
-    : null;
+  const latest = backups[0] ?? null;
 
   const metrics = [
     { label: "Dernière sauvegarde", value: latest ? new Date(latest.mtime).toLocaleString("fr-FR") : "Aucune" },
@@ -47,34 +43,10 @@ export default function BackupPage() {
         ))}
       </div>
 
-      {/* Latest backup download */}
-      {latest && (
-        <div style={{ marginBottom: "var(--s7)", padding: "var(--s5)", background: "var(--bg-r)", border: "1px solid var(--ln)", display: "flex", alignItems: "center", gap: "var(--s5)", flexWrap: "wrap" }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontFamily: "var(--ff-h)", fontSize: 14, fontWeight: 600 }}>Dernier snapshot</div>
-            <div style={{ fontFamily: "var(--ff-m)", fontSize: 11, color: "var(--ink-f)", marginTop: 4 }}>
-              {latest.name} · {(latest.size / 1024 / 1024).toFixed(1)} Mo · {new Date(latest.mtime).toLocaleString("fr-FR")}
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: "var(--s3)", alignItems: "center" }}>
-            <span className="s-ok" />
-            <span style={{ fontFamily: "var(--ff-m)", fontSize: 10, color: "var(--ok)", textTransform: "uppercase", letterSpacing: ".06em" }}>OK</span>
-            <a href="/api/admin/backup" className="btn btn-sm btn-g" style={{ fontFamily: "var(--ff-m)", fontSize: 10 }}>
-              Télécharger ↓
-            </a>
-          </div>
-        </div>
-      )}
-
-      {count === 0 && (
-        <div style={{ textAlign: "center", padding: "var(--s9) var(--s5)", display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--s4)" }}>
-          <span style={{ fontFamily: "var(--ff-m)", fontSize: 40, color: "var(--ln-h)" }}>⊞</span>
-          <div style={{ fontFamily: "var(--ff-h)", fontSize: 18, fontWeight: 600, color: "var(--ink-d)" }}>Aucune sauvegarde</div>
-          <div style={{ fontFamily: "var(--ff-b)", fontSize: 14, color: "var(--ink-f)" }}>
-            La première sauvegarde automatique sera effectuée à 03h00. Vous pouvez aussi en créer une manuellement.
-          </div>
-        </div>
-      )}
+      {/* Backup list */}
+      <div style={{ marginBottom: "var(--s7)" }}>
+        <BackupList backups={backups} />
+      </div>
 
       {/* Info */}
       <div style={{ padding: "var(--s5)", background: "var(--bg-r)", border: "1px solid var(--ln)", borderLeft: "3px solid var(--ac)" }}>

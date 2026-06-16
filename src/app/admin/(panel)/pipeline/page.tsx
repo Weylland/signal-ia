@@ -76,7 +76,7 @@ export default function PipelinePage() {
       )}
 
       {/* Moderation queue */}
-      <h2 style={{ fontFamily: "var(--ff-h)", fontSize: 15, fontWeight: 600, marginBottom: "var(--s5)" }}>File d'attente</h2>
+      <h2 style={{ fontFamily: "var(--ff-h)", fontSize: 15, fontWeight: 600, marginBottom: "var(--s5)" }}>File d&apos;attente</h2>
       <ModerationQueue items={pending} />
 
       {pending.length === 0 && (

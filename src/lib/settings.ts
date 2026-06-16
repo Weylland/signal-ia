@@ -62,6 +62,10 @@ export function getSettings(): SiteSettings {
       (result[key] as string) = raw;
     }
   }
+  // Champs d'identité obligatoires : un vide retombe sur le défaut pour ne jamais casser le branding.
+  for (const key of ["siteName", "tagline", "seoDescription"] as const) {
+    if (!result[key].trim()) result[key] = DEFAULT_SETTINGS[key];
+  }
   return result;
 }
 

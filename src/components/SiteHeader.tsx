@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { Lang } from "@/lib/i18n";
+import { splitBrand } from "@/lib/brand";
 
 type NavLink = { href: string; label: string };
 
@@ -11,13 +12,15 @@ type Props = {
   links: NavLink[];
   lang: Lang;
   labels: { search: string; favorites: string; menu: string; close: string };
+  isAdmin?: boolean;
+  siteName?: string;
 };
 
 function openCmdk() {
   window.dispatchEvent(new CustomEvent("open-cmdk"));
 }
 
-export function SiteHeader({ links, lang, labels }: Props) {
+export function SiteHeader({ links, lang, labels, isAdmin, siteName = "signal·ia" }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const [mob, setMob] = useState(false);
@@ -56,11 +59,16 @@ export function SiteHeader({ links, lang, labels }: Props) {
     router.refresh();
   }
 
+  const brand = splitBrand(siteName);
   const Logo = (
     <span className="font-display text-[19px] tracking-tight">
-      <span className="text-[var(--ac)]">signal</span>
-      <span className="text-[var(--ink-f)]">·</span>
-      <span>ia</span>
+      <span className="text-[var(--ac)]">{brand.before}</span>
+      {brand.after && (
+        <>
+          <span className="text-[var(--ink-f)]">·</span>
+          <span>{brand.after}</span>
+        </>
+      )}
     </span>
   );
 
@@ -111,17 +119,17 @@ export function SiteHeader({ links, lang, labels }: Props) {
             </button>
             <Link
               href="/favoris"
-              className="btn btn-g flex h-11 w-11 items-center justify-center !p-0 text-lg"
+              className="btn btn-g flex h-11 w-11 items-center justify-center !p-0"
               aria-label={labels.favorites}
             >
-              ★
+              <HeartIcon />
             </Link>
             <button
               onClick={toggleTheme}
-              className="btn btn-g flex h-11 w-11 items-center justify-center !p-0 text-[15px]"
+              className="btn btn-g flex h-11 w-11 items-center justify-center !p-0"
               aria-label="Thème"
             >
-              {theme === "dark" ? "○" : "●"}
+              {theme === "dark" ? <MoonIcon /> : <SunIcon />}
             </button>
             <span className="hm flex items-center gap-1.5 px-1 font-mono text-[11px] text-[var(--ink-f)]">
               <button
@@ -138,14 +146,16 @@ export function SiteHeader({ links, lang, labels }: Props) {
                 EN
               </button>
             </span>
-            <Link
-              href="/admin"
-              className="hm flex h-11 items-center px-2 font-mono text-[11px] text-[var(--ink-f)] transition-colors hover:text-[var(--ink)]"
-            >
-              admin ↗
-            </Link>
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className="hm flex h-11 items-center px-2 font-mono text-[11px] text-[var(--ink-f)] transition-colors hover:text-[var(--ink)]"
+              >
+                admin ↗
+              </Link>
+            )}
             <button
-              onClick={() => setMob(true)}
+              onClick={() => setMob(!mob)}
               className="hd flex h-11 w-11 items-center justify-center text-[22px]"
               aria-label={labels.menu}
             >
@@ -203,6 +213,31 @@ function SearchIcon() {
     <svg width="14" height="14" fill="none" aria-hidden="true">
       <circle cx="6" cy="6" r="4" stroke="currentColor" strokeWidth="1.5" />
       <path d="M9.5 9.5l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" />
+    </svg>
+  );
+}
+
+function HeartIcon() {
+  return (
+    <svg width="15" height="15" fill="none" aria-hidden="true">
+      <path d="M7.5 12.5L2.5 8.5C1.2 7.5 1.2 5.5 2.5 4.5 3.8 3.5 5.5 4 7.5 6 9.5 4 11.2 3.5 12.5 4.5 13.8 5.5 13.8 7.5 12.5 8.5L7.5 12.5Z" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+function SunIcon() {
+  return (
+    <svg width="15" height="15" fill="none" aria-hidden="true">
+      <circle cx="7.5" cy="7.5" r="3" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M7.5 1v1.5M7.5 12.5V14M1 7.5h1.5M12.5 7.5H14M3.05 3.05l1.06 1.06M9.89 9.89l1.06 1.06M11.95 3.05l-1.06 1.06M5.11 9.89l-1.06 1.06" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function MoonIcon() {
+  return (
+    <svg width="15" height="15" fill="none" aria-hidden="true">
+      <path d="M12.5 9A6 6 0 0 1 6 2.5a.5.5 0 0 0-.6-.6A6.5 6.5 0 1 0 13.1 9.6a.5.5 0 0 0-.6-.6Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
     </svg>
   );
 }

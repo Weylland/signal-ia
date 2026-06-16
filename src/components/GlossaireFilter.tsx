@@ -33,19 +33,22 @@ export function GlossaireFilter({ entries, letters, lang, placeholder, noResult,
 
   return (
     <div>
-      <div className="mb-5 flex flex-wrap items-center gap-3">
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={placeholder}
-          className="inp inp-sm w-[260px] max-w-full"
-          autoComplete="off"
-        />
-        <div className="flex flex-wrap gap-1">
+      <div className="mb-5 flex flex-col gap-3">
+        <div className="flex items-center gap-2">
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={placeholder}
+            className="inp inp-sm"
+            style={{ width: 260, flex: "0 0 260px" }}
+            autoComplete="off"
+          />
           <button onClick={() => setLetter("")} className={`btn btn-sm${!letter ? " btn-p" : ""}`}>
             {allLabel}
           </button>
+        </div>
+        <div className="flex flex-wrap gap-1">
           {letters.map((l) => (
             <button
               key={l}

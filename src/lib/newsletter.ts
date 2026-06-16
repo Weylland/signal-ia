@@ -1,4 +1,5 @@
 import { getDb } from "./db";
+import { getSettings } from "./settings";
 
 export function getSubscribers(): { id: number; email: string; created_at: string }[] {
   return getDb().prepare("SELECT * FROM newsletter_subscribers ORDER BY created_at DESC").all() as { id: number; email: string; created_at: string }[];
@@ -12,7 +13,7 @@ export async function sendNewsletter(subject: string, html: string): Promise<{ s
   const key = process.env.RESEND_API_KEY;
   if (!key) throw new Error("RESEND_API_KEY manquante dans .env.local");
 
-  const from = process.env.NEWSLETTER_FROM ?? "signal·ia <newsletter@signal-ia.fr>";
+  const from = process.env.NEWSLETTER_FROM ?? `${getSettings().siteName} <newsletter@signal-ia.fr>`;
   const subscribers = getSubscribers();
 
   let sent = 0;
@@ -42,6 +43,7 @@ export async function sendNewsletter(subject: string, html: string): Promise<{ s
 export async function generateDigestHtml(articles: { title: string; excerpt: string; slug: string }[]): Promise<string> {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const key = process.env.MISTRAL_API_KEY;
+  const { siteName } = getSettings();
 
   let intro = "Voici les 5 articles IA les plus importants de la semaine.";
   if (key) {
@@ -88,7 +90,7 @@ export async function generateDigestHtml(articles: { title: string; excerpt: str
       <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#1d2620;border:2px solid #c8f54e;">
         <tr>
           <td style="padding:32px 32px 24px;border-bottom:2px solid #c8f54e;">
-            <span style="font-family:Georgia,serif;font-size:28px;color:#c8f54e;font-weight:bold;">signal·ia</span>
+            <span style="font-family:Georgia,serif;font-size:28px;color:#c8f54e;font-weight:bold;">${siteName}</span>
             <p style="color:#8a9b88;font-size:12px;font-family:monospace;margin:4px 0 0;text-transform:uppercase;letter-spacing:0.1em;">Digest hebdomadaire</p>
           </td>
         </tr>
@@ -101,7 +103,7 @@ export async function generateDigestHtml(articles: { title: string; excerpt: str
         <tr>
           <td style="padding:20px 32px;border-top:1px solid #2d3b2c;">
             <p style="color:#4a5c49;font-size:11px;font-family:monospace;margin:0;">
-              signal·ia — <a href="${siteUrl}" style="color:#c8f54e;">${siteUrl}</a><br>
+              ${siteName} — <a href="${siteUrl}" style="color:#c8f54e;">${siteUrl}</a><br>
               Pour vous désabonner : <a href="${siteUrl}/unsubscribe?email={{email}}" style="color:#4a5c49;">cliquez ici</a>
             </p>
           </td>

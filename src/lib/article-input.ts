@@ -29,6 +29,11 @@ export function parseInput(body: Record<string, unknown>): ArticleInput | null {
         )
       : undefined,
     type: body.type === "tuto" ? "tuto" : "news",
+    difficulty:
+      typeof body.difficulty === "string" &&
+      ["debutant", "intermediaire", "avance"].includes(body.difficulty)
+        ? body.difficulty
+        : null,
     tldr: Array.isArray(body.tldr)
       ? body.tldr
           .filter((t): t is string => typeof t === "string" && t.trim().length > 0)

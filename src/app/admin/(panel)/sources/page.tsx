@@ -13,7 +13,7 @@ export default function SourcesPage() {
         <div>
           <h1 style={{ fontFamily: "var(--ff-h)", fontSize: 26, fontWeight: 700, letterSpacing: "-.02em" }}>Sources RSS</h1>
           <p style={{ fontFamily: "var(--ff-m)", fontSize: 12, color: "var(--ink-f)", marginTop: "var(--s2)" }}>
-            {sources.length} sources · Santé des flux et statistiques d'ingestion
+            {sources.length} sources · Santé des flux et statistiques d&apos;ingestion
           </p>
         </div>
       </div>

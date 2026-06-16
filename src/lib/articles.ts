@@ -3,6 +3,8 @@ import { cleanHtml } from "./sanitize";
 
 export type ArticleType = "news" | "tuto";
 
+export type Difficulty = "debutant" | "intermediaire" | "avance";
+
 export type ArticleMeta = {
   id: number;
   slug: string;
@@ -21,6 +23,7 @@ export type ArticleMeta = {
   titleEn: string | null;
   excerptEn: string | null;
   tldrEn: string[];
+  difficulty: Difficulty | null;
 };
 
 export type Article = ArticleMeta & {
@@ -47,6 +50,7 @@ type ArticleRow = {
   excerpt_en: string | null;
   content_html_en: string | null;
   tldr_en: string | null;
+  difficulty: string | null;
 };
 
 function safeJson<T>(raw: string, fallback: T): T {
@@ -85,6 +89,7 @@ function rowToMeta(row: ArticleRow): ArticleMeta {
     titleEn: row.title_en,
     excerptEn: row.excerpt_en,
     tldrEn: row.tldr_en ? safeJson(row.tldr_en, []) : [],
+    difficulty: (row.difficulty as Difficulty | null) ?? null,
   };
 }
 
@@ -119,6 +124,7 @@ export async function getAllArticles(options?: {
   includeDrafts?: boolean;
   search?: string;
   type?: ArticleType;
+  difficulty?: Difficulty;
   limit?: number;
 }): Promise<ArticleMeta[]> {
   const db = getDb();
@@ -137,6 +143,10 @@ export async function getAllArticles(options?: {
     clauses.push("(title LIKE ? OR excerpt LIKE ? OR content_html LIKE ?)");
     const like = `%${options.search}%`;
     params.push(like, like, like);
+  }
+  if (options?.difficulty) {
+    clauses.push("difficulty = ?");
+    params.push(options.difficulty);
   }
 
   const where = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
@@ -258,6 +268,7 @@ export type ArticleInput = {
   date?: string;
   sources?: { name: string; url: string }[];
   type?: ArticleType;
+  difficulty?: string | null;
   tldr?: string[];
   breakingUntil?: string | null;
   scheduledAt?: string | null;
@@ -305,8 +316,8 @@ export async function createArticle(input: ArticleInput): Promise<string> {
     .prepare(
       `INSERT INTO articles
        (slug, title, excerpt, content_html, image, sources, published, date,
-        type, tldr, breaking_until, scheduled_at, score)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        type, difficulty, tldr, breaking_until, scheduled_at, score)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       slug,
@@ -318,6 +329,7 @@ export async function createArticle(input: ArticleInput): Promise<string> {
       input.published ? 1 : 0,
       date,
       input.type ?? "news",
+      input.difficulty ?? null,
       JSON.stringify(input.tldr ?? []),
       input.breakingUntil ?? null,
       input.scheduledAt ?? null,
@@ -348,8 +360,8 @@ export async function updateArticle(slug: string, input: ArticleInput): Promise<
 
   db.prepare(
     `UPDATE articles SET title = ?, excerpt = ?, content_html = ?, image = ?, sources = ?,
-     published = ?, date = ?, type = ?, tldr = ?, breaking_until = ?, scheduled_at = ?,
-     updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+     published = ?, date = ?, type = ?, difficulty = ?, tldr = ?, breaking_until = ?,
+     scheduled_at = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
      WHERE id = ?`
   ).run(
     input.title,
@@ -360,6 +372,7 @@ export async function updateArticle(slug: string, input: ArticleInput): Promise<
     input.published ? 1 : 0,
     input.date ?? row.date,
     input.type ?? row.type,
+    input.difficulty === undefined ? null : (input.difficulty ?? null),
     JSON.stringify(input.tldr ?? safeJson(row.tldr, [])),
     input.breakingUntil === undefined ? row.breaking_until : input.breakingUntil,
     input.scheduledAt === undefined ? row.scheduled_at : input.scheduledAt,

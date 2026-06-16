@@ -8,7 +8,6 @@ import {
   readingTimeMinutes,
   type ArticleMeta,
 } from "@/lib/articles";
-import { getSettings } from "@/lib/settings";
 import { categoryFor } from "@/lib/category";
 import { getLang, getDict, type Lang } from "@/lib/i18n";
 import { ArticleCard } from "@/components/ArticleCard";
@@ -53,20 +52,10 @@ function SecHead({
 }
 
 export default async function Home() {
-  const settings = getSettings();
   const lang = await getLang();
   const t = getDict(lang);
   const en = lang === "en";
   const locale = en ? "en-GB" : "fr-FR";
-
-  if (settings.maintenanceMode) {
-    return (
-      <div className="mx-auto max-w-md py-20 text-center">
-        <p className="font-display text-4xl">{t.maintenanceTitle}</p>
-        <p className="mt-4 text-[var(--ink-dim)]">{t.maintenanceBody}</p>
-      </div>
-    );
-  }
 
   const [articles, tags, mostViewed, tutos] = await Promise.all([
     getAllArticles({ type: "news" }),

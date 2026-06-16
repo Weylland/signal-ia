@@ -12,6 +12,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${siteUrl}/tutos`, changeFrequency: "weekly", priority: 0.9 },
     { url: `${siteUrl}/glossaire`, changeFrequency: "monthly", priority: 0.8 },
     { url: `${siteUrl}/cette-semaine`, changeFrequency: "daily", priority: 0.8 },
+    { url: `${siteUrl}/trending`, changeFrequency: "daily", priority: 0.7 },
     { url: `${siteUrl}/sources`, changeFrequency: "monthly", priority: 0.4 },
     { url: `${siteUrl}/a-propos`, changeFrequency: "monthly", priority: 0.5 },
     ...articles.map((article) => ({

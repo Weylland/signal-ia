@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 type Labels = {
   name: string;
@@ -38,25 +39,37 @@ export function ContactForm({ labels }: { labels: Labels }) {
 
   if (status === "sent") {
     return (
-      <div className="flex flex-col items-center gap-4 py-24 text-center">
-        <div className="font-mono text-[32px] text-[var(--ok)]">✓</div>
-        <h2 className="text-[24px] font-bold">{labels.sent}</h2>
-        <p className="font-serif text-[16px] text-[var(--ink-d)]">{labels.sentBody}</p>
-        <a href="/" className="btn mt-3">
+      <div
+        className="mx-auto flex max-w-[560px] flex-col items-center gap-4 py-16 text-center"
+        style={{ border: "1px solid var(--ln)", background: "var(--bg-r)", borderTop: "3px solid var(--ok)" }}
+      >
+        <div
+          className="flex h-14 w-14 items-center justify-center rounded-full text-[26px]"
+          style={{ background: "color-mix(in srgb, var(--ok) 14%, transparent)", color: "var(--ok)" }}
+        >
+          ✓
+        </div>
+        <h2 className="font-display text-[24px] font-bold">{labels.sent}</h2>
+        <p className="max-w-[360px] font-serif text-[15px] leading-relaxed text-[var(--ink-d)]">{labels.sentBody}</p>
+        <Link href="/" className="btn btn-g mt-2 font-mono text-[12px]">
           ← {labels.back}
-        </a>
+        </Link>
       </div>
     );
   }
 
   const Label = ({ children }: { children: React.ReactNode }) => (
-    <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-[var(--ink-f)]">
+    <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--ink-f)]">
       {children}
     </span>
   );
 
   return (
-    <form onSubmit={handleSubmit} className="flex max-w-[560px] flex-col gap-4">
+    <form
+      onSubmit={handleSubmit}
+      className="mx-auto flex max-w-[560px] flex-col gap-5 p-6 max-sm:p-5"
+      style={{ border: "1px solid var(--ln)", background: "var(--bg-r)", borderTop: "3px solid var(--ac)" }}
+    >
       <div className="absolute left-[-9999px]" aria-hidden="true">
         <label>
           Ne pas remplir
@@ -80,6 +93,7 @@ export function ContactForm({ labels }: { labels: Labels }) {
             value={form.name}
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
             className="inp"
+            placeholder="Jane Doe"
           />
         </div>
         <div className="flex flex-col gap-2">
@@ -91,6 +105,7 @@ export function ContactForm({ labels }: { labels: Labels }) {
             value={form.email}
             onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
             className="inp"
+            placeholder="jane@exemple.fr"
           />
         </div>
       </div>
@@ -112,23 +127,40 @@ export function ContactForm({ labels }: { labels: Labels }) {
       </div>
 
       <div className="flex flex-col gap-2">
-        <Label>{labels.message} *</Label>
+        <div className="flex items-center justify-between">
+          <Label>{labels.message} *</Label>
+          <span className="font-mono text-[10px] text-[var(--ink-f)]">{form.message.length}/5000</span>
+        </div>
         <textarea
           required
           maxLength={5000}
           value={form.message}
           onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
           className="inp resize-y font-serif leading-relaxed"
-          style={{ minHeight: 140 }}
+          style={{ minHeight: 150 }}
+          placeholder="…"
         />
       </div>
 
-      {status === "error" && <p className="text-sm text-[var(--er)]">{labels.error}</p>}
+      {status === "error" && (
+        <p
+          className="font-mono text-[12px]"
+          style={{ color: "var(--er)", border: "1px solid var(--er)", padding: "8px 12px" }}
+        >
+          {labels.error}
+        </p>
+      )}
 
-      <button type="submit" disabled={status === "sending"} className="btn btn-p btn-lg self-start disabled:opacity-50">
-        {status === "sending" ? "…" : labels.send}
-      </button>
-      <p className="font-mono text-[11px] text-[var(--ink-f)]">{labels.note}</p>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--ln)] pt-4">
+        <p className="max-w-[300px] font-mono text-[10px] leading-relaxed text-[var(--ink-f)]">{labels.note}</p>
+        <button
+          type="submit"
+          disabled={status === "sending"}
+          className="btn btn-p btn-lg disabled:opacity-50"
+        >
+          {status === "sending" ? "…" : labels.send + " →"}
+        </button>
+      </div>
     </form>
   );
 }

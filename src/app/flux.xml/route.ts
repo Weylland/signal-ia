@@ -1,4 +1,5 @@
 import { getAllArticles } from "@/lib/articles";
+import { getSettings } from "@/lib/settings";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
@@ -12,6 +13,7 @@ function escapeXml(value: string): string {
 
 export async function GET() {
   const articles = await getAllArticles();
+  const { siteName, seoDescription } = getSettings();
 
   const items = articles
     .slice(0, 30)
@@ -29,9 +31,9 @@ export async function GET() {
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
   <channel>
-    <title>signal·ia</title>
+    <title>${escapeXml(siteName)}</title>
     <link>${siteUrl}</link>
-    <description>L'essentiel de l'actualité IA et robotique, chaque matin.</description>
+    <description>${escapeXml(seoDescription)}</description>
     <language>fr</language>
 ${items}
   </channel>

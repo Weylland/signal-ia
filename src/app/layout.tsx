@@ -1,13 +1,20 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, Lora, JetBrains_Mono } from "next/font/google";
+import Script from "next/script";
 import Link from "next/link";
 import { NewsletterForm } from "@/components/NewsletterForm";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Ticker, type TickerItem } from "@/components/Ticker";
 import { CommandPalette } from "@/components/CommandPalette";
 import { ConditionalLayout } from "@/components/ConditionalLayout";
-import { getBreakingArticles, localizeMeta } from "@/lib/articles";
+import { getBreakingArticles, getAllArticles, localizeMeta } from "@/lib/articles";
 import { getLang, getDict } from "@/lib/i18n";
+import { isAuthenticated } from "@/lib/auth";
+import { getSettings } from "@/lib/settings";
+import { splitBrand } from "@/lib/brand";
+import { getSystemStatus } from "@/lib/status";
+import { headers } from "next/headers";
+import { MaintenancePage } from "@/components/MaintenancePage";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -31,37 +38,52 @@ const jetbrainsMono = JetBrains_Mono({
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
-export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
-  title: {
-    default: "signal·ia — l'essentiel de l'actu IA et robotique",
-    template: "%s — signal·ia",
-  },
-  description:
-    "Veille IA en continu, en français : les news qui comptent sur l'intelligence artificielle, la robotique et le dev lié à l'IA, plus des tutos pratiques.",
-  alternates: {
-    types: { "application/rss+xml": `${siteUrl}/flux.xml` },
-  },
-  manifest: "/manifest.json",
-  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "signal·ia" },
-  openGraph: {
-    siteName: "signal·ia",
-    locale: "fr_FR",
-    type: "website",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { siteName, tagline, seoDescription } = getSettings();
+  return {
+    metadataBase: new URL(siteUrl),
+    title: {
+      default: `${siteName} — ${tagline}`,
+      template: `%s — ${siteName}`,
+    },
+    description: seoDescription,
+    alternates: {
+      types: { "application/rss+xml": `${siteUrl}/flux.xml` },
+    },
+    manifest: "/manifest.json",
+    icons: {
+      icon: [
+        { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+        { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+      ],
+      apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+    },
+    appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: siteName },
+    openGraph: {
+      siteName,
+      locale: "fr_FR",
+      type: "website",
+    },
+  };
+}
 
 const themeInit = `(function(){try{if(localStorage.getItem("theme")==="light")document.documentElement.dataset.theme="light";}catch(e){}})();`;
 const swInit = `if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catch(()=>{})}`;
 
-function Logo({ className = "" }: { className?: string }) {
+function Logo({ className = "", name }: { className?: string; name: string }) {
+  const { before, after } = splitBrand(name);
   return (
     <Link
       href="/"
       className={`font-display leading-none tracking-tight whitespace-nowrap ${className}`}
     >
-      signal<span className="text-[var(--accent)]">·</span>
-      <span className="italic">ia</span>
+      {before}
+      {after && (
+        <>
+          <span className="text-[var(--accent)]">·</span>
+          <span className="italic">{after}</span>
+        </>
+      )}
     </Link>
   );
 }
@@ -74,6 +96,30 @@ export default async function RootLayout({
   const lang = await getLang();
   const t = getDict(lang);
   const locale = lang === "en" ? "en-GB" : "fr-FR";
+  const adminAuth = await isAuthenticated();
+  const settings = getSettings();
+  const systemStatus = getSystemStatus();
+  const statusColor =
+    systemStatus.level === "ok"
+      ? "var(--ok)"
+      : systemStatus.level === "degraded"
+        ? "var(--er)"
+        : systemStatus.level === "stale"
+          ? "var(--wn)"
+          : "var(--ink-f)";
+  const pathname = (await headers()).get("x-pathname") ?? "";
+
+  if (settings.maintenanceMode && !adminAuth && !pathname.startsWith("/admin")) {
+    return (
+      <html lang={lang} className={`${spaceGrotesk.variable} ${lora.variable} ${jetbrainsMono.variable} h-full antialiased`} suppressHydrationWarning>
+        <head><script dangerouslySetInnerHTML={{ __html: themeInit }} /></head>
+        <body className="flex min-h-full flex-col">
+          <div className="grain-layer" aria-hidden="true" />
+          <MaintenancePage />
+        </body>
+      </html>
+    );
+  }
 
   // Liens de la nav principale (header desktop + drawer mobile)
   const navLinks = [
@@ -87,25 +133,42 @@ export default async function RootLayout({
 
   // Liste complète pour la command palette
   const pages = [
-    { href: "/", label: t.home },
-    ...navLinks,
-    { href: "/recherche", label: t.searchTitle },
-    { href: "/favoris", label: t.favoritesTitle },
-    { href: "/a-propos", label: t.footerAbout },
-    { href: "/contact", label: t.contactTitle },
+    { href: "/", label: t.home, icon: "⌂" },
+    { href: "/actus", label: t.navAllNews, icon: "◈" },
+    { href: "/tutos", label: t.navTutos, icon: "⊗" },
+    { href: "/glossaire", label: t.navGlossary, icon: "A" },
+    { href: "/cette-semaine", label: t.navWeek, icon: "◉" },
+    { href: "/trending", label: t.navTrending, icon: "↑" },
+    { href: "/sources", label: t.footerSources, icon: "⊂" },
+    { href: "/recherche", label: t.searchTitle, icon: "⌕" },
+    { href: "/favoris", label: t.favoritesTitle, icon: "♡" },
+    { href: "/a-propos", label: t.footerAbout, icon: "◎" },
+    { href: "/contact", label: t.contactTitle, icon: "✉" },
   ];
 
-  // Ticker d'alertes (breaking)
+  // Ticker : breaking en priorité, sinon 6 actus récentes
   const breaking = await getBreakingArticles();
-  const tickerItems: TickerItem[] = breaking.map((a) => ({
-    slug: a.slug,
-    title: localizeMeta(a, lang).title,
-    time: new Date(a.date).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" }),
-  }));
+  let tickerItems: TickerItem[];
+  let tickerLabel: string;
+  if (breaking.length > 0) {
+    tickerItems = breaking.map((a) => ({
+      slug: a.slug,
+      title: localizeMeta(a, lang).title,
+      time: new Date(a.date).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" }),
+    }));
+    tickerLabel = t.breaking;
+  } else {
+    const recent = await getAllArticles({ limit: 10 });
+    tickerItems = recent.map((a) => ({
+      slug: a.slug,
+      title: localizeMeta(a, lang).title,
+      time: new Date(a.date).toLocaleString(locale, { day: "numeric", month: "short" }),
+    }));
+    tickerLabel = lang === "en" ? "LATEST" : "ACTUS";
+  }
 
   const nav = (
     <>
-      <Ticker items={tickerItems} label={t.breaking} />
       <SiteHeader
         links={navLinks}
         lang={lang}
@@ -115,7 +178,10 @@ export default async function RootLayout({
           menu: t.menu,
           close: t.close,
         }}
+        isAdmin={adminAuth}
+        siteName={settings.siteName}
       />
+      <Ticker items={tickerItems} label={tickerLabel} />
     </>
   );
 
@@ -128,13 +194,25 @@ export default async function RootLayout({
         <div className="wrap" style={{ paddingTop: "var(--s9)", paddingBottom: "var(--s6)" }}>
           <div className="mb-12 grid gap-12 [grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]">
             <div className="flex flex-col gap-4">
-              <Logo className="text-[22px]" />
+              <Logo className="text-[22px]" name={settings.siteName} />
               <p className="max-w-[220px] font-serif text-sm leading-relaxed text-[var(--ink-d)]">
                 {t.footerDesc}
               </p>
-              <p className="flex items-center gap-1.5 font-mono text-[11px] text-[var(--ok)]">
-                <span className="s-ok" />
-                {lang === "en" ? "All systems operational" : "Tous systèmes opérationnels"}
+              <p
+                className="flex items-center gap-1.5 font-mono text-[11px]"
+                style={{ color: statusColor }}
+              >
+                <span
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: "50%",
+                    background: "currentColor",
+                    display: "inline-block",
+                    flexShrink: 0,
+                  }}
+                />
+                {lang === "en" ? systemStatus.en : systemStatus.fr}
               </p>
             </div>
 
@@ -215,6 +293,33 @@ export default async function RootLayout({
     </>
   );
 
+  const orgJsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": `${siteUrl}/#organization`,
+        name: settings.siteName,
+        url: siteUrl,
+        description: settings.seoDescription,
+        logo: { "@type": "ImageObject", url: `${siteUrl}/icon-512.png` },
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${siteUrl}/#website`,
+        name: settings.siteName,
+        url: siteUrl,
+        inLanguage: lang === "en" ? "en" : "fr",
+        publisher: { "@id": `${siteUrl}/#organization` },
+        potentialAction: {
+          "@type": "SearchAction",
+          target: { "@type": "EntryPoint", urlTemplate: `${siteUrl}/recherche?q={search_term_string}` },
+          "query-input": "required name=search_term_string",
+        },
+      },
+    ],
+  };
+
   return (
     <html
       lang={lang}
@@ -222,8 +327,9 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col">
-        <script dangerouslySetInnerHTML={{ __html: themeInit }} />
-        <script dangerouslySetInnerHTML={{ __html: swInit }} />
+        <Script id="theme-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: themeInit }} />
+        <Script id="sw-init" strategy="afterInteractive" dangerouslySetInnerHTML={{ __html: swInit }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }} />
         <div className="grain-layer" aria-hidden="true" />
         <ConditionalLayout nav={nav} footer={footer}>
           {children}

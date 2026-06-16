@@ -1,7 +1,7 @@
 // Service worker « sûr » : ne met JAMAIS en cache le HTML ni les payloads RSC
 // (sinon Next.js sert du périmé → mismatch → rechargement en boucle).
 // On ne cache que les assets immuables hashés (/_next/static) et les images.
-const CACHE = "signal-ia-v2";
+const CACHE = "signal-ia-v3";
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.add("/offline.html").catch(() => {})));

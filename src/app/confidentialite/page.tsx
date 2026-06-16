@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getSettings } from "@/lib/settings";
 
 export const metadata: Metadata = {
   title: "Politique de confidentialité",
@@ -6,12 +7,13 @@ export const metadata: Metadata = {
 };
 
 export default function ConfidentialitePage() {
+  const { siteName } = getSettings();
   return (
     <div className="mx-auto max-w-2xl">
       <h1 className="font-display text-3xl font-semibold">Politique de confidentialité</h1>
       <div className="prose-article mt-8">
         <p>
-          signal·ia est conçu pour respecter votre vie privée. En résumé : nous ne collectons
+          {siteName} est conçu pour respecter votre vie privée. En résumé : nous ne collectons
           aucune donnée personnelle sur les visiteurs.
         </p>
 

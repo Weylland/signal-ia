@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getAllArticles } from "@/lib/articles";
+import { ArticlesTable } from "@/components/admin/ArticlesTable";
 
 export const dynamic = "force-dynamic";
 
@@ -57,60 +58,7 @@ export default async function AdminArticlesPage({ searchParams }: PageProps<"/ad
       </form>
 
       {/* Table */}
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 700 }}>
-          <thead>
-            <tr style={{ borderBottom: "2px solid var(--ln-h)" }}>
-              {["Titre", "Type", "Statut", "Date", "Vues", "Actions"].map((h) => (
-                <th key={h} style={{ fontFamily: "var(--ff-m)", fontSize: 10, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--ink-f)", padding: "var(--s2) var(--s3)", textAlign: "left", fontWeight: 500, whiteSpace: "nowrap" }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {slice.map((a) => (
-              <tr key={a.slug} style={{ borderBottom: "1px solid var(--ln)" }}>
-                <td style={{ padding: "var(--s3)", maxWidth: 300 }}>
-                  <div style={{ fontFamily: "var(--ff-h)", fontSize: 13, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    <Link href={`/admin/articles/${a.slug}`} style={{ color: "var(--ac)", textDecoration: "none" }}>{a.title}</Link>
-                  </div>
-                  <div style={{ fontFamily: "var(--ff-m)", fontSize: 10, color: "var(--ink-f)", marginTop: 2 }}>
-                    {a.tags.slice(0, 2).join(" · ")}
-                  </div>
-                </td>
-                <td style={{ padding: "var(--s3)" }}>
-                  <span style={{ fontFamily: "var(--ff-m)", fontSize: 10, padding: "2px 6px", border: "1px solid var(--ln-h)", color: "var(--ink-f)", textTransform: "uppercase", letterSpacing: ".06em" }}>
-                    {a.type}
-                  </span>
-                </td>
-                <td style={{ padding: "var(--s3)" }}>
-                  <StatusBadge published={a.published} scheduled={!!a.scheduledAt} />
-                </td>
-                <td style={{ padding: "var(--s3)", fontFamily: "var(--ff-m)", fontSize: 12, color: "var(--ink-f)", whiteSpace: "nowrap" }}>
-                  {a.date.slice(0, 10)}
-                </td>
-                <td style={{ padding: "var(--s3)", fontFamily: "var(--ff-m)", fontSize: 12, color: "var(--ink-d)" }}>
-                  {a.views.toLocaleString("fr-FR")}
-                </td>
-                <td style={{ padding: "var(--s3)" }}>
-                  <div style={{ display: "flex", gap: "var(--s2)" }}>
-                    <Link href={`/admin/articles/${a.slug}`} className="btn btn-sm btn-g" style={{ fontFamily: "var(--ff-m)", fontSize: 10 }}>Éditer</Link>
-                    {a.published && (
-                      <Link href={`/articles/${a.slug}`} target="_blank" className="btn btn-sm btn-g" style={{ fontFamily: "var(--ff-m)", fontSize: 10, color: "var(--ink-f)" }}>Voir ↗</Link>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {slice.length === 0 && (
-              <tr>
-                <td colSpan={6} style={{ padding: "var(--s9)", textAlign: "center", fontFamily: "var(--ff-m)", fontSize: 13, color: "var(--ink-f)" }}>
-                  Aucun article trouvé.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <ArticlesTable articles={slice} />
 
       {/* Pagination */}
       {totalPages > 1 && (
@@ -123,18 +71,5 @@ export default async function AdminArticlesPage({ searchParams }: PageProps<"/ad
         </div>
       )}
     </div>
-  );
-}
-
-function StatusBadge({ published, scheduled }: { published: boolean; scheduled: boolean }) {
-  const cfg = published
-    ? { l: "Publié", c: "var(--ok)" }
-    : scheduled
-      ? { l: "Planifié", c: "var(--wn)" }
-      : { l: "Brouillon", c: "var(--ink-f)" };
-  return (
-    <span style={{ fontFamily: "var(--ff-m)", fontSize: 10, fontWeight: 500, textTransform: "uppercase", letterSpacing: ".08em", padding: "2px 6px", border: "1px solid currentColor", color: cfg.c, whiteSpace: "nowrap" }}>
-      {cfg.l}
-    </span>
   );
 }

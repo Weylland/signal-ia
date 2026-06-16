@@ -13,6 +13,21 @@ export function backupDir(): string {
   return path.join(path.dirname(dbPath()), "backups");
 }
 
+export function listAllBackups(): { file: string; mtime: number; size: number }[] {
+  const dir = backupDir();
+  try {
+    return readdirSync(dir)
+      .filter((f) => f.startsWith("backup-") && f.endsWith(".sqlite"))
+      .map((f) => {
+        const st = statSync(path.join(dir, f));
+        return { file: f, mtime: st.mtimeMs, size: st.size };
+      })
+      .sort((a, b) => b.mtime - a.mtime);
+  } catch {
+    return [];
+  }
+}
+
 function listBackups(dir: string): { file: string; mtime: number }[] {
   try {
     return readdirSync(dir)

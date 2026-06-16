@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySessionToken, SESSION_COOKIE } from "@/lib/auth";
 
+function pass(request: NextRequest) {
+  const headers = new Headers(request.headers);
+  headers.set("x-pathname", request.nextUrl.pathname);
+  return NextResponse.next({ request: { headers } });
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (pathname === "/admin/login" || pathname === "/api/admin/login") {
-    return NextResponse.next();
+    return pass(request);
   }
 
   const token = request.cookies.get(SESSION_COOKIE)?.value;
@@ -19,7 +25,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  return NextResponse.next();
+  return pass(request);
 }
 
 export const config = {

@@ -22,12 +22,12 @@ export default function MentionsLegalesPage() {
 
         <h2>Hébergement</h2>
         <p>
-          Vercel Inc.
+          Railway Corp.
           <br />
-          440 N Barranca Ave #4133, Covina, CA 91723, États-Unis
+          San Francisco, Californie, États-Unis
           <br />
-          <a href="https://vercel.com" target="_blank" rel="noopener noreferrer">
-            vercel.com
+          <a href="https://railway.com" target="_blank" rel="noopener noreferrer">
+            railway.com
           </a>
         </p>
 

@@ -3,6 +3,7 @@ import { getAllArticles } from "@/lib/articles";
 import { getLang, getDict } from "@/lib/i18n";
 import { ArticleRow } from "@/components/ArticleRow";
 import { PageHeader, PageBand } from "@/components/PageShell";
+import { CetteSemaineFilter } from "@/components/CetteSemaineFilter";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,12 @@ export const metadata: Metadata = {
     "Le récapitulatif des actualités IA et robotique des 7 derniers jours, en français.",
 };
 
-export default async function CetteSemainePage() {
+export default async function CetteSemainePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ day?: string }>;
+}) {
+  const { day: selectedDay } = await searchParams;
   const lang = await getLang();
   const t = getDict(lang);
   const en = lang === "en";
@@ -29,12 +35,23 @@ export default async function CetteSemainePage() {
     const day = a.date.slice(0, 10);
     byDay.set(day, [...(byDay.get(day) ?? []), a]);
   }
-  const days = [...byDay.entries()].sort((a, b) => b[0].localeCompare(a[0]));
+  const allDays = [...byDay.entries()].sort((a, b) => b[0].localeCompare(a[0]));
+
+  const dayEntries = allDays.map(([day, arts]) => ({
+    day,
+    label: new Date(day).toLocaleDateString(locale, { weekday: "short", day: "numeric", month: "short" }),
+    count: arts.length,
+  }));
+
+  const filteredDays =
+    selectedDay && byDay.has(selectedDay)
+      ? [[selectedDay, byDay.get(selectedDay)!] as [string, typeof articles]]
+      : allDays;
 
   const stats: [string, string][] = [
     [String(articles.length), en ? "Articles" : "Articles"],
     [String(distinctSources), "Sources"],
-    [String(days.length), en ? "Days" : "Jours"],
+    [String(allDays.length), en ? "Days" : "Jours"],
     [String(tutos), "Tutos"],
   ];
 
@@ -57,10 +74,11 @@ export default async function CetteSemainePage() {
         }
       />
       <PageBand>
-        {days.length === 0 ? (
+        <CetteSemaineFilter days={dayEntries} selected={selectedDay ?? null} />
+        {filteredDays.length === 0 ? (
           <p className="font-serif text-[15px] text-[var(--ink-d)]">{t.weekEmpty}</p>
         ) : (
-          days.map(([day, dayArticles]) => (
+          filteredDays.map(([day, dayArticles]) => (
             <div key={day} className="mb-16 last:mb-0">
               <div className="mb-4 border-l-2 border-[var(--ac)] pl-3 font-mono text-[12px] font-semibold capitalize tracking-[0.04em] text-[var(--ac)]">
                 {new Date(day).toLocaleDateString(locale, {

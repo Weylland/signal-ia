@@ -4,7 +4,7 @@ export type TickerItem = { slug: string; title: string; time: string };
 
 export function Ticker({ items, label }: { items: TickerItem[]; label: string }) {
   if (items.length === 0) return null;
-  const doubled = [...items, ...items];
+  const doubled = [...items, ...items, ...items, ...items];
 
   return (
     <div

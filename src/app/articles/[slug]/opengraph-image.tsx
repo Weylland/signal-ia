@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 import { getArticle } from "@/lib/articles";
+import { getSettings } from "@/lib/settings";
 
 export const runtime = "nodejs";
 export const size = { width: 1200, height: 630 };
@@ -8,8 +9,9 @@ export const contentType = "image/png";
 export default async function OGImage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const article = await getArticle(slug);
+  const { siteName } = getSettings();
 
-  const title = article?.title ?? "signal·ia";
+  const title = article?.title ?? siteName;
   const type = article?.type === "tuto" ? "TUTORIEL" : "ACTUALITÉ";
   const tag = article?.tags[0]?.toUpperCase() ?? "IA";
 
@@ -84,7 +86,7 @@ export default async function OGImage({ params }: { params: Promise<{ slug: stri
               letterSpacing: "0.05em",
             }}
           >
-            signal·ia
+            {siteName}
           </div>
           <div
             style={{

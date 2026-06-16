@@ -2,6 +2,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { splitBrand } from "@/lib/brand";
+
 
 const NAV = [
   {
@@ -31,7 +33,8 @@ const NAV = [
   },
 ];
 
-function SidebarInner({ path, onClose }: { path: string; onClose?: () => void }) {
+function SidebarInner({ path, onClose, onLogout, siteName }: { path: string; onClose?: () => void; onLogout: () => void; siteName: string }) {
+  const brand = splitBrand(siteName);
   return (
     <aside className="adm-side">
       {/* Logo */}
@@ -56,7 +59,7 @@ function SidebarInner({ path, onClose }: { path: string; onClose?: () => void })
             color: "inherit",
           }}
         >
-          <span style={{ color: "var(--ac)" }}>signal</span>·ia
+          <span><span style={{ color: "var(--ac)" }}>{brand.before}</span>{brand.after && `·${brand.after}`}</span>
           <span
             style={{
               fontFamily: "var(--ff-m)",
@@ -140,6 +143,9 @@ function SidebarInner({ path, onClose }: { path: string; onClose?: () => void })
           padding: "var(--s3) var(--s5)",
           borderTop: "1px solid var(--ln)",
           flexShrink: 0,
+          display: "flex",
+          flexDirection: "column",
+          gap: "var(--s2)",
         }}
       >
         <Link
@@ -152,19 +158,43 @@ function SidebarInner({ path, onClose }: { path: string; onClose?: () => void })
             display: "flex",
             alignItems: "center",
             gap: 6,
-            minHeight: 36,
+            minHeight: 32,
           }}
         >
           ← site public
         </Link>
+        <button
+          onClick={onLogout}
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            fontFamily: "var(--ff-m)",
+            fontSize: 11,
+            color: "var(--er)",
+            textAlign: "left",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            minHeight: 32,
+            padding: 0,
+            opacity: 0.7,
+          }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = "1"; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = "0.7"; }}
+        >
+          ⏻ Déconnexion
+        </button>
       </div>
     </aside>
   );
 }
 
-export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
+export function AdminLayoutClient({ children, siteName = "signal·ia" }: { children: React.ReactNode; siteName?: string }) {
   const [mob, setMob] = useState(false);
   const path = usePathname() ?? "/admin";
+  const router = useRouter();
+  const brand = splitBrand(siteName);
 
   const label = (() => {
     for (const g of NAV)
@@ -172,6 +202,11 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
         if (it.p === path || (it.p !== "/admin" && path.startsWith(it.p))) return it.l;
     return "Admin";
   })();
+
+  async function handleLogout() {
+    await fetch("/api/admin/logout", { method: "POST" });
+    router.push("/admin/login");
+  }
 
   return (
     <div className="adm-wrap">
@@ -181,7 +216,7 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
         onClick={() => setMob(false)}
       />
 
-      <SidebarInner path={path} onClose={() => setMob(false)} />
+      <SidebarInner path={path} onClose={() => setMob(false)} onLogout={handleLogout} siteName={siteName} />
 
       <div className="adm-main">
         {/* Top bar */}
@@ -226,7 +261,7 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
               color: "var(--ink-d)",
             }}
           >
-            <span style={{ color: "var(--ink-f)" }}>signal·ia /</span>{" "}
+            <span style={{ color: "var(--ink-f)" }}>{brand.before}{brand.after && `·${brand.after}`} /</span>{" "}
             <span style={{ color: "var(--ac)" }}>{label}</span>
           </div>
           <Link href="/admin/articles/new" className="btn btn-p btn-sm">

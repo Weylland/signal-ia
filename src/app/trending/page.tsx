@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getTrendingArticles, getAllTags } from "@/lib/articles";
 import { categoryFor } from "@/lib/category";
-import { getLang, getDict } from "@/lib/i18n";
+import { getLang } from "@/lib/i18n";
 import { ArticleCard } from "@/components/ArticleCard";
 import { PageHeader, PageBand } from "@/components/PageShell";
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { RichTextEditor } from "./RichTextEditor";
 
@@ -14,6 +14,7 @@ type EditorProps = {
     html: string;
     published: boolean;
     type: "news" | "tuto";
+    difficulty?: string | null;
     tldr: string[];
     scheduledAt: string | null;
     titleEn?: string | null;
@@ -23,6 +24,13 @@ type EditorProps = {
   };
 };
 
+const S = {
+  label: { fontFamily: "var(--ff-m)", fontSize: 10, textTransform: "uppercase" as const, letterSpacing: ".08em", color: "var(--ink-f)", display: "block", marginBottom: "var(--s2)" },
+  section: { display: "flex", flexDirection: "column" as const, gap: "var(--s3)" },
+  divider: { borderTop: "1px solid var(--ln)", paddingTop: "var(--s5)", marginTop: "var(--s2)" },
+  sectionTitle: { fontFamily: "var(--ff-h)", fontSize: 13, fontWeight: 600, letterSpacing: "-.01em", marginBottom: "var(--s3)", color: "var(--ink-f)" },
+};
+
 export function ArticleEditor({ slug, initial }: EditorProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -30,16 +38,9 @@ export function ArticleEditor({ slug, initial }: EditorProps) {
   const [excerpt, setExcerpt] = useState(initial?.excerpt ?? searchParams.get("excerpt") ?? "");
   const [tags, setTags] = useState(initial?.tags.join(", ") ?? "");
   const [image, setImage] = useState(initial?.image ?? searchParams.get("image") ?? "");
-
-  // Pre-fill source from URL import
-  useEffect(() => {
-    const source = searchParams.get("source");
-    if (source && !initial) {
-      // Will show in HTML as a source link placeholder
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [html, setHtml] = useState(initial?.html ?? "");
   const [type, setType] = useState<"news" | "tuto">(initial?.type ?? "news");
+  const [difficulty, setDifficulty] = useState<string>(initial?.difficulty ?? "");
   const [tldr, setTldr] = useState<string[]>([
     initial?.tldr[0] ?? "",
     initial?.tldr[1] ?? "",
@@ -63,6 +64,7 @@ export function ArticleEditor({ slug, initial }: EditorProps) {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   async function save(published: boolean, schedule = false) {
     setSaving(true);
@@ -75,13 +77,11 @@ export function ArticleEditor({ slug, initial }: EditorProps) {
       published,
       image: image.trim() || null,
       type,
+      difficulty: type === "tuto" ? difficulty || null : null,
       tldr: tldr.map((t) => t.trim()).filter(Boolean),
       scheduledAt:
         schedule && scheduledAt ? new Date(scheduledAt).toISOString() : null,
-      tags: tags
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean),
+      tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
     };
 
     const res = await fetch(slug ? `/api/admin/articles/${slug}` : "/api/admin/articles", {
@@ -105,11 +105,9 @@ export function ArticleEditor({ slug, initial }: EditorProps) {
     if (!file) return;
     setUploading(true);
     setError(null);
-
     const formData = new FormData();
     formData.append("file", file);
     const res = await fetch("/api/admin/upload", { method: "POST", body: formData });
-
     if (res.ok) {
       const { url } = await res.json();
       setImage(url);
@@ -164,7 +162,6 @@ export function ArticleEditor({ slug, initial }: EditorProps) {
 
   async function handleDelete() {
     if (!slug) return;
-    if (!confirm("Supprimer définitivement cet article ?")) return;
     setSaving(true);
     const res = await fetch(`/api/admin/articles/${slug}`, { method: "DELETE" });
     if (res.ok) {
@@ -174,106 +171,142 @@ export function ArticleEditor({ slug, initial }: EditorProps) {
       setError("Erreur lors de la suppression");
       setSaving(false);
     }
+    setConfirmDelete(false);
   }
 
+  const canSave = !!title && !!html;
+
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex gap-2">
-        {(["news", "tuto"] as const).map((t) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => setType(t)}
-            className={`nb-btn text-sm ${type === t ? "nb-btn-primary" : "opacity-50"}`}
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--s6)" }}>
+      {/* Confirm delete modal */}
+      {confirmDelete && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ background: "var(--bg-r)", border: "1px solid var(--ln-h)", padding: "var(--s7)", maxWidth: 380, width: "90%", boxShadow: "var(--sh)" }}>
+            <div style={{ fontFamily: "var(--ff-h)", fontSize: 18, fontWeight: 700, marginBottom: "var(--s3)" }}>Supprimer cet article ?</div>
+            <div style={{ fontFamily: "var(--ff-m)", fontSize: 12, color: "var(--ink-f)", marginBottom: "var(--s6)" }}>Cette action est irréversible.</div>
+            <div style={{ display: "flex", gap: "var(--s3)" }}>
+              <button
+                className="btn btn-p"
+                style={{ flex: 1, color: "var(--er)", background: "none", borderColor: "var(--er)" }}
+                onClick={handleDelete}
+                disabled={saving}
+              >
+                Supprimer
+              </button>
+              <button className="btn btn-g" style={{ flex: 1 }} onClick={() => setConfirmDelete(false)}>Annuler</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Type + Difficulty */}
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "var(--s3)" }}>
+        <div style={{ display: "flex", gap: "var(--s2)", border: "1px solid var(--ln)", padding: 3 }}>
+          {(["news", "tuto"] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setType(t)}
+              className={`btn btn-sm ${type === t ? "btn-p" : "btn-g"}`}
+              style={{ fontFamily: "var(--ff-m)", fontSize: 11 }}
+            >
+              {t === "news" ? "Actu" : "Tuto"}
+            </button>
+          ))}
+        </div>
+        {type === "tuto" && (
+          <select
+            value={difficulty}
+            onChange={(e) => setDifficulty(e.target.value)}
+            className="inp inp-sm"
+            style={{ minWidth: 160 }}
           >
-            {t === "news" ? "📰 Actu" : "🎓 Tuto"}
-          </button>
-        ))}
+            <option value="">Niveau (optionnel)</option>
+            <option value="debutant">Débutant</option>
+            <option value="intermediaire">Intermédiaire</option>
+            <option value="avance">Avancé</option>
+          </select>
+        )}
       </div>
 
-      <div>
-        <label className="mb-1.5 block text-sm font-bold" htmlFor="title">
-          Titre
-        </label>
+      {/* Title */}
+      <div style={S.section}>
+        <label style={S.label} htmlFor="ed-title">Titre</label>
         <input
-          id="title"
-          className="field font-display text-lg font-semibold"
+          id="ed-title"
+          className="inp"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Titre de l'article"
           required
+          style={{ fontFamily: "var(--ff-h)", fontSize: 18, fontWeight: 600 }}
         />
+        {title && <div style={{ fontFamily: "var(--ff-m)", fontSize: 10, color: "var(--ink-f)", textAlign: "right" }}>{title.length} car.</div>}
       </div>
 
-      <div>
-        <label className="mb-1.5 block text-sm font-bold" htmlFor="excerpt">
-          Chapeau (résumé court)
-        </label>
+      {/* Excerpt */}
+      <div style={S.section}>
+        <label style={S.label} htmlFor="ed-excerpt">Chapeau</label>
         <textarea
-          id="excerpt"
-          className="field"
+          id="ed-excerpt"
+          className="inp"
           rows={2}
           value={excerpt}
           onChange={(e) => setExcerpt(e.target.value)}
+          placeholder="Résumé court affiché sur les cards"
+          style={{ resize: "vertical" }}
         />
       </div>
 
-      <div>
-        <label className="mb-1.5 block text-sm font-bold">
-          L&apos;essentiel en 3 points (affiché en haut de l&apos;article, facultatif)
-        </label>
-        <div className="flex flex-col gap-2">
-          {tldr.map((point, i) => (
-            <input
-              key={i}
-              className="field"
-              value={point}
-              placeholder={`Point clé ${i + 1}`}
-              onChange={(e) =>
-                setTldr((prev) => prev.map((p, j) => (j === i ? e.target.value : p)))
-              }
-            />
-          ))}
-        </div>
+      {/* TL;DR */}
+      <div style={S.section}>
+        <div style={S.label}>L&apos;essentiel en 3 points <span style={{ opacity: .5 }}>(optionnel)</span></div>
+        {tldr.map((point, i) => (
+          <input
+            key={i}
+            className="inp"
+            value={point}
+            placeholder={`Point clé ${i + 1}`}
+            onChange={(e) => setTldr((prev) => prev.map((p, j) => (j === i ? e.target.value : p)))}
+          />
+        ))}
       </div>
 
-      <div>
-        <label className="mb-1.5 block text-sm font-bold">Contenu</label>
+      {/* Content */}
+      <div style={S.section}>
+        <div style={S.label}>Contenu</div>
         <RichTextEditor content={html} onChange={setHtml} />
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-2">
-        <div>
-          <label className="mb-1.5 block text-sm font-bold" htmlFor="tags">
-            Tags (séparés par des virgules)
-          </label>
+      {/* Tags + Image */}
+      <div style={{ display: "grid", gap: "var(--s5)", gridTemplateColumns: "1fr 1fr" }}>
+        <div style={S.section}>
+          <label style={S.label} htmlFor="ed-tags">Tags <span style={{ opacity: .5 }}>(virgules)</span></label>
           <input
-            id="tags"
-            className="field"
+            id="ed-tags"
+            className="inp"
             value={tags}
             onChange={(e) => setTags(e.target.value)}
             placeholder="robotique, agents"
           />
         </div>
-        <div>
-          <label className="mb-1.5 block text-sm font-bold" htmlFor="image">
-            Image de couverture
-          </label>
-          <div className="flex gap-2">
+        <div style={S.section}>
+          <div style={S.label}>Image de couverture</div>
+          <div style={{ display: "flex", gap: "var(--s2)" }}>
             <input
-              id="image"
-              className="field"
+              className="inp"
               type="url"
               value={image}
               onChange={(e) => setImage(e.target.value)}
-              placeholder="https://... ou upload →"
+              placeholder="https://…"
+              style={{ flex: 1 }}
             />
-            <label className="nb-btn shrink-0 cursor-pointer text-sm">
-              {uploading ? "..." : "Upload"}
+            <label className="btn btn-g" style={{ cursor: "pointer", fontFamily: "var(--ff-m)", fontSize: 11, whiteSpace: "nowrap" }}>
+              {uploading ? "…" : "Upload"}
               <input
                 type="file"
                 accept="image/jpeg,image/png,image/webp,image/avif"
-                className="hidden"
+                style={{ display: "none" }}
                 onChange={handleUpload}
                 disabled={uploading}
               />
@@ -284,129 +317,122 @@ export function ArticleEditor({ slug, initial }: EditorProps) {
 
       {image && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={image}
-          alt="Aperçu de la couverture"
-          className="max-h-48 w-auto border-2 border-ink object-cover"
-        />
+        <img src={image} alt="Couverture" style={{ maxHeight: 180, width: "auto", border: "1px solid var(--ln)", objectFit: "cover" }} />
       )}
 
-      {error && <p className="border-2 border-ink bg-[var(--peach)] p-3 text-sm font-semibold">{error}</p>}
+      {error && (
+        <div style={{ padding: "var(--s4)", border: "1px solid var(--er)", color: "var(--er)", fontFamily: "var(--ff-m)", fontSize: 12 }}>
+          {error}
+        </div>
+      )}
 
+      {/* Translation block */}
       {slug && (
-        <div className="border-2 border-ink">
+        <div style={{ border: "1px solid var(--ln)" }}>
           <button
             type="button"
             onClick={() => setShowEn((v) => !v)}
-            className="flex w-full items-center justify-between px-4 py-3 text-sm font-bold hover:bg-[var(--bg-raised)]"
+            style={{ display: "flex", width: "100%", alignItems: "center", justifyContent: "space-between", padding: "var(--s4) var(--s5)", background: "var(--bg-r)", border: "none", cursor: "pointer" }}
           >
-            <span>🇬🇧 Version EN {titleEn ? "✓" : "(non traduit)"}</span>
-            <span>{showEn ? "▲" : "▼"}</span>
+            <span style={{ fontFamily: "var(--ff-h)", fontSize: 14, fontWeight: 600 }}>
+              Version EN {titleEn ? <span style={{ color: "var(--ok)", fontSize: 11 }}>✓ traduit</span> : <span style={{ color: "var(--ink-f)", fontSize: 11 }}>(non traduit)</span>}
+            </span>
+            <span style={{ fontFamily: "var(--ff-m)", fontSize: 12, color: "var(--ink-f)" }}>{showEn ? "▲" : "▼"}</span>
           </button>
           {showEn && (
-            <div className="flex flex-col gap-4 border-t-2 border-ink p-4">
-              <div className="flex gap-2">
+            <div style={{ padding: "var(--s5)", borderTop: "1px solid var(--ln)", display: "flex", flexDirection: "column", gap: "var(--s4)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--s3)" }}>
                 <button
                   type="button"
                   onClick={autoTranslate}
                   disabled={translating}
-                  className="nb-btn nb-btn-primary text-sm"
+                  className="btn btn-sm btn-p"
+                  style={{ fontFamily: "var(--ff-m)", fontSize: 11 }}
                 >
-                  {translating ? "Traduction en cours…" : "✨ Traduire via Mistral"}
+                  {translating ? "Traduction…" : "✨ Traduire via Mistral"}
                 </button>
+                {enMsg && <span style={{ fontFamily: "var(--ff-m)", fontSize: 11, color: "var(--ink-f)" }}>{enMsg}</span>}
               </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-bold">Titre EN</label>
-                <input
-                  className="field"
-                  value={titleEn}
-                  onChange={(e) => setTitleEn(e.target.value)}
-                  placeholder="Title in English"
-                />
+
+              <div style={S.section}>
+                <label style={S.label}>Titre EN</label>
+                <input className="inp" value={titleEn} onChange={(e) => setTitleEn(e.target.value)} placeholder="Title in English" />
               </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-bold">Chapeau EN</label>
-                <textarea
-                  className="field"
-                  rows={2}
-                  value={excerptEn}
-                  onChange={(e) => setExcerptEn(e.target.value)}
-                  placeholder="Short summary in English"
-                />
+              <div style={S.section}>
+                <label style={S.label}>Chapeau EN</label>
+                <textarea className="inp" rows={2} value={excerptEn} onChange={(e) => setExcerptEn(e.target.value)} placeholder="Short summary in English" style={{ resize: "vertical" }} />
               </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-bold">L&apos;essentiel EN (3 points)</label>
-                <div className="flex flex-col gap-2">
-                  {tldrEn.map((point, i) => (
-                    <input
-                      key={i}
-                      className="field"
-                      value={point}
-                      placeholder={`Key point ${i + 1}`}
-                      onChange={(e) =>
-                        setTldrEn((prev) => prev.map((p, j) => (j === i ? e.target.value : p)))
-                      }
-                    />
-                  ))}
-                </div>
+              <div style={S.section}>
+                <div style={S.label}>Essentiel EN (3 points)</div>
+                {tldrEn.map((point, i) => (
+                  <input key={i} className="inp" value={point} placeholder={`Key point ${i + 1}`} onChange={(e) => setTldrEn((prev) => prev.map((p, j) => (j === i ? e.target.value : p)))} />
+                ))}
               </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-bold">Contenu EN</label>
+              <div style={S.section}>
+                <div style={S.label}>Contenu EN</div>
                 <RichTextEditor content={htmlEn} onChange={setHtmlEn} />
               </div>
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={saveEn}
-                  disabled={enSaving}
-                  className="nb-btn text-sm"
-                >
-                  {enSaving ? "…" : "Sauvegarder traduction EN"}
-                </button>
-                {enMsg && <span className="text-sm">{enMsg}</span>}
-              </div>
+              <button
+                type="button"
+                onClick={saveEn}
+                disabled={enSaving}
+                className="btn btn-sm btn-g"
+                style={{ fontFamily: "var(--ff-m)", fontSize: 11, alignSelf: "flex-start" }}
+              >
+                {enSaving ? "…" : "Sauvegarder traduction EN"}
+              </button>
             </div>
           )}
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-3 border-t-2 border-ink pt-5">
+      {/* Action bar */}
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "var(--s3)", borderTop: "1px solid var(--ln)", paddingTop: "var(--s5)" }}>
         <button
           type="button"
           onClick={() => save(true)}
-          className="nb-btn nb-btn-primary"
-          disabled={saving || !title || !html}
+          className="btn btn-p"
+          disabled={saving || !canSave}
         >
-          {saving ? "..." : "Publier"}
+          {saving ? "…" : "Publier"}
         </button>
         <button
           type="button"
           onClick={() => save(false)}
-          className="nb-btn"
-          disabled={saving || !title || !html}
+          className="btn btn-g"
+          disabled={saving || !canSave}
+          style={{ fontFamily: "var(--ff-m)", fontSize: 12 }}
         >
-          Enregistrer en brouillon
+          Brouillon
         </button>
-        <div className="flex items-center gap-2">
+
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--s2)" }}>
           <input
             type="datetime-local"
-            className="field w-auto text-sm"
+            className="inp inp-sm"
             value={scheduledAt}
             onChange={(e) => setScheduledAt(e.target.value)}
+            style={{ width: "auto" }}
           />
           <button
             type="button"
             onClick={() => save(false, true)}
-            className="nb-btn text-sm"
-            disabled={saving || !title || !html || !scheduledAt}
-            title="L'article restera en brouillon jusqu'à cette date, puis sera publié automatiquement"
+            className="btn btn-sm btn-g"
+            disabled={saving || !canSave || !scheduledAt}
+            style={{ fontFamily: "var(--ff-m)", fontSize: 11 }}
           >
-            🕐 Planifier
+            Planifier
           </button>
         </div>
+
         {slug && (
-          <a href={`/admin/articles/${slug}/apercu`} target="_blank" className="nb-btn text-sm">
-            👁 Aperçu
+          <a
+            href={`/admin/articles/${slug}/apercu`}
+            target="_blank"
+            className="btn btn-sm btn-g"
+            style={{ fontFamily: "var(--ff-m)", fontSize: 11 }}
+          >
+            Aperçu ↗
           </a>
         )}
         {slug && (
@@ -419,18 +445,20 @@ export function ArticleEditor({ slug, initial }: EditorProps) {
                 router.push(`/admin/articles/${newSlug}`);
               }
             }}
-            className="nb-btn text-sm"
+            className="btn btn-sm btn-g"
             disabled={saving}
+            style={{ fontFamily: "var(--ff-m)", fontSize: 11 }}
           >
-            ⧉ Dupliquer
+            Dupliquer
           </button>
         )}
         {slug && (
           <button
             type="button"
-            onClick={handleDelete}
-            className="nb-btn ml-auto bg-[var(--peach)]"
+            onClick={() => setConfirmDelete(true)}
+            className="btn btn-sm"
             disabled={saving}
+            style={{ fontFamily: "var(--ff-m)", fontSize: 11, color: "var(--er)", borderColor: "var(--er)", marginLeft: "auto" }}
           >
             Supprimer
           </button>

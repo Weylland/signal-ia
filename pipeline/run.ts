@@ -184,6 +184,62 @@ Réponds en JSON strict : {"groups": [{"title": "...", "links": ["url1", "url2"]
   return parsed.groups ?? [];
 }
 
+/**
+ * Filtre les groupes candidats contre les articles récemment publiés.
+ * Un même sujet déjà couvert n'est republié QUE s'il apporte une info nouvelle (mise à jour).
+ * En cas d'échec LLM, on retombe sur un dédoublonnage par titre exact (comportement minimal sûr).
+ */
+async function filterAlreadyCovered(
+  groups: StoryGroup[],
+  recent: { title: string; excerpt: string; date: string }[]
+): Promise<StoryGroup[]> {
+  if (groups.length === 0 || recent.length === 0) return groups;
+
+  try {
+    const recentList = recent
+      .map((a, i) => `${i + 1}. [${a.date.slice(0, 10)}] ${a.title} — ${a.excerpt}`)
+      .join("\n");
+    const candidateList = groups
+      .map((g, i) => `[${i}] ${g.title} — ${g.angle}`)
+      .join("\n");
+
+    const content = await callMistral(
+      [
+        {
+          role: "system",
+          content: `Tu filtres des news IA candidates à la publication pour éviter les doublons.
+On te donne des articles DÉJÀ publiés récemment, puis des candidats.
+Pour chaque candidat, attribue un verdict :
+- "new" : sujet pas encore couvert par les articles publiés.
+- "update" : MÊME sujet qu'un article publié, MAIS apporte une info nouvelle substantielle (nouveaux chiffres, suite des événements, démenti, sortie effective d'un produit annoncé...). À garder.
+- "duplicate" : même sujet sans aucune information nouvelle. À écarter.
+Sois strict : en cas de doute entre "duplicate" et "update", choisis "duplicate".
+Réponds en JSON strict : {"results":[{"index":0,"verdict":"new|update|duplicate"}]}`,
+        },
+        {
+          role: "user",
+          content: `Articles déjà publiés (récents) :\n${recentList}\n\nCandidats :\n${candidateList}`,
+        },
+      ],
+      true
+    );
+
+    const parsed = JSON.parse(content) as { results: { index: number; verdict: string }[] };
+    const keep = new Set(
+      (parsed.results ?? [])
+        .filter((r) => r.verdict !== "duplicate")
+        .map((r) => r.index)
+    );
+    // Tout index non renvoyé par le modèle est conservé par sécurité.
+    const seen = new Set((parsed.results ?? []).map((r) => r.index));
+    return groups.filter((_, i) => keep.has(i) || !seen.has(i));
+  } catch (error) {
+    log(`⚠ dédup sujet indisponible (${error instanceof Error ? error.message : error}), repli sur titre exact`);
+    const recentTitles = new Set(recent.map((a) => a.title.toLowerCase()));
+    return groups.filter((g) => !recentTitles.has(g.title.toLowerCase()));
+  }
+}
+
 async function writeArticle(group: StoryGroup, items: PendingRow[]): Promise<WrittenArticle> {
   const sources = items.filter((item) => group.links.includes(item.url));
   const context = sources
@@ -329,7 +385,19 @@ async function main() {
       .all() as PendingRow[];
 
     if (queuedItems.length > 0) {
-      const groups = await groupStories(queuedItems, settings.breakingThreshold);
+      const rawGroups = await groupStories(queuedItems, settings.breakingThreshold);
+
+      // Dédoublonnage par sujet : on écarte les groupes déjà couverts (sauf vraie mise à jour).
+      const existing = await getAllArticles({ includeDrafts: true });
+      const recentCutoff = new Date(Date.now() - 14 * 24 * 3600_000).toISOString();
+      const recent = existing
+        .filter((a) => a.date >= recentCutoff)
+        .map((a) => ({ title: a.title, excerpt: a.excerpt, date: a.date }));
+      const groups = await filterAlreadyCovered(rawGroups, recent);
+      if (groups.length < rawGroups.length) {
+        log(`— ${rawGroups.length - groups.length} sujet(s) déjà couvert(s), écarté(s)`);
+      }
+
       const breakingGroups = groups.filter((g) => g.breaking);
       const normalGroups = groups.filter((g) => !g.breaking);
 
@@ -340,14 +408,13 @@ async function main() {
         ...normalGroups.slice(0, Math.max(0, settings.maxArticlesPerRun - breakingGroups.length)),
       ].slice(0, dailyBudget === 0 && breakingGroups.length > 0 ? breakingGroups.length : dailyBudget);
 
-      const existing = await getAllArticles({ includeDrafts: true });
       const markDone = db.prepare(
         "UPDATE pending_news SET status = 'published', article_slug = ? WHERE url = ?"
       );
 
       for (const group of toWrite) {
         if (existing.some((a) => a.title.toLowerCase() === group.title.toLowerCase())) {
-          log(`— déjà couvert : ${group.title}`);
+          log(`— déjà couvert (titre identique) : ${group.title}`);
           continue;
         }
 

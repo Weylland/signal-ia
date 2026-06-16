@@ -31,8 +31,6 @@ export default function AnalyticsPage() {
     { label: "Vues moyennes/article", value: avgViews.toLocaleString("fr-FR"), delta: null },
   ];
 
-  const days = ["L", "M", "M", "J", "V", "S", "D"];
-
   return (
     <div>
       {/* Header */}
@@ -58,7 +56,7 @@ export default function AnalyticsPage() {
         <div style={{ background: "var(--bg-r)", border: "1px solid var(--ln)", padding: "var(--s6)", marginBottom: "var(--s6)" }}>
           <h2 style={{ fontFamily: "var(--ff-h)", fontSize: 15, fontWeight: 600, marginBottom: "var(--s5)" }}>Vues par jour (7 jours)</h2>
           <div style={{ display: "flex", gap: "var(--s3)", alignItems: "flex-end", height: 140 }}>
-            {dailyStats.map((d, i) => {
+            {dailyStats.map((d) => {
               const pct = Math.round(((d.total_views ?? 0) / maxViews) * 120);
               return (
                 <div key={d.day} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--s2)" }}>
