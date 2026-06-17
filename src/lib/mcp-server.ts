@@ -87,6 +87,7 @@ export function createMcpServer() {
             tldr: { type: "array", items: { type: "string" }, description: "3 points clés max" },
             image: { type: "string", description: "URL image de couverture" },
             published: { type: "boolean", description: "Publier immédiatement (défaut true)" },
+            difficulty: { type: "string", enum: ["debutant", "intermediaire", "avance"], description: "Niveau (tutos uniquement)" },
           },
         },
       },
@@ -105,6 +106,7 @@ export function createMcpServer() {
             tldr: { type: "array", items: { type: "string" } },
             image: { type: "string" },
             published: { type: "boolean" },
+            difficulty: { type: "string", enum: ["debutant", "intermediaire", "avance"], description: "Niveau (tutos uniquement)" },
           },
         },
       },
@@ -297,6 +299,7 @@ export function createMcpServer() {
             tldr: (args.tldr as string[]) ?? [],
             image: (args.image as string) ?? null,
             published: args.published !== false,
+            difficulty: (args.difficulty as string) ?? null,
             sources: [],
           });
           return ok({ slug, url: `/articles/${slug}` });
@@ -317,6 +320,7 @@ export function createMcpServer() {
             tldr: (args.tldr as string[]) ?? existing.tldr,
             image: (args.image as string) ?? existing.image,
             published: args.published !== undefined ? (args.published as boolean) : existing.published,
+            difficulty: (args.difficulty as string) ?? existing.difficulty,
           });
           return ok({ slug: args.slug });
         }
