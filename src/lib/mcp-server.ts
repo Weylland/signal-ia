@@ -1,7 +1,5 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
-import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
-import type { JSONRPCMessage } from "@modelcontextprotocol/sdk/types.js";
 import { marked } from "marked";
 import {
   getAllArticles,
@@ -17,31 +15,6 @@ import { getSubscribers } from "./newsletter";
 import { getSettings, saveSettings } from "./settings";
 import { getDb } from "./db";
 import { runPipeline } from "../../pipeline/run";
-
-const encoder = new TextEncoder();
-
-export class NextJsTransport implements Transport {
-  onmessage?: (message: JSONRPCMessage) => void;
-  onclose?: () => void;
-  onerror?: (error: Error) => void;
-
-  constructor(private controller: ReadableStreamDefaultController<Uint8Array>) {}
-
-  async start(): Promise<void> {}
-
-  async send(message: JSONRPCMessage): Promise<void> {
-    const data = `event: message\ndata: ${JSON.stringify(message)}\n\n`;
-    this.controller.enqueue(encoder.encode(data));
-  }
-
-  async close(): Promise<void> {
-    try { this.controller.close(); } catch {}
-  }
-
-  handleIncoming(raw: unknown): void {
-    this.onmessage?.(raw as JSONRPCMessage);
-  }
-}
 
 export function createMcpServer() {
   const server = new Server(

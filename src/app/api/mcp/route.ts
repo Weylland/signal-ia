@@ -1,10 +1,8 @@
 import { NextRequest } from "next/server";
-import { createMcpServer, NextJsTransport } from "@/lib/mcp-server";
+import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
+import { createMcpServer } from "@/lib/mcp-server";
 
 export const dynamic = "force-dynamic";
-
-const encoder = new TextEncoder();
-const sessions = new Map<string, NextJsTransport>();
 
 function checkApiKey(request: NextRequest): boolean {
   const expected = process.env.CLAUDE_API_KEY;
@@ -14,60 +12,26 @@ function checkApiKey(request: NextRequest): boolean {
   return fromHeader === expected || fromQuery === expected;
 }
 
-export async function GET(request: NextRequest) {
+// Transport Streamable HTTP en mode stateless : chaque requête est autonome
+// (un serveur + un transport neufs), donc rien à garder en mémoire entre les
+// appels. Survit aux redéploiements et permet de passer la clé en header.
+async function handle(request: NextRequest): Promise<Response> {
   if (!checkApiKey(request)) {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const sessionId = crypto.randomUUID();
-
-  const stream = new ReadableStream<Uint8Array>({
-    start(controller) {
-      const transport = new NextJsTransport(controller);
-      sessions.set(sessionId, transport);
-
-      const server = createMcpServer();
-      server.connect(transport).catch((e: unknown) =>
-        console.error("[mcp] connect error:", e)
-      );
-
-      // Send endpoint event so the client knows where to POST.
-      // Propagate the auth key so the follow-up POST is authorized too.
-      const key = request.nextUrl.searchParams.get("key");
-      const keyParam = key ? `&key=${encodeURIComponent(key)}` : "";
-      controller.enqueue(
-        encoder.encode(`event: endpoint\ndata: /api/mcp?sessionId=${sessionId}${keyParam}\n\n`)
-      );
-    },
-    cancel() {
-      sessions.delete(sessionId);
-    },
+  const server = createMcpServer();
+  const transport = new WebStandardStreamableHTTPServerTransport({
+    sessionIdGenerator: undefined,
+    enableJsonResponse: true,
   });
 
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive",
-      "X-Accel-Buffering": "no",
-    },
-  });
+  await server.connect(transport);
+  const response = await transport.handleRequest(request);
+  await server.close();
+  return response;
 }
 
-export async function POST(request: NextRequest) {
-  if (!checkApiKey(request)) {
-    return new Response("Unauthorized", { status: 401 });
-  }
-
-  const sessionId = request.nextUrl.searchParams.get("sessionId");
-  const transport = sessionId ? sessions.get(sessionId) : null;
-
-  if (!transport) {
-    return new Response("Session introuvable", { status: 404 });
-  }
-
-  const message = await request.json();
-  transport.handleIncoming(message);
-
-  return new Response(null, { status: 202 });
-}
+export const GET = handle;
+export const POST = handle;
+export const DELETE = handle;
