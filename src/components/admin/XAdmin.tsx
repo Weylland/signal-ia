@@ -14,16 +14,30 @@ type XPost = {
 export function XAdmin({ configured, posts }: { configured: boolean; posts: XPost[] }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const [preview, setPreview] = useState<{ text: string; url: string; type: string } | null>(null);
 
-  async function postNow() {
+  async function run(dryRun: boolean) {
+    if (!dryRun && !confirm("Publier réellement ce post sur X maintenant ?")) return;
     setBusy(true);
     setMsg(null);
+    if (dryRun) setPreview(null);
     try {
-      const res = await fetch("/api/admin/x/post", { method: "POST" });
-      const data = await res.json() as { posted?: string; type?: string; skipped?: string; error?: string };
-      if (data.posted) setMsg({ text: `Posté : ${data.type} — ${data.posted}`, ok: true });
-      else if (data.skipped) setMsg({ text: `Rien posté : ${data.skipped}`, ok: false });
-      else setMsg({ text: data.error ?? "Erreur inconnue", ok: false });
+      const res = await fetch("/api/admin/x/post", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dryRun }),
+      });
+      const data = await res.json() as { posted?: string; type?: string; preview?: string; url?: string; skipped?: string; error?: string };
+      if (data.preview) {
+        setPreview({ text: data.preview, url: data.url ?? "", type: data.type ?? "?" });
+        setMsg({ text: "Aperçu généré (rien n'a été publié).", ok: true });
+      } else if (data.posted) {
+        setMsg({ text: `Publié : ${data.type} — ${data.posted}`, ok: true });
+      } else if (data.skipped) {
+        setMsg({ text: `Rien posté : ${data.skipped}`, ok: false });
+      } else {
+        setMsg({ text: data.error ?? "Erreur inconnue", ok: false });
+      }
     } catch (err) {
       setMsg({ text: String(err), ok: false });
     }
@@ -47,11 +61,25 @@ export function XAdmin({ configured, posts }: { configured: boolean; posts: XPos
           Choisit automatiquement une actu importante récente, sinon un tuto evergreen. Le lien part en réponse au tweet. Posté chaque jour ~11h30 (heure de Paris).
         </p>
         <div style={{ display: "flex", alignItems: "center", gap: "var(--s3)", flexWrap: "wrap" }}>
-          <button className="btn btn-p" onClick={postNow} disabled={busy || !configured} style={{ ...mono }}>
+          <button className="btn btn-g" onClick={() => run(true)} disabled={busy} style={{ ...mono }}>
+            {busy ? "…" : "Tester (sans publier)"}
+          </button>
+          <button className="btn btn-p" onClick={() => run(false)} disabled={busy || !configured} style={{ ...mono }}>
             {busy ? "Publication…" : "Poster maintenant"}
           </button>
           {msg && <span style={{ ...mono, color: msg.ok ? "var(--ok)" : "var(--er)" }}>{msg.text}</span>}
         </div>
+
+        {preview && (
+          <div style={{ marginTop: "var(--s5)", padding: "var(--s5)", background: "var(--bg-d)", border: "1px solid var(--ln)" }}>
+            <div style={{ fontFamily: "var(--ff-m)", fontSize: 10, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--ink-f)", marginBottom: "var(--s3)" }}>
+              Aperçu du post ({preview.type}) — non publié
+            </div>
+            <div style={{ fontFamily: "var(--ff-h)", fontSize: 15, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{preview.text}</div>
+            <div style={{ ...mono, fontSize: 11, color: "var(--ac)", marginTop: "var(--s3)" }}>↳ en réponse : → {preview.url}</div>
+            <div style={{ ...mono, fontSize: 10, color: "var(--ink-f)", marginTop: "var(--s2)" }}>{preview.text.length} / 280 caractères</div>
+          </div>
+        )}
       </div>
 
       <div style={card}>

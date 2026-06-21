@@ -137,23 +137,34 @@ function postedRecently(lang: PostLang): boolean {
 
 export type XResult =
   | { skipped: string }
-  | { posted: string; type: "news" | "tuto"; tweetId: string };
+  | { posted: string; type: "news" | "tuto"; tweetId: string }
+  | { preview: string; url: string; slug: string; type: "news" | "tuto" };
 
 // Cascade : actu importante → sinon tuto evergreen. Le lien part en réponse au tweet (anti-throttle).
-export async function runXDigest(lang: PostLang = "fr"): Promise<XResult> {
+// dryRun : génère le post et le retourne SANS rien publier ni enregistrer.
+export async function runXDigest(
+  lang: PostLang = "fr",
+  opts: { dryRun?: boolean } = {}
+): Promise<XResult> {
+  const dryRun = opts.dryRun ?? false;
   const client = getClient();
-  if (!client) return { skipped: "X non configuré (clés manquantes)" };
-  if (postedRecently(lang)) return { skipped: "déjà posté dans les 12 dernières heures" };
+  if (!client && !dryRun) return { skipped: "X non configuré (clés manquantes)" };
+  if (!dryRun && postedRecently(lang)) return { skipped: "déjà posté dans les 12 dernières heures" };
 
   const candidate = pickNews(lang) ?? pickTuto(lang);
   if (!candidate) return { skipped: "rien de pertinent à poster" };
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://watch-ia.com";
   const text = await generatePostText(candidate, lang);
+  const url = `${siteUrl}/articles/${candidate.slug}`;
 
-  const main = await client.v2.tweet(text);
+  if (dryRun) {
+    return { preview: text, url, slug: candidate.slug, type: candidate.type };
+  }
+
+  const main = await client!.v2.tweet(text);
   const tweetId = main.data.id;
-  await client.v2.tweet(`→ ${siteUrl}/articles/${candidate.slug}`, {
+  await client!.v2.tweet(`→ ${url}`, {
     reply: { in_reply_to_tweet_id: tweetId },
   });
 
