@@ -1,20 +1,29 @@
 import Link from "next/link";
-import { getAllArticles } from "@/lib/articles";
+import { getAllArticles, type ArticleType, type Difficulty } from "@/lib/articles";
 import { ArticlesTable } from "@/components/admin/ArticlesTable";
 
 export const dynamic = "force-dynamic";
 
 const PER = 20;
+const NIVEAUX: Difficulty[] = ["debutant", "intermediaire", "avance"];
 
 export default async function AdminArticlesPage({ searchParams }: PageProps<"/admin/articles">) {
   const params = await searchParams;
   const search = typeof params.q === "string" ? params.q : "";
   const filter = typeof params.statut === "string" ? params.statut : "tous";
+  const type = typeof params.type === "string" ? params.type : "tous";
+  const niveau = typeof params.niveau === "string" ? params.niveau : "tous";
   const page = Math.max(1, parseInt(typeof params.page === "string" ? params.page : "1") || 1);
 
-  let articles = await getAllArticles({ includeDrafts: true, search: search || undefined });
+  let articles = await getAllArticles({
+    includeDrafts: true,
+    search: search || undefined,
+    type: type === "news" || type === "tuto" ? (type as ArticleType) : undefined,
+    difficulty: NIVEAUX.includes(niveau as Difficulty) ? (niveau as Difficulty) : undefined,
+  });
   if (filter === "publies") articles = articles.filter((a) => a.published);
   if (filter === "brouillons") articles = articles.filter((a) => !a.published);
+  if (niveau === "aucun") articles = articles.filter((a) => a.difficulty === null);
 
   const totalPages = Math.max(1, Math.ceil(articles.length / PER));
   const cur = Math.min(page, totalPages);
@@ -24,6 +33,8 @@ export default async function AdminArticlesPage({ searchParams }: PageProps<"/ad
     const qs = new URLSearchParams();
     if (search) qs.set("q", search);
     if (filter !== "tous") qs.set("statut", filter);
+    if (type !== "tous") qs.set("type", type);
+    if (niveau !== "tous") qs.set("niveau", niveau);
     if (p > 1) qs.set("page", String(p));
     const s = qs.toString();
     return `/admin/articles${s ? `?${s}` : ""}`;
@@ -48,8 +59,20 @@ export default async function AdminArticlesPage({ searchParams }: PageProps<"/ad
           <option value="publies">Publiés</option>
           <option value="brouillons">Brouillons</option>
         </select>
+        <select name="type" defaultValue={type} className="inp inp-sm" style={{ width: "auto" }}>
+          <option value="tous">Tous types</option>
+          <option value="news">Actus</option>
+          <option value="tuto">Tutos</option>
+        </select>
+        <select name="niveau" defaultValue={niveau} className="inp inp-sm" style={{ width: "auto" }}>
+          <option value="tous">Tous niveaux</option>
+          <option value="debutant">Débutant</option>
+          <option value="intermediaire">Intermédiaire</option>
+          <option value="avance">Avancé</option>
+          <option value="aucun">Sans niveau</option>
+        </select>
         <button type="submit" className="btn btn-sm btn-p">Filtrer</button>
-        {(search || filter !== "tous") && (
+        {(search || filter !== "tous" || type !== "tous" || niveau !== "tous") && (
           <Link href="/admin/articles" className="btn btn-sm btn-g" style={{ color: "var(--ink-f)" }}>× Réinitialiser</Link>
         )}
         <span style={{ marginLeft: "auto", fontFamily: "var(--ff-m)", fontSize: 11, color: "var(--ink-f)" }}>
