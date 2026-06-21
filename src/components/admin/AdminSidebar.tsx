@@ -12,6 +12,7 @@ const NAV = [
       { l: "Dashboard", p: "/admin", i: "◉" },
       { l: "Articles", p: "/admin/articles", i: "◈" },
       { l: "Glossaire", p: "/admin/glossaire", i: "▤" },
+      { l: "Modération", p: "/admin/moderation", i: "⊳" },
       { l: "Pipeline", p: "/admin/pipeline", i: "⊂" },
     ],
   },

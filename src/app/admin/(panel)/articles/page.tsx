@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getAllArticles, type ArticleType, type Difficulty } from "@/lib/articles";
 import { ArticlesTable } from "@/components/admin/ArticlesTable";
 import { FixProperNounsButton } from "@/components/admin/FixProperNounsButton";
+import { Pagination } from "@/components/Pagination";
 
 export const dynamic = "force-dynamic";
 
@@ -30,16 +31,11 @@ export default async function AdminArticlesPage({ searchParams }: PageProps<"/ad
   const cur = Math.min(page, totalPages);
   const slice = articles.slice((cur - 1) * PER, cur * PER);
 
-  function pageHref(p: number) {
-    const qs = new URLSearchParams();
-    if (search) qs.set("q", search);
-    if (filter !== "tous") qs.set("statut", filter);
-    if (type !== "tous") qs.set("type", type);
-    if (niveau !== "tous") qs.set("niveau", niveau);
-    if (p > 1) qs.set("page", String(p));
-    const s = qs.toString();
-    return `/admin/articles${s ? `?${s}` : ""}`;
-  }
+  const query: Record<string, string> = {};
+  if (search) query.q = search;
+  if (filter !== "tous") query.statut = filter;
+  if (type !== "tous") query.type = type;
+  if (niveau !== "tous") query.niveau = niveau;
 
   return (
     <div>
@@ -87,16 +83,7 @@ export default async function AdminArticlesPage({ searchParams }: PageProps<"/ad
       {/* Table */}
       <ArticlesTable articles={slice} />
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "var(--s2)", marginTop: "var(--s6)" }}>
-          {cur > 1 && <Link href={pageHref(cur - 1)} className="btn btn-sm">← Préc.</Link>}
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-            <Link key={p} href={pageHref(p)} className={`btn btn-sm${p === cur ? " btn-p" : ""}`}>{p}</Link>
-          ))}
-          {cur < totalPages && <Link href={pageHref(cur + 1)} className="btn btn-sm">Suiv. →</Link>}
-        </div>
-      )}
+      <Pagination page={cur} totalPages={totalPages} basePath="/admin/articles" query={query} />
     </div>
   );
 }

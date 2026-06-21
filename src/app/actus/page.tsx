@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { getAllArticles, getAllTags, localizeMeta } from "@/lib/articles";
 import { getLang, getDict } from "@/lib/i18n";
 import { categoryFor, categoryList } from "@/lib/category";
 import { ArticleCard } from "@/components/ArticleCard";
 import { PageHeader, PageBand } from "@/components/PageShell";
+import { Pagination } from "@/components/Pagination";
 
 export const dynamic = "force-dynamic";
 
@@ -58,12 +58,6 @@ export default async function ActusPage({ searchParams }: PageProps<"/actus">) {
   if (categoryFilter) qbase.category = categoryFilter;
   if (sourceFilter) qbase.source = sourceFilter;
   if (periodFilter) qbase.periode = periodFilter;
-  const pageHref = (p: number) => {
-    const q = new URLSearchParams(qbase);
-    if (p > 1) q.set("page", String(p));
-    const s = q.toString();
-    return `/actus${s ? `?${s}` : ""}`;
-  };
 
   return (
     <div className="-mt-10">
@@ -128,25 +122,7 @@ export default async function ActusPage({ searchParams }: PageProps<"/actus">) {
           </div>
         )}
 
-        {totalPages > 1 && (
-          <div className="flex flex-wrap justify-center gap-2">
-            {cur > 1 && (
-              <Link href={pageHref(cur - 1)} className="btn btn-sm">
-                ← {en ? "Prev" : "Préc."}
-              </Link>
-            )}
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-              <Link key={p} href={pageHref(p)} className={`btn btn-sm${p === cur ? " btn-p" : ""}`}>
-                {p}
-              </Link>
-            ))}
-            {cur < totalPages && (
-              <Link href={pageHref(cur + 1)} className="btn btn-sm">
-                {en ? "Next" : "Suiv."} →
-              </Link>
-            )}
-          </div>
-        )}
+        <Pagination page={cur} totalPages={totalPages} basePath="/actus" query={qbase} />
       </PageBand>
     </div>
   );

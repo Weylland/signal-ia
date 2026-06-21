@@ -129,7 +129,6 @@ export default async function TutosPage({
           totalPages={totalPages}
           basePath="/tutos"
           query={difficulty ? { difficulty } : undefined}
-          t={t}
         />
       </PageBand>
     </div>

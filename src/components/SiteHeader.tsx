@@ -99,7 +99,7 @@ export function SiteHeader({ links, lang, labels, isAdmin, siteName = "watch·ia
           <div className="ml-auto flex shrink-0 items-center gap-1">
             <button
               onClick={openCmdk}
-              className="hm flex h-8 items-center gap-1.5 border border-line px-2.5 font-mono text-[11px] text-[var(--ink-f)]"
+              className="hm flex h-8 cursor-pointer items-center gap-1.5 border border-line px-2.5 font-mono text-[11px] text-[var(--ink-f)] transition-colors hover:border-[var(--ac)] hover:text-[var(--ink)]"
               style={{ background: "var(--bg-r)" }}
               aria-label={labels.search}
             >
@@ -129,14 +129,14 @@ export function SiteHeader({ links, lang, labels, isAdmin, siteName = "watch·ia
             <span className="hm flex items-center gap-1.5 px-1 font-mono text-[11px] text-[var(--ink-f)]">
               <button
                 onClick={() => setLang("fr")}
-                className={lang === "fr" ? "text-[var(--ac)]" : ""}
+                className={`cursor-pointer transition-colors ${lang === "fr" ? "text-[var(--ac)]" : "hover:text-[var(--ink)]"}`}
               >
                 FR
               </button>
               <span className="opacity-40">/</span>
               <button
                 onClick={() => setLang("en")}
-                className={lang === "en" ? "text-[var(--ac)]" : ""}
+                className={`cursor-pointer transition-colors ${lang === "en" ? "text-[var(--ac)]" : "hover:text-[var(--ink)]"}`}
               >
                 EN
               </button>

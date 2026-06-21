@@ -59,7 +59,6 @@ export default async function TagPage({ params, searchParams }: PageProps<"/tags
         page={page}
         totalPages={totalPages}
         basePath={`/tags/${encodeURIComponent(decoded)}`}
-        t={t}
       />
 
       {otherTags.length > 0 && (

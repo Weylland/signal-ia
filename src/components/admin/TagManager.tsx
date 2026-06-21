@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { pageWindow } from "@/components/Pagination";
 
 type SortKey = "alpha" | "count";
 const PER = 20;
@@ -152,10 +153,16 @@ export function TagManager({ tags }: { tags: { tag: string; count: number }[] })
       </div>
 
       {totalPages > 1 && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "var(--s3)", marginTop: "var(--s5)" }}>
-          <button className="btn btn-sm" disabled={cur <= 1} onClick={() => setPage(cur - 1)} style={{ ...mono, fontSize: 11 }}>← Préc.</button>
-          <span style={{ ...mono, fontSize: 11, color: "var(--ink-f)" }}>{cur} / {totalPages}</span>
-          <button className="btn btn-sm" disabled={cur >= totalPages} onClick={() => setPage(cur + 1)} style={{ ...mono, fontSize: 11 }}>Suiv. →</button>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: "var(--s2)", marginTop: "var(--s5)" }}>
+          {cur > 1 && <button className="btn btn-sm" onClick={() => setPage(cur - 1)} style={{ ...mono, fontSize: 11 }}>←</button>}
+          {pageWindow(cur, totalPages).map((p, i) =>
+            p === "…" ? (
+              <span key={`e${i}`} style={{ ...mono, fontSize: 11, color: "var(--ink-f)", minWidth: 20, textAlign: "center" }}>…</span>
+            ) : (
+              <button key={p} className={`btn btn-sm${p === cur ? " btn-p" : ""}`} onClick={() => setPage(p)} style={{ ...mono, fontSize: 11 }}>{p}</button>
+            )
+          )}
+          {cur < totalPages && <button className="btn btn-sm" onClick={() => setPage(cur + 1)} style={{ ...mono, fontSize: 11 }}>→</button>}
         </div>
       )}
     </div>
