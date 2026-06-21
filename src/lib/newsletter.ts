@@ -13,7 +13,7 @@ export async function sendNewsletter(subject: string, html: string): Promise<{ s
   const key = process.env.RESEND_API_KEY;
   if (!key) throw new Error("RESEND_API_KEY manquante dans .env.local");
 
-  const from = process.env.NEWSLETTER_FROM ?? `${getSettings().siteName} <newsletter@watch-ia.fr>`;
+  const from = process.env.NEWSLETTER_FROM ?? `${getSettings().siteName} <newsletter@watch-ia.com>`;
   const subscribers = getSubscribers();
 
   let sent = 0;
