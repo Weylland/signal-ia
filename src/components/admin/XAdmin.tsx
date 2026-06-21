@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 type XPost = {
+  id: number;
   posted_at: string;
   tweet_id: string | null;
   lang: string;
@@ -16,6 +18,23 @@ export function XAdmin({ configured, posts, includeLink: initialLink }: { config
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [preview, setPreview] = useState<{ text: string; url: string; type: string; slug: string; withLink: boolean } | null>(null);
   const [includeLink, setIncludeLink] = useState(initialLink);
+  const [deleting, setDeleting] = useState<number | null>(null);
+  const router = useRouter();
+
+  async function deletePost(id: number) {
+    if (!confirm("Supprimer ce post ? (tentative de suppression sur X aussi)")) return;
+    setDeleting(id);
+    try {
+      await fetch("/api/admin/x/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      router.refresh();
+    } finally {
+      setDeleting(null);
+    }
+  }
 
   async function toggleLink() {
     const next = !includeLink;
@@ -44,6 +63,7 @@ export function XAdmin({ configured, posts, includeLink: initialLink }: { config
         setMsg({ text: "Aperçu généré (rien n'a été publié).", ok: true });
       } else if (data.posted) {
         setMsg({ text: `Publié : ${data.type} — ${data.posted}`, ok: true });
+        router.refresh();
       } else if (data.skipped) {
         setMsg({ text: `Rien posté : ${data.skipped}`, ok: false });
       } else {
@@ -124,15 +144,23 @@ export function XAdmin({ configured, posts, includeLink: initialLink }: { config
         ) : (
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <tbody>
-              {posts.map((p, i) => (
-                <tr key={i} style={{ borderBottom: "1px solid var(--ln)" }}>
+              {posts.map((p) => (
+                <tr key={p.id} style={{ borderBottom: "1px solid var(--ln)" }}>
                   <td style={{ padding: "var(--s3)", ...mono, fontSize: 11, color: "var(--ink-f)", whiteSpace: "nowrap" }}>{p.posted_at.slice(0, 16).replace("T", " ")}</td>
                   <td style={{ padding: "var(--s3)", ...mono, fontSize: 10, color: "var(--ac)", textTransform: "uppercase" }}>{p.type ?? "?"}</td>
                   <td style={{ padding: "var(--s3)", fontFamily: "var(--ff-h)", fontSize: 13 }}>{p.title ?? p.article_slug}</td>
-                  <td style={{ padding: "var(--s3)", textAlign: "right" }}>
+                  <td style={{ padding: "var(--s3)", textAlign: "right", whiteSpace: "nowrap" }}>
                     {p.tweet_id && (
-                      <a className="btn btn-sm" style={{ ...mono, fontSize: 10 }} href={`https://x.com/i/web/status/${p.tweet_id}`} target="_blank" rel="noreferrer">Voir ↗</a>
+                      <a className="btn btn-sm" style={{ ...mono, fontSize: 10, marginRight: "var(--s2)" }} href={`https://x.com/i/web/status/${p.tweet_id}`} target="_blank" rel="noreferrer">Voir ↗</a>
                     )}
+                    <button
+                      className="btn btn-sm"
+                      style={{ ...mono, fontSize: 10, color: "var(--er)", borderColor: "var(--er)" }}
+                      onClick={() => deletePost(p.id)}
+                      disabled={deleting === p.id}
+                    >
+                      {deleting === p.id ? "…" : "Supprimer"}
+                    </button>
                   </td>
                 </tr>
               ))}

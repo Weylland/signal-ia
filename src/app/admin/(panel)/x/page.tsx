@@ -5,6 +5,7 @@ import { XAdmin } from "@/components/admin/XAdmin";
 export const dynamic = "force-dynamic";
 
 type XPostRow = {
+  id: number;
   posted_at: string;
   tweet_id: string | null;
   lang: string;
@@ -23,7 +24,7 @@ export default async function XPage() {
 
   const posts = getDb()
     .prepare(
-      `SELECT x.posted_at, x.tweet_id, x.lang, x.article_slug, a.title, a.type
+      `SELECT x.id, x.posted_at, x.tweet_id, x.lang, x.article_slug, a.title, a.type
        FROM x_posts x LEFT JOIN articles a ON a.slug = x.article_slug
        ORDER BY x.posted_at DESC LIMIT 20`
     )

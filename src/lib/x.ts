@@ -73,11 +73,21 @@ function pickTuto(lang: PostLang): Candidate | null {
   return row ? { ...row, tldr: parseTldr(row.tldr) } : null;
 }
 
-const FALLBACK_LIMIT = 260;
+const MAX_LEN = 278;
+
+// Coupe proprement sous la limite : à la fin d'une phrase si possible, sinon au dernier mot + …
+function cleanTruncate(text: string): string {
+  if (text.length <= MAX_LEN) return text;
+  const slice = text.slice(0, MAX_LEN);
+  const lastSentence = Math.max(slice.lastIndexOf(". "), slice.lastIndexOf("! "), slice.lastIndexOf("? "));
+  if (lastSentence > 140) return slice.slice(0, lastSentence + 1);
+  const lastSpace = slice.lastIndexOf(" ");
+  return (lastSpace > 0 ? slice.slice(0, lastSpace) : slice).trimEnd() + "…";
+}
 
 // Génère le texte du tweet : un angle, voix humaine, pas de hashtag ni emoji en rafale.
 async function generatePostText(a: Candidate, lang: PostLang): Promise<string> {
-  const fallback = a.title.slice(0, FALLBACK_LIMIT);
+  const fallback = cleanTruncate(a.title);
   const key = process.env.MISTRAL_API_KEY;
   if (!key) return fallback;
 
@@ -115,7 +125,7 @@ Exemples du NIVEAU attendu (ton, densité — invente sur TON sujet) :
 - "OpenAI casse ses prix de 40%. Traduction : la bataille des modèles ne se joue plus sur le benchmark mais sur le coût par token. Anthropic et Google vont devoir suivre."
 - "Un agent qui lit tes mails peut être détourné par un simple mail piégé. La prompt injection n'a aucun équivalent en sécu classique — et la majorité des apps IA y sont vulnérables par défaut."
 
-Vise 150 à 270 caractères. Renvoie un JSON STRICT : {"text": "..."}`,
+Longueur : entre 180 et 250 caractères, et termine TOUJOURS sur une phrase complète (jamais coupé au milieu). Renvoie un JSON STRICT : {"text": "..."}`,
         }],
       }),
     });
@@ -125,7 +135,7 @@ Vise 150 à 270 caractères. Renvoie un JSON STRICT : {"text": "..."}`,
     const parsed = JSON.parse(raw) as { text?: string };
     const text = parsed.text?.trim();
     if (!text) return fallback;
-    return text.length > 280 ? text.slice(0, FALLBACK_LIMIT) : text;
+    return cleanTruncate(text);
   } catch {
     return fallback;
   }
@@ -193,4 +203,24 @@ export async function runXDigest(
     .run(candidate.slug, tweetId, lang);
 
   return { posted: candidate.slug, type: candidate.type, tweetId };
+}
+
+// Supprime une entrée de l'historique. Tente aussi de supprimer le tweet sur X (best-effort).
+export async function deleteXPost(id: number): Promise<{ ok: true; removedOnX: boolean }> {
+  const db = getDb();
+  const row = db.prepare("SELECT tweet_id FROM x_posts WHERE id = ?").get(id) as { tweet_id: string | null } | undefined;
+
+  let removedOnX = false;
+  const client = getClient();
+  if (client && row?.tweet_id) {
+    try {
+      await client.v2.deleteTweet(row.tweet_id);
+      removedOnX = true;
+    } catch {
+      removedOnX = false;
+    }
+  }
+
+  db.prepare("DELETE FROM x_posts WHERE id = ?").run(id);
+  return { ok: true, removedOnX };
 }
