@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getAllArticles, type ArticleType, type Difficulty } from "@/lib/articles";
 import { ArticlesTable } from "@/components/admin/ArticlesTable";
+import { FixProperNounsButton } from "@/components/admin/FixProperNounsButton";
 
 export const dynamic = "force-dynamic";
 
@@ -48,7 +49,10 @@ export default async function AdminArticlesPage({ searchParams }: PageProps<"/ad
           <h1 style={{ fontFamily: "var(--ff-h)", fontSize: 26, fontWeight: 700, letterSpacing: "-.02em" }}>Articles</h1>
           <p style={{ fontFamily: "var(--ff-m)", fontSize: 12, color: "var(--ink-f)", marginTop: "var(--s2)" }}>{articles.length} articles au total</p>
         </div>
-        <Link href="/admin/articles/new" className="btn btn-p">+ Nouvel article</Link>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--s3)", flexWrap: "wrap" }}>
+          <FixProperNounsButton />
+          <Link href="/admin/articles/new" className="btn btn-p">+ Nouvel article</Link>
+        </div>
       </div>
 
       {/* Filters */}
