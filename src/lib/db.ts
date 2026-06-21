@@ -174,5 +174,15 @@ export function getDb(): Database.Database {
     );
   `);
 
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS newsletter_sends (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      subject TEXT NOT NULL,
+      recipients INTEGER NOT NULL DEFAULT 0,
+      errors INTEGER NOT NULL DEFAULT 0,
+      sent_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    );
+  `);
+
   return db;
 }

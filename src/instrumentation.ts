@@ -3,6 +3,7 @@ export async function register() {
     const cron = await import("node-cron");
     const { runPipeline } = await import("../pipeline/run");
     const { runBackup } = await import("./lib/backup");
+    const { sendWeeklyDigest } = await import("./lib/newsletter");
 
     const intervalMin = process.env.PIPELINE_INTERVAL_MIN
       ? parseInt(process.env.PIPELINE_INTERVAL_MIN, 10)
@@ -23,6 +24,19 @@ export async function register() {
         );
     });
 
-    console.log(`[watch·ia] Pipeline toutes les ${intervalMin} min · backup quotidien 03:00`);
+    // Digest newsletter hebdo : mardi 9h (heure de Paris)
+    cron.default.schedule(
+      "0 9 * * 2",
+      () => {
+        sendWeeklyDigest()
+          .then((r) => console.log("[newsletter] digest hebdo :", JSON.stringify(r)))
+          .catch((err: unknown) =>
+            console.error("[newsletter] erreur :", err instanceof Error ? err.message : err)
+          );
+      },
+      { timezone: "Europe/Paris" }
+    );
+
+    console.log(`[watch·ia] Pipeline toutes les ${intervalMin} min · backup quotidien 03:00 · newsletter mardi 09:00`);
   }
 }

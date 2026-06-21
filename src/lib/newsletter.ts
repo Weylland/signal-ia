@@ -2,6 +2,7 @@ import { SignJWT, jwtVerify } from "jose";
 import { getDb } from "./db";
 import { getSettings } from "./settings";
 import { getSecret } from "./auth";
+import { getAllArticles } from "./articles";
 
 export async function createUnsubToken(email: string): Promise<string> {
   return new SignJWT({ email })
@@ -56,7 +57,41 @@ export async function sendNewsletter(subject: string, html: string): Promise<{ s
     if (res.ok) sent += batch.length;
     else errors += batch.length;
   }
+
+  getDb()
+    .prepare("INSERT INTO newsletter_sends (subject, recipients, errors) VALUES (?, ?, ?)")
+    .run(subject, sent, errors);
+
   return { sent, errors };
+}
+
+// Articles de la semaine écoulée, max 5 — même logique que l'admin newsletter.
+function getWeekArticles(): Promise<DigestArticle[]> {
+  return getAllArticles({ limit: 20 }).then((articles) => {
+    const weekAgo = new Date(Date.now() - 7 * 24 * 3600_000).toISOString();
+    return articles
+      .filter((a) => a.date >= weekAgo)
+      .slice(0, 5)
+      .map((a) => ({ title: a.title, excerpt: a.excerpt, slug: a.slug }));
+  });
+}
+
+// Envoi automatique du digest hebdo. Idempotent : ne renvoie pas si un envoi a déjà eu lieu dans les 6 derniers jours.
+export async function sendWeeklyDigest(): Promise<{ skipped: string } | { sent: number; errors: number }> {
+  if (getSubscribers().length === 0) return { skipped: "aucun abonné" };
+
+  const sixDaysAgo = new Date(Date.now() - 6 * 24 * 3600_000).toISOString();
+  const recent = getDb()
+    .prepare("SELECT COUNT(*) AS c FROM newsletter_sends WHERE sent_at >= ?")
+    .get(sixDaysAgo) as { c: number };
+  if (recent.c > 0) return { skipped: "envoi déjà effectué cette semaine" };
+
+  const articles = await getWeekArticles();
+  if (articles.length === 0) return { skipped: "aucun article cette semaine" };
+
+  const { siteName } = getSettings();
+  const html = await generateDigestHtml(articles);
+  return sendNewsletter(`${siteName} — Le digest de la semaine`, html);
 }
 
 type DigestArticle = { title: string; excerpt: string; slug: string };
