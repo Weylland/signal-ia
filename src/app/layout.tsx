@@ -270,7 +270,16 @@ export default async function RootLayout({
             <span className="font-mono text-[11px] text-[var(--ink-f)]">
               © {new Date().getFullYear()} watch·ia — {t.footerRights}
             </span>
-            <span className="flex gap-5 font-mono text-[11px] text-[var(--ink-f)]">
+            <span className="flex flex-wrap items-center gap-5 font-mono text-[11px] text-[var(--ink-f)]">
+              {settings.socialX && (
+                <a href={settings.socialX} target="_blank" rel="noreferrer noopener" className="transition-colors hover:text-[var(--ac)]">X ↗</a>
+              )}
+              {settings.socialLinkedin && (
+                <a href={settings.socialLinkedin} target="_blank" rel="noreferrer noopener" className="transition-colors hover:text-[var(--ac)]">LinkedIn ↗</a>
+              )}
+              {settings.socialGithub && (
+                <a href={settings.socialGithub} target="_blank" rel="noreferrer noopener" className="transition-colors hover:text-[var(--ac)]">GitHub ↗</a>
+              )}
               <a href="/flux.xml" className="transition-colors hover:text-[var(--ac)]">RSS ↗</a>
               <Link href="/mentions-legales" className="transition-colors hover:text-[var(--ac)]">
                 {t.footerLegal}
