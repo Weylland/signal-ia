@@ -24,6 +24,23 @@ export default function AnalyticsPage() {
   const maxViews = Math.max(...dailyStats.map((d) => d.total_views ?? 0), 1);
   const maxArticles = Math.max(...topArticles.map((a) => a.views), 1);
 
+  const reactionTotals = db
+    .prepare("SELECT reaction, SUM(count) AS total FROM article_reactions GROUP BY reaction")
+    .all() as { reaction: string; total: number }[];
+  const reactByKey = Object.fromEntries(reactionTotals.map((r) => [r.reaction, r.total])) as Record<string, number>;
+  const REACTIONS = [
+    { key: "useful", emoji: "👍", label: "Utile" },
+    { key: "fire", emoji: "🔥", label: "Important" },
+    { key: "think", emoji: "🤔", label: "À creuser" },
+  ];
+  const topReacted = db
+    .prepare(
+      `SELECT a.slug, a.title, SUM(r.count) AS reactions
+       FROM article_reactions r JOIN articles a ON a.id = r.article_id
+       GROUP BY a.id ORDER BY reactions DESC LIMIT 8`
+    )
+    .all() as { slug: string; title: string; reactions: number }[];
+
   const metrics = [
     { label: "Vues totales", value: totalViews.toLocaleString("fr-FR"), delta: null },
     { label: "Articles publiés", value: totalPublished, delta: null },
@@ -73,6 +90,36 @@ export default function AnalyticsPage() {
           </div>
         </div>
       )}
+
+      {/* Réactions */}
+      <div style={{ background: "var(--bg-r)", border: "1px solid var(--ln)", padding: "var(--s6)", marginBottom: "var(--s6)" }}>
+        <h2 style={{ fontFamily: "var(--ff-h)", fontSize: 15, fontWeight: 600, marginBottom: "var(--s5)" }}>Réactions des lecteurs</h2>
+        <div style={{ display: "flex", gap: "var(--s4)", flexWrap: "wrap", marginBottom: "var(--s5)" }}>
+          {REACTIONS.map((r) => (
+            <div key={r.key} style={{ display: "flex", alignItems: "center", gap: "var(--s3)", border: "1px solid var(--ln)", padding: "var(--s3) var(--s5)", background: "var(--bg-d)" }}>
+              <span style={{ fontSize: 20 }}>{r.emoji}</span>
+              <div>
+                <div style={{ fontFamily: "var(--ff-h)", fontSize: 22, fontWeight: 700, lineHeight: 1 }}>{(reactByKey[r.key] ?? 0).toLocaleString("fr-FR")}</div>
+                <div style={{ fontFamily: "var(--ff-m)", fontSize: 10, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--ink-f)" }}>{r.label}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        {topReacted.length === 0 ? (
+          <p style={{ fontFamily: "var(--ff-m)", fontSize: 13, color: "var(--ink-f)" }}>Pas encore de réactions.</p>
+        ) : (
+          <div>
+            <div style={{ fontFamily: "var(--ff-m)", fontSize: 10, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--ink-f)", marginBottom: "var(--s3)" }}>Articles les plus appréciés</div>
+            {topReacted.map((a, i) => (
+              <div key={a.slug} style={{ display: "flex", alignItems: "center", gap: "var(--s4)", padding: "var(--s3) 0", borderBottom: "1px solid var(--ln)" }}>
+                <span style={{ fontFamily: "var(--ff-m)", fontSize: 14, fontWeight: 700, color: "var(--ac)", width: 20, flexShrink: 0 }}>{i + 1}</span>
+                <div style={{ flex: 1, fontFamily: "var(--ff-h)", fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.title}</div>
+                <span style={{ fontFamily: "var(--ff-m)", fontSize: 12, color: "var(--ink-d)", flexShrink: 0 }}>{a.reactions.toLocaleString("fr-FR")}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Top articles */}
       <div style={{ background: "var(--bg-r)", border: "1px solid var(--ln)", padding: "var(--s5)" }}>
