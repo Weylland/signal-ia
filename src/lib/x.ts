@@ -1,6 +1,7 @@
-import { TwitterApi } from "twitter-api-v2";
+import { TwitterApi, EUploadMimeType } from "twitter-api-v2";
 import { getDb } from "./db";
 import { getSettings } from "./settings";
+import { generateXCard } from "./x-card";
 
 export type PostLang = "fr" | "en";
 
@@ -81,11 +82,8 @@ async function generatePostText(a: Candidate, lang: PostLang): Promise<string> {
   if (!key) return fallback;
 
   const kind = a.type === "tuto" ? "tutoriel pratique (contenu intemporel)" : "actualité du moment";
-  const points = a.tldr.length ? `\nPoints clés :\n- ${a.tldr.join("\n- ")}` : "";
-  const langRule =
-    lang === "fr"
-      ? "Écris en français."
-      : "Write in English.";
+  const points = a.tldr.length ? `\nFaits / points clés (sers-t'en) :\n- ${a.tldr.join("\n- ")}` : "";
+  const langRule = lang === "fr" ? "Écris en français." : "Write in English.";
 
   try {
     const res = await fetch("https://api.mistral.ai/v1/chat/completions", {
@@ -93,24 +91,31 @@ async function generatePostText(a: Candidate, lang: PostLang): Promise<string> {
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
       body: JSON.stringify({
         model: "mistral-small-latest",
-        temperature: 0.85,
+        temperature: 0.8,
         response_format: { type: "json_object" },
         messages: [{
           role: "user",
-          content: `Tu écris UN post pour le compte X d'un média de veille IA. ${langRule}
+          content: `Tu animes un compte X de veille IA qu'on suit pour ses PRISES DE POSITION, pas pour relayer des titres. ${langRule}
 
 Sujet (${kind}) : "${a.title}"
 ${a.excerpt}${points}
 
-Règles ABSOLUES :
-- Le post porte un ANGLE, une idée ou une prise de position concrète — surtout pas le titre recopié.
-- Ton humain, direct, vivant. Comme un humain qui partage un truc qu'il trouve intéressant, pas un communiqué.
-- AUCUN hashtag. AUCUN lien (il sera ajouté à part). Pas d'emoji, ou un seul max si vraiment naturel.
-- Pas de formule creuse ("dans un monde où", "découvrez", "à ne pas manquer", "🚀").
-- Varie l'accroche : parfois une question, un constat, un chiffre, un avis tranché.
-- Maximum 260 caractères.
+Écris UN post (1 à 3 phrases) qui apporte une vraie valeur :
+- Pars d'un FAIT CONCRET du sujet (un chiffre, un nom, une décision, une conséquence) et ajoute TON ANGLE : ce que ça révèle, pourquoi c'est important, ou une opinion assumée.
+- Donne envie de lire la suite par la substance, pas par le racolage.
+- Ton humain, vif, comme quelqu'un de calé qui balance une observation à ses abonnés.
 
-Renvoie un JSON STRICT : {"text": "..."}`,
+INTERDIT :
+- Recopier ou paraphraser le titre.
+- Empiler des questions rhétoriques ("et si… ? le pari de… ?") — au plus UNE question, et seulement si elle fait mouche.
+- Hashtags, liens, emojis en rafale (un seul emoji max, et seulement s'il est naturel).
+- Formules creuses : "découvrez", "à ne pas manquer", "dans un monde où", "révolution", "🚀", "game changer".
+
+Exemples du NIVEAU attendu (ton, densité — invente sur TON sujet) :
+- "OpenAI casse ses prix de 40%. Traduction : la bataille des modèles ne se joue plus sur le benchmark mais sur le coût par token. Anthropic et Google vont devoir suivre."
+- "Un agent qui lit tes mails peut être détourné par un simple mail piégé. La prompt injection n'a aucun équivalent en sécu classique — et la majorité des apps IA y sont vulnérables par défaut."
+
+Vise 150 à 270 caractères. Renvoie un JSON STRICT : {"text": "..."}`,
         }],
       }),
     });
@@ -162,7 +167,19 @@ export async function runXDigest(
     return { preview: text, url, slug: candidate.slug, type: candidate.type };
   }
 
-  const main = await client!.v2.tweet(text);
+  // Carte de marque en illustration ; si la génération/upload échoue, on poste sans image.
+  let mediaIds: string[] = [];
+  try {
+    const card = await generateXCard({ title: candidate.title, kind: candidate.type });
+    const mediaId = await client!.v1.uploadMedia(card, { mimeType: EUploadMimeType.Png });
+    mediaIds = [mediaId];
+  } catch {
+    mediaIds = [];
+  }
+
+  const main = mediaIds.length
+    ? await client!.v2.tweet(text, { media: { media_ids: mediaIds as [string] } })
+    : await client!.v2.tweet(text);
   const tweetId = main.data.id;
   await client!.v2.tweet(`→ ${url}`, {
     reply: { in_reply_to_tweet_id: tweetId },

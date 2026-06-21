@@ -14,7 +14,7 @@ type XPost = {
 export function XAdmin({ configured, posts }: { configured: boolean; posts: XPost[] }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
-  const [preview, setPreview] = useState<{ text: string; url: string; type: string } | null>(null);
+  const [preview, setPreview] = useState<{ text: string; url: string; type: string; slug: string } | null>(null);
 
   async function run(dryRun: boolean) {
     if (!dryRun && !confirm("Publier réellement ce post sur X maintenant ?")) return;
@@ -27,9 +27,9 @@ export function XAdmin({ configured, posts }: { configured: boolean; posts: XPos
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ dryRun }),
       });
-      const data = await res.json() as { posted?: string; type?: string; preview?: string; url?: string; skipped?: string; error?: string };
+      const data = await res.json() as { posted?: string; type?: string; preview?: string; url?: string; slug?: string; skipped?: string; error?: string };
       if (data.preview) {
-        setPreview({ text: data.preview, url: data.url ?? "", type: data.type ?? "?" });
+        setPreview({ text: data.preview, url: data.url ?? "", type: data.type ?? "?", slug: data.slug ?? "" });
         setMsg({ text: "Aperçu généré (rien n'a été publié).", ok: true });
       } else if (data.posted) {
         setMsg({ text: `Publié : ${data.type} — ${data.posted}`, ok: true });
@@ -76,6 +76,14 @@ export function XAdmin({ configured, posts }: { configured: boolean; posts: XPos
               Aperçu du post ({preview.type}) — non publié
             </div>
             <div style={{ fontFamily: "var(--ff-h)", fontSize: 15, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{preview.text}</div>
+            {preview.slug && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={`/api/admin/x/card?slug=${encodeURIComponent(preview.slug)}`}
+                alt="Carte du post"
+                style={{ display: "block", width: "100%", maxWidth: 480, marginTop: "var(--s4)", border: "1px solid var(--ln)" }}
+              />
+            )}
             <div style={{ ...mono, fontSize: 11, color: "var(--ac)", marginTop: "var(--s3)" }}>↳ en réponse : → {preview.url}</div>
             <div style={{ ...mono, fontSize: 10, color: "var(--ink-f)", marginTop: "var(--s2)" }}>{preview.text.length} / 280 caractères</div>
           </div>
