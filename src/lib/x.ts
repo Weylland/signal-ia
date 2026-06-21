@@ -205,6 +205,60 @@ export async function runXDigest(
   return { posted: candidate.slug, type: candidate.type, tweetId };
 }
 
+export type XCustomResult =
+  | { skipped: string }
+  | { posted: string; tweetId: string }
+  | { preview: string; cardTitle: string; tag: string; withLink: boolean; url: string };
+
+// Tweet rédigé à la main + carte de marque (titre/tag libres). Lien optionnel.
+export async function postCustomTweet(opts: {
+  text: string;
+  cardTitle?: string;
+  tag?: string;
+  link?: string;
+  dryRun?: boolean;
+}): Promise<XCustomResult> {
+  const text = cleanTruncate(opts.text.trim());
+  if (!text) return { skipped: "texte vide" };
+
+  const cardTitle = opts.cardTitle?.trim() || opts.text.trim();
+  const tag = opts.tag?.trim() || "ANNONCE";
+  const link = opts.link?.trim() || "";
+  const dryRun = opts.dryRun ?? false;
+
+  if (dryRun) {
+    return { preview: text, cardTitle, tag, withLink: Boolean(link), url: link };
+  }
+
+  const client = getClient();
+  if (!client) return { skipped: "X non configuré (clés manquantes)" };
+
+  let mediaIds: string[] = [];
+  try {
+    const card = await generateXCard({ title: cardTitle, kind: "news", tag });
+    const mediaId = await client.v1.uploadMedia(card, { mimeType: EUploadMimeType.Png });
+    mediaIds = [mediaId];
+  } catch {
+    mediaIds = [];
+  }
+
+  const main = mediaIds.length
+    ? await client.v2.tweet(text, { media: { media_ids: mediaIds as [string] } })
+    : await client.v2.tweet(text);
+  const tweetId = main.data.id;
+
+  if (link) {
+    await client.v2.tweet(`→ ${link}`, { reply: { in_reply_to_tweet_id: tweetId } });
+  }
+
+  const label = cardTitle.slice(0, 80);
+  getDb()
+    .prepare("INSERT INTO x_posts (article_slug, tweet_id, lang, custom_text) VALUES (?, ?, ?, ?)")
+    .run("", tweetId, "fr", label);
+
+  return { posted: label, tweetId };
+}
+
 // Supprime une entrée de l'historique. Tente aussi de supprimer le tweet sur X (best-effort).
 export async function deleteXPost(id: number): Promise<{ ok: true; removedOnX: boolean }> {
   const db = getDb();

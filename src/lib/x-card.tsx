@@ -28,12 +28,14 @@ function titleSize(title: string): number {
 export async function generateXCard({
   title,
   kind,
+  tag: customTag,
 }: {
   title: string;
   kind: "news" | "tuto";
+  tag?: string;
 }): Promise<Buffer> {
   const { spaceGrotesk, jetbrainsMono } = fonts();
-  const tag = kind === "tuto" ? "TUTO" : "ACTU";
+  const tag = (customTag?.trim() || (kind === "tuto" ? "TUTO" : "ACTU")).toUpperCase().slice(0, 16);
 
   const image = new ImageResponse(
     (

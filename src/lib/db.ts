@@ -194,6 +194,7 @@ export function getDb(): Database.Database {
     );
     CREATE INDEX IF NOT EXISTS idx_x_posts_slug ON x_posts(article_slug, posted_at DESC);
   `);
+  addColumnIfMissing(db, "x_posts", "custom_text", "TEXT");
 
   return db;
 }

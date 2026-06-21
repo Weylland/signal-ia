@@ -12,6 +12,7 @@ type XPostRow = {
   title: string | null;
   type: string | null;
   article_slug: string;
+  custom_text: string | null;
 };
 
 export default async function XPage() {
@@ -24,7 +25,7 @@ export default async function XPage() {
 
   const posts = getDb()
     .prepare(
-      `SELECT x.id, x.posted_at, x.tweet_id, x.lang, x.article_slug, a.title, a.type
+      `SELECT x.id, x.posted_at, x.tweet_id, x.lang, x.article_slug, x.custom_text, a.title, a.type
        FROM x_posts x LEFT JOIN articles a ON a.slug = x.article_slug
        ORDER BY x.posted_at DESC LIMIT 20`
     )
