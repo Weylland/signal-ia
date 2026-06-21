@@ -88,13 +88,8 @@ export function SiteHeader({ links, lang, labels, isAdmin, siteName = "watch·ia
               <Link
                 key={l.href}
                 href={l.href}
-                className="flex h-[52px] items-center whitespace-nowrap px-[9px] text-[13px] font-medium transition-colors"
-                style={{
-                  color: isActive(l.href) ? "var(--ac)" : "var(--ink-d)",
-                  borderBottom: isActive(l.href)
-                    ? "2px solid var(--ac)"
-                    : "2px solid transparent",
-                }}
+                className="topnav-link"
+                data-active={isActive(l.href)}
               >
                 {l.label}
               </Link>

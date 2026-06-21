@@ -47,7 +47,7 @@ export default async function TagPage({ params, searchParams }: PageProps<"/tags
         </header>
       </FadeUp>
 
-      <div className="cards-grid">
+      <div className="mag mb-12">
         {slice.map((article, i) => (
           <FadeUp key={article.slug} delay={Math.min(i * 0.05, 0.25)} className="h-full">
             <ArticleCard article={article} lang={lang} />

@@ -399,6 +399,29 @@ a.nb-pill:hover {
   border-color: var(--accent);
 }
 
+.topnav-link {
+  display: flex;
+  height: 52px;
+  align-items: center;
+  white-space: nowrap;
+  padding: 0 9px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-d);
+  border-bottom: 2px solid transparent;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.topnav-link:hover {
+  color: var(--ink);
+  border-bottom-color: color-mix(in srgb, var(--ac) 45%, transparent);
+}
+.topnav-link[data-active="true"] {
+  color: var(--ac);
+  border-bottom-color: var(--ac);
+}
+
 /* Inputs */
 .field {
   width: 100%;

@@ -5,6 +5,7 @@ import { getLang, getDict } from "@/lib/i18n";
 import { Tag } from "@/components/Tag";
 import { PageHeader, PageBand } from "@/components/PageShell";
 import { TutosFilter } from "@/components/TutosFilter";
+import { Pagination, paginate, parsePage } from "@/components/Pagination";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,7 @@ const DIFFICULTIES: { value: Difficulty; labelFr: string; labelEn: string }[] = 
 export default async function TutosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ difficulty?: string }>;
+  searchParams: Promise<{ difficulty?: string; page?: string }>;
 }) {
   const params = await searchParams;
   const lang = await getLang();
@@ -32,7 +33,10 @@ export default async function TutosPage({
   const locale = en ? "en-GB" : "fr-FR";
 
   const difficulty = DIFFICULTIES.find((d) => d.value === params.difficulty)?.value;
-  const tutos = await getAllArticles({ type: "tuto", difficulty });
+  const page = parsePage(params.page);
+  const allTutos = await getAllArticles({ type: "tuto", difficulty });
+  const { slice: tutos, totalPages } = paginate(allTutos, page);
+  const offset = (Math.min(page, totalPages) - 1) * 9;
 
   return (
     <div className="-mt-10">
@@ -87,7 +91,7 @@ export default async function TutosPage({
                 >
                   <div className="text-center max-sm:text-left">
                     <div className="font-mono text-[28px] font-bold leading-none text-[var(--ac)]">
-                      {String(i + 1).padStart(2, "0")}
+                      {String(offset + i + 1).padStart(2, "0")}
                     </div>
                     <div className="mt-1 font-mono text-[10px] text-[var(--ink-f)]">{readMin} min</div>
                   </div>
@@ -119,6 +123,14 @@ export default async function TutosPage({
             })}
           </div>
         )}
+
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          basePath="/tutos"
+          query={difficulty ? { difficulty } : undefined}
+          t={t}
+        />
       </PageBand>
     </div>
   );
