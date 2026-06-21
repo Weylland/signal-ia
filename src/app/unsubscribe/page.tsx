@@ -1,11 +1,12 @@
-import { removeSubscriber } from "@/lib/newsletter";
+import { removeSubscriber, verifyUnsubToken } from "@/lib/newsletter";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
 export default async function UnsubscribePage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const params = await searchParams;
-  const email = typeof params.email === "string" ? params.email.trim() : "";
+  const token = typeof params.token === "string" ? params.token : "";
+  const email = token ? await verifyUnsubToken(token) : null;
   let done = false;
 
   if (email) {

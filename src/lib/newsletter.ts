@@ -1,5 +1,23 @@
+import { SignJWT, jwtVerify } from "jose";
 import { getDb } from "./db";
 import { getSettings } from "./settings";
+import { getSecret } from "./auth";
+
+export async function createUnsubToken(email: string): Promise<string> {
+  return new SignJWT({ email })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .sign(getSecret());
+}
+
+export async function verifyUnsubToken(token: string): Promise<string | null> {
+  try {
+    const { payload } = await jwtVerify(token, getSecret());
+    return typeof payload.email === "string" ? payload.email : null;
+  } catch {
+    return null;
+  }
+}
 
 export function getSubscribers(): { id: number; email: string; created_at: string }[] {
   return getDb().prepare("SELECT * FROM newsletter_subscribers ORDER BY created_at DESC").all() as { id: number; email: string; created_at: string }[];
@@ -22,17 +40,18 @@ export async function sendNewsletter(subject: string, html: string): Promise<{ s
   // Resend supports batch up to 100 emails
   for (let i = 0; i < subscribers.length; i += 50) {
     const batch = subscribers.slice(i, i + 50);
+    const messages = await Promise.all(
+      batch.map(async (s) => ({
+        from,
+        to: s.email,
+        subject,
+        html: html.replace(/\{\{token\}\}/g, await createUnsubToken(s.email)),
+      }))
+    );
     const res = await fetch("https://api.resend.com/emails/batch", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-      body: JSON.stringify(
-        batch.map((s) => ({
-          from,
-          to: s.email,
-          subject,
-          html: html.replace(/\{\{email\}\}/g, encodeURIComponent(s.email)),
-        }))
-      ),
+      body: JSON.stringify(messages),
     });
     if (res.ok) sent += batch.length;
     else errors += batch.length;
@@ -104,7 +123,7 @@ export async function generateDigestHtml(articles: { title: string; excerpt: str
           <td style="padding:20px 32px;border-top:1px solid #2d3b2c;">
             <p style="color:#4a5c49;font-size:11px;font-family:monospace;margin:0;">
               ${siteName} — <a href="${siteUrl}" style="color:#c8f54e;">${siteUrl}</a><br>
-              Pour vous désabonner : <a href="${siteUrl}/unsubscribe?email={{email}}" style="color:#4a5c49;">cliquez ici</a>
+              Pour vous désabonner : <a href="${siteUrl}/unsubscribe?token={{token}}" style="color:#4a5c49;">cliquez ici</a>
             </p>
           </td>
         </tr>

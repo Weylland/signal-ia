@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 export const SESSION_COOKIE = "watch_admin";
 const SESSION_DURATION = 60 * 60 * 24 * 7; // 7 jours
 
-function getSecret(): Uint8Array {
+export function getSecret(): Uint8Array {
   const secret = process.env.AUTH_SECRET;
   if (!secret || secret.length < 32) {
     throw new Error("AUTH_SECRET manquant ou trop court (32 caractères minimum)");
