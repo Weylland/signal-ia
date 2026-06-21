@@ -11,6 +11,7 @@ const NAV = [
     items: [
       { l: "Dashboard", p: "/admin", i: "◉" },
       { l: "Articles", p: "/admin/articles", i: "◈" },
+      { l: "Glossaire", p: "/admin/glossaire", i: "▤" },
       { l: "Pipeline", p: "/admin/pipeline", i: "⊂" },
     ],
   },
