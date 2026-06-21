@@ -184,5 +184,16 @@ export function getDb(): Database.Database {
     );
   `);
 
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS x_posts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      article_slug TEXT NOT NULL,
+      tweet_id TEXT,
+      lang TEXT NOT NULL DEFAULT 'fr',
+      posted_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_x_posts_slug ON x_posts(article_slug, posted_at DESC);
+  `);
+
   return db;
 }

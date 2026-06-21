@@ -18,6 +18,7 @@ const NAV = [
     section: "Audience",
     items: [
       { l: "Newsletter", p: "/admin/newsletter", i: "◎" },
+      { l: "Réseaux (X)", p: "/admin/x", i: "✕" },
       { l: "Messages", p: "/admin/messages", i: "◷" },
       { l: "Analytics", p: "/admin/analytics", i: "↑" },
     ],

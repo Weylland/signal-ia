@@ -4,6 +4,7 @@ export async function register() {
     const { runPipeline } = await import("../pipeline/run");
     const { runBackup } = await import("./lib/backup");
     const { sendWeeklyDigest } = await import("./lib/newsletter");
+    const { runXDigest } = await import("./lib/x");
 
     const intervalMin = process.env.PIPELINE_INTERVAL_MIN
       ? parseInt(process.env.PIPELINE_INTERVAL_MIN, 10)
@@ -37,6 +38,22 @@ export async function register() {
       { timezone: "Europe/Paris" }
     );
 
-    console.log(`[watch·ia] Pipeline toutes les ${intervalMin} min · backup quotidien 03:00 · newsletter mardi 09:00`);
+    // Post X quotidien : base 11:30 (heure de Paris) + jitter aléatoire 0-120 min pour ne pas faire robot
+    cron.default.schedule(
+      "30 11 * * *",
+      () => {
+        const jitterMs = Math.floor(Math.random() * 120 * 60_000);
+        setTimeout(() => {
+          runXDigest("fr")
+            .then((r) => console.log("[x] post quotidien :", JSON.stringify(r)))
+            .catch((err: unknown) =>
+              console.error("[x] erreur :", err instanceof Error ? err.message : err)
+            );
+        }, jitterMs);
+      },
+      { timezone: "Europe/Paris" }
+    );
+
+    console.log(`[watch·ia] Pipeline toutes les ${intervalMin} min · backup quotidien 03:00 · newsletter mardi 09:00 · post X quotidien ~11:30`);
   }
 }
