@@ -143,7 +143,7 @@ function postedRecently(lang: PostLang): boolean {
 export type XResult =
   | { skipped: string }
   | { posted: string; type: "news" | "tuto"; tweetId: string }
-  | { preview: string; url: string; slug: string; type: "news" | "tuto" };
+  | { preview: string; url: string; slug: string; type: "news" | "tuto"; withLink: boolean };
 
 // Cascade : actu importante → sinon tuto evergreen. Le lien part en réponse au tweet (anti-throttle).
 // dryRun : génère le post et le retourne SANS rien publier ni enregistrer.
@@ -160,11 +160,12 @@ export async function runXDigest(
   if (!candidate) return { skipped: "rien de pertinent à poster" };
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://watch-ia.com";
+  const includeLink = getSettings().xIncludeLink;
   const text = await generatePostText(candidate, lang);
   const url = `${siteUrl}/articles/${candidate.slug}`;
 
   if (dryRun) {
-    return { preview: text, url, slug: candidate.slug, type: candidate.type };
+    return { preview: text, url, slug: candidate.slug, type: candidate.type, withLink: includeLink };
   }
 
   // Carte de marque en illustration ; si la génération/upload échoue, on poste sans image.
@@ -181,9 +182,11 @@ export async function runXDigest(
     ? await client!.v2.tweet(text, { media: { media_ids: mediaIds as [string] } })
     : await client!.v2.tweet(text);
   const tweetId = main.data.id;
-  await client!.v2.tweet(`→ ${url}`, {
-    reply: { in_reply_to_tweet_id: tweetId },
-  });
+
+  // Lien en réponse uniquement si activé (un post avec lien coûte plus cher côté X).
+  if (includeLink) {
+    await client!.v2.tweet(`→ ${url}`, { reply: { in_reply_to_tweet_id: tweetId } });
+  }
 
   getDb()
     .prepare("INSERT INTO x_posts (article_slug, tweet_id, lang) VALUES (?, ?, ?)")

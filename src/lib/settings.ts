@@ -18,6 +18,7 @@ export type SiteSettings = {
   requireApproval: boolean;
   blacklistKeywords: string;
   blacklistDomains: string;
+  xIncludeLink: boolean;
 };
 
 export const DEFAULT_SETTINGS: SiteSettings = {
@@ -39,6 +40,7 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   requireApproval: false,
   blacklistKeywords: "",
   blacklistDomains: "",
+  xIncludeLink: true,
 };
 
 export function getSettings(): SiteSettings {

@@ -11,10 +11,21 @@ type XPost = {
   article_slug: string;
 };
 
-export function XAdmin({ configured, posts }: { configured: boolean; posts: XPost[] }) {
+export function XAdmin({ configured, posts, includeLink: initialLink }: { configured: boolean; posts: XPost[]; includeLink: boolean }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
-  const [preview, setPreview] = useState<{ text: string; url: string; type: string; slug: string } | null>(null);
+  const [preview, setPreview] = useState<{ text: string; url: string; type: string; slug: string; withLink: boolean } | null>(null);
+  const [includeLink, setIncludeLink] = useState(initialLink);
+
+  async function toggleLink() {
+    const next = !includeLink;
+    setIncludeLink(next);
+    await fetch("/api/admin/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ xIncludeLink: next }),
+    });
+  }
 
   async function run(dryRun: boolean) {
     if (!dryRun && !confirm("Publier réellement ce post sur X maintenant ?")) return;
@@ -27,9 +38,9 @@ export function XAdmin({ configured, posts }: { configured: boolean; posts: XPos
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ dryRun }),
       });
-      const data = await res.json() as { posted?: string; type?: string; preview?: string; url?: string; slug?: string; skipped?: string; error?: string };
+      const data = await res.json() as { posted?: string; type?: string; preview?: string; url?: string; slug?: string; withLink?: boolean; skipped?: string; error?: string };
       if (data.preview) {
-        setPreview({ text: data.preview, url: data.url ?? "", type: data.type ?? "?", slug: data.slug ?? "" });
+        setPreview({ text: data.preview, url: data.url ?? "", type: data.type ?? "?", slug: data.slug ?? "", withLink: Boolean(data.withLink) });
         setMsg({ text: "Aperçu généré (rien n'a été publié).", ok: true });
       } else if (data.posted) {
         setMsg({ text: `Publié : ${data.type} — ${data.posted}`, ok: true });
@@ -58,8 +69,18 @@ export function XAdmin({ configured, posts }: { configured: boolean; posts: XPos
       <div style={card}>
         <div style={{ fontFamily: "var(--ff-h)", fontSize: 18, fontWeight: 700, marginBottom: "var(--s3)" }}>Publier sur X</div>
         <p style={{ ...mono, color: "var(--ink-f)", marginBottom: "var(--s5)" }}>
-          Choisit automatiquement une actu importante récente, sinon un tuto evergreen. Le lien part en réponse au tweet. Posté chaque jour ~11h30 (heure de Paris).
+          Choisit automatiquement une actu importante récente, sinon un tuto evergreen. Posté chaque jour ~11h30 (heure de Paris).
         </p>
+
+        <label style={{ display: "flex", alignItems: "flex-start", gap: "var(--s3)", marginBottom: "var(--s5)", cursor: "pointer" }}>
+          <input type="checkbox" checked={includeLink} onChange={toggleLink} style={{ marginTop: 3 }} />
+          <span style={{ ...mono, color: "var(--ink)" }}>
+            Ajouter le lien de l&apos;article en réponse au tweet
+            <span style={{ display: "block", fontSize: 11, color: "var(--ink-f)", marginTop: 2 }}>
+              Activé : meilleur trafic, mais X facture ~0,20 $ par post contenant un lien. Désactivé : ~0,015 $ (le site reste visible sur la carte et dans la bio).
+            </span>
+          </span>
+        </label>
         <div style={{ display: "flex", alignItems: "center", gap: "var(--s3)", flexWrap: "wrap" }}>
           <button className="btn btn-g" onClick={() => run(true)} disabled={busy} style={{ ...mono }}>
             {busy ? "…" : "Tester (sans publier)"}
@@ -84,7 +105,11 @@ export function XAdmin({ configured, posts }: { configured: boolean; posts: XPos
                 style={{ display: "block", width: "100%", maxWidth: 480, marginTop: "var(--s4)", border: "1px solid var(--ln)" }}
               />
             )}
-            <div style={{ ...mono, fontSize: 11, color: "var(--ac)", marginTop: "var(--s3)" }}>↳ en réponse : → {preview.url}</div>
+            {preview.withLink ? (
+              <div style={{ ...mono, fontSize: 11, color: "var(--ac)", marginTop: "var(--s3)" }}>↳ en réponse : → {preview.url}</div>
+            ) : (
+              <div style={{ ...mono, fontSize: 11, color: "var(--ink-f)", marginTop: "var(--s3)" }}>Aucun lien posté (le site est sur la carte).</div>
+            )}
             <div style={{ ...mono, fontSize: 10, color: "var(--ink-f)", marginTop: "var(--s2)" }}>{preview.text.length} / 280 caractères</div>
           </div>
         )}

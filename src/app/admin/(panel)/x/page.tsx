@@ -1,4 +1,5 @@
 import { getDb } from "@/lib/db";
+import { getSettings } from "@/lib/settings";
 import { XAdmin } from "@/components/admin/XAdmin";
 
 export const dynamic = "force-dynamic";
@@ -37,7 +38,7 @@ export default async function XPage() {
         </p>
       </div>
 
-      <XAdmin configured={configured} posts={posts} />
+      <XAdmin configured={configured} posts={posts} includeLink={getSettings().xIncludeLink} />
     </div>
   );
 }
