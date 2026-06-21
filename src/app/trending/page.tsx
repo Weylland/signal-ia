@@ -9,7 +9,7 @@ import { PageHeader, PageBand } from "@/components/PageShell";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Tendances — signal·ia",
+  title: "Tendances — watch·ia",
   description: "Les sujets IA les plus discutés de la semaine.",
 };
 

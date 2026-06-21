@@ -23,7 +23,7 @@ export default async function GlossairePage() {
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "DefinedTermSet",
-    name: "Glossaire de l'IA — signal·ia",
+    name: "Glossaire de l'IA — watch·ia",
     inLanguage: "fr",
     hasDefinedTerm: entries.map((e) => ({
       "@type": "DefinedTerm",

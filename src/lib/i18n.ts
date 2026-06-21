@@ -85,7 +85,7 @@ const dict = {
     searchHint: "Ou explore par tag :",
     sourcesTitle: "Nos sources",
     sourcesIntro:
-      "signal·ia surveille en continu une sélection de médias et blogs spécialisés reconnus. Chaque article cite ses sources — tu peux toujours remonter à l'information d'origine.",
+      "watch·ia surveille en continu une sélection de médias et blogs spécialisés reconnus. Chaque article cite ses sources — tu peux toujours remonter à l'information d'origine.",
     sourcesActive: (n: number) => `${n} sources actives`,
     tagTitle: (tag: string) => `Tag : ${tag}`,
     tagIntro: (n: number, tag: string) =>
@@ -213,7 +213,7 @@ const dict = {
     searchHint: "Or browse by tag:",
     sourcesTitle: "Our sources",
     sourcesIntro:
-      "signal·ia continuously monitors a selection of recognized specialist media and blogs. Every article cites its sources — you can always trace back to the original.",
+      "watch·ia continuously monitors a selection of recognized specialist media and blogs. Every article cites its sources — you can always trace back to the original.",
     sourcesActive: (n: number) => `${n} active sources`,
     tagTitle: (tag: string) => `Tag: ${tag}`,
     tagIntro: (n: number, tag: string) => `${n} article${n > 1 ? "s" : ""} tagged “${tag}”`,

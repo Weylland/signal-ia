@@ -18,7 +18,7 @@ import { runPipeline } from "../../pipeline/run";
 
 export function createMcpServer() {
   const server = new Server(
-    { name: "signal-ia", version: "1.0.0" },
+    { name: "watch-ia", version: "1.0.0" },
     { capabilities: { tools: {} } }
   );
 
@@ -26,7 +26,7 @@ export function createMcpServer() {
     tools: [
       {
         name: "list_articles",
-        description: "Liste les articles du site signal·ia",
+        description: "Liste les articles du site watch·ia",
         inputSchema: {
           type: "object",
           properties: {
@@ -47,7 +47,7 @@ export function createMcpServer() {
       },
       {
         name: "create_article",
-        description: "Crée un article (actualité ou tutoriel) sur signal·ia",
+        description: "Crée un article (actualité ou tutoriel) sur watch·ia",
         inputSchema: {
           type: "object",
           required: ["title", "content", "type"],

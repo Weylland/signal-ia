@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
   let html = "";
   try {
     const res = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; signal-ia-bot/1.0)" },
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; watch-ia-bot/1.0)" },
       signal: AbortSignal.timeout(10000),
     });
     html = await res.text();

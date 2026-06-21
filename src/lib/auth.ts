@@ -1,7 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
-export const SESSION_COOKIE = "signal_admin";
+export const SESSION_COOKIE = "watch_admin";
 const SESSION_DURATION = 60 * 60 * 24 * 7; // 7 jours
 
 function getSecret(): Uint8Array {

@@ -21,7 +21,7 @@ export function NewsletterAdmin({
   weekArticles: ArticleSnippet[];
   subscribers: Subscriber[];
 }) {
-  const [subject, setSubject] = useState("signal·ia — Le digest de la semaine");
+  const [subject, setSubject] = useState("watch·ia — Le digest de la semaine");
   const [customNote, setCustomNote] = useState("");
   const [preview, setPreview] = useState(false);
   const [previewHtml, setPreviewHtml] = useState("");

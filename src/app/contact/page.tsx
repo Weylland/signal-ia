@@ -5,7 +5,7 @@ import { PageHeader, PageBand } from "@/components/PageShell";
 
 export const metadata: Metadata = {
   title: "Contact",
-  description: "Contacter l'équipe de signal·ia — questions, remarques, propositions.",
+  description: "Contacter l'équipe de watch·ia — questions, remarques, propositions.",
 };
 
 export default async function ContactPage() {

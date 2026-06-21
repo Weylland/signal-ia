@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Toutes les actus",
-  description: "L'archive complète des actualités IA et robotique de signal·ia.",
+  description: "L'archive complète des actualités IA et robotique de watch·ia.",
 };
 
 const PERIODS: Record<string, number> = { "24h": 1, "7j": 7, "30j": 30 };

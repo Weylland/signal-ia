@@ -268,7 +268,7 @@ export default async function RootLayout({
 
           <div className="flex flex-wrap items-center justify-between gap-4 border-t border-line pt-6">
             <span className="font-mono text-[11px] text-[var(--ink-f)]">
-              © {new Date().getFullYear()} signal·ia — {t.footerRights}
+              © {new Date().getFullYear()} watch·ia — {t.footerRights}
             </span>
             <span className="flex gap-5 font-mono text-[11px] text-[var(--ink-f)]">
               <a href="/flux.xml" className="transition-colors hover:text-[var(--ac)]">RSS ↗</a>

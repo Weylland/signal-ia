@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Recherche",
-  description: "Rechercher dans les actualités et tutos IA de signal·ia.",
+  description: "Rechercher dans les actualités et tutos IA de watch·ia.",
   robots: { index: false },
 };
 

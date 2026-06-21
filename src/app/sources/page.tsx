@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Nos sources",
   description:
-    "La liste des médias et blogs spécialisés que signal·ia surveille en continu pour produire sa veille IA.",
+    "La liste des médias et blogs spécialisés que watch·ia surveille en continu pour produire sa veille IA.",
 };
 
 function health(s: Source): { cls: string; color: string; label: string; labelEn: string } {

@@ -1,7 +1,7 @@
 export async function fetchOgImage(url: string): Promise<string | null> {
   try {
     const res = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; signal-ia/1.0)" },
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; watch-ia/1.0)" },
       signal: AbortSignal.timeout(10_000),
     });
     if (!res.ok) return null;

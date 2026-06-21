@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: PageProps<"/tags/[tag]">): Pr
   const decoded = decodeURIComponent(tag);
   return {
     title: `${decoded} — toutes les actualités`,
-    description: `Toutes les actualités signal·ia sur le thème ${decoded}.`,
+    description: `Toutes les actualités watch·ia sur le thème ${decoded}.`,
   };
 }
 

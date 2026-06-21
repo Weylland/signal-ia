@@ -44,7 +44,7 @@ export default async function AdminDashboard() {
         <div>
           <h1 style={{ fontFamily: "var(--ff-h)", fontSize: 26, fontWeight: 700, letterSpacing: "-.02em" }}>Dashboard</h1>
           <p style={{ fontFamily: "var(--ff-m)", fontSize: 12, color: "var(--ink-f)", marginTop: "var(--s2)" }}>
-            signal·ia — prochain pipeline dans {nextIn} min
+            watch·ia — prochain pipeline dans {nextIn} min
           </p>
         </div>
         <div style={{ display: "flex", gap: "var(--s3)", alignItems: "center" }}>

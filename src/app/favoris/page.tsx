@@ -5,7 +5,7 @@ import { PageHeader, PageBand } from "@/components/PageShell";
 
 export const metadata: Metadata = {
   title: "Mes favoris",
-  description: "Les articles que vous avez sauvegardés sur signal·ia.",
+  description: "Les articles que vous avez sauvegardés sur watch·ia.",
   robots: { index: false },
 };
 

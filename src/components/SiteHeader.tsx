@@ -20,7 +20,7 @@ function openCmdk() {
   window.dispatchEvent(new CustomEvent("open-cmdk"));
 }
 
-export function SiteHeader({ links, lang, labels, isAdmin, siteName = "signal·ia" }: Props) {
+export function SiteHeader({ links, lang, labels, isAdmin, siteName = "watch·ia" }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const [mob, setMob] = useState(false);
@@ -79,7 +79,7 @@ export function SiteHeader({ links, lang, labels, isAdmin, siteName = "signal·i
         style={{ background: "var(--bg-d)", backdropFilter: "blur(8px)" }}
       >
         <nav className="mx-auto flex h-[52px] max-w-[1200px] items-center gap-3 px-6">
-          <Link href="/" className="flex shrink-0 items-center" aria-label="signal·ia">
+          <Link href="/" className="flex shrink-0 items-center" aria-label="watch·ia">
             {Logo}
           </Link>
 

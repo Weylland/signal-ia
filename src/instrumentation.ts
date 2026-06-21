@@ -23,6 +23,6 @@ export async function register() {
         );
     });
 
-    console.log(`[signal·ia] Pipeline toutes les ${intervalMin} min · backup quotidien 03:00`);
+    console.log(`[watch·ia] Pipeline toutes les ${intervalMin} min · backup quotidien 03:00`);
   }
 }

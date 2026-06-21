@@ -190,7 +190,7 @@ function SidebarInner({ path, onClose, onLogout, siteName }: { path: string; onC
   );
 }
 
-export function AdminLayoutClient({ children, siteName = "signal·ia" }: { children: React.ReactNode; siteName?: string }) {
+export function AdminLayoutClient({ children, siteName = "watch·ia" }: { children: React.ReactNode; siteName?: string }) {
   const [mob, setMob] = useState(false);
   const path = usePathname() ?? "/admin";
   const router = useRouter();

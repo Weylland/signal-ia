@@ -21,7 +21,7 @@ export type SiteSettings = {
 };
 
 export const DEFAULT_SETTINGS: SiteSettings = {
-  siteName: "signal·ia",
+  siteName: "watch·ia",
   tagline: "L'actu IA et robotique, en français, sans le bruit.",
   seoDescription:
     "Veille IA en français : les news qui comptent sur l'intelligence artificielle, la robotique et le dev lié à l'IA, plus des tutos pratiques.",

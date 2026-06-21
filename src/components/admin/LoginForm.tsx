@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { splitBrand } from "@/lib/brand";
 
-export function LoginForm({ siteName = "signal·ia" }: { siteName?: string }) {
+export function LoginForm({ siteName = "watch·ia" }: { siteName?: string }) {
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
