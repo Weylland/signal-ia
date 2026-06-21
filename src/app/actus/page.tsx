@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getAllArticles, getAllTags } from "@/lib/articles";
+import { getAllArticles, getAllTags, localizeMeta } from "@/lib/articles";
 import { getLang, getDict } from "@/lib/i18n";
+import { categoryFor, categoryList } from "@/lib/category";
 import { ArticleCard } from "@/components/ArticleCard";
 import { PageHeader, PageBand } from "@/components/PageShell";
 
@@ -21,6 +22,7 @@ export default async function ActusPage({ searchParams }: PageProps<"/actus">) {
   const tagFilter = typeof params.tag === "string" ? params.tag : "";
   const sourceFilter = typeof params.source === "string" ? params.source : "";
   const periodFilter = typeof params.periode === "string" ? params.periode : "";
+  const categoryFilter = typeof params.category === "string" ? params.category : "";
   const lang = await getLang();
   const t = getDict(lang);
   const en = lang === "en";
@@ -32,6 +34,11 @@ export default async function ActusPage({ searchParams }: PageProps<"/actus">) {
 
   let articles = allNews;
   if (tagFilter) articles = articles.filter((a) => a.tags.includes(tagFilter));
+  if (categoryFilter) {
+    articles = articles.filter(
+      (a) => categoryFor(a.tags, lang, localizeMeta(a, lang).title).key === categoryFilter
+    );
+  }
   if (sourceFilter) articles = articles.filter((a) => a.sources.some((s) => s.name === sourceFilter));
   if (PERIODS[periodFilter]) {
     const since = new Date(Date.now() - PERIODS[periodFilter] * 24 * 3600_000).toISOString();
@@ -42,11 +49,13 @@ export default async function ActusPage({ searchParams }: PageProps<"/actus">) {
   const cur = Math.min(page, totalPages);
   const slice = articles.slice((cur - 1) * PER, cur * PER);
 
-  const hasFilter = Boolean(tagFilter || sourceFilter || periodFilter);
+  const hasFilter = Boolean(tagFilter || categoryFilter || sourceFilter || periodFilter);
   const tagOptions = tags.filter((x) => x.count >= 1).slice(0, 40);
+  const categories = categoryList(lang);
 
   const qbase: Record<string, string> = {};
   if (tagFilter) qbase.tag = tagFilter;
+  if (categoryFilter) qbase.category = categoryFilter;
   if (sourceFilter) qbase.source = sourceFilter;
   if (periodFilter) qbase.periode = periodFilter;
   const pageHref = (p: number) => {
@@ -64,6 +73,14 @@ export default async function ActusPage({ searchParams }: PageProps<"/actus">) {
       />
       <PageBand>
         <form method="get" className="mb-12 flex flex-wrap items-center gap-3">
+          <select name="category" defaultValue={categoryFilter} className="inp inp-sm" style={{ width: "auto", minWidth: 150 }}>
+            <option value="">{en ? "All categories" : "Toutes les catégories"}</option>
+            {categories.map(({ key, label }) => (
+              <option key={key} value={key}>
+                {label}
+              </option>
+            ))}
+          </select>
           <select name="tag" defaultValue={tagFilter} className="inp inp-sm" style={{ width: "auto", minWidth: 150 }}>
             <option value="">{t.filterAllTags}</option>
             {tagOptions.map(({ tag, count }) => (

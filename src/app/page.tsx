@@ -79,11 +79,11 @@ export default async function Home() {
   const monitoredSources = getSources({ activeOnly: true }).length;
 
   // Compte par catégorie pour le panneau latéral
-  const catMap = new Map<string, { label: string; cls: string; count: number }>();
+  const catMap = new Map<string, { key: string; label: string; cls: string; count: number }>();
   for (const a of articles) {
     const c = categoryFor(a.tags, lang, localizeMeta(a, lang).title);
     if (!c.key) continue;
-    const e = catMap.get(c.key) ?? { label: c.label, cls: c.cls, count: 0 };
+    const e = catMap.get(c.key) ?? { key: c.key, label: c.label, cls: c.cls, count: 0 };
     e.count++;
     catMap.set(c.key, e);
   }
@@ -190,7 +190,7 @@ export default async function Home() {
                     {catList.map((c) => (
                       <Link
                         key={c.label}
-                        href={`/recherche?q=${encodeURIComponent(c.label)}`}
+                        href={`/actus?category=${encodeURIComponent(c.key)}`}
                         className="flex min-h-[44px] items-center justify-between border border-line px-4 text-[13px] font-medium transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5"
                         style={{ background: "var(--bg-r)" }}
                       >

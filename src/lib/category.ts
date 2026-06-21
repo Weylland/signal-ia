@@ -53,6 +53,11 @@ const CATEGORIES: CategoryDef[] = [
 
 export type Category = { key: CategoryKey | null; label: string; cls: string };
 
+/** Liste des catégories (clé + libellé localisé), dans l'ordre de priorité. */
+export function categoryList(lang: "fr" | "en" = "fr"): { key: CategoryKey; label: string }[] {
+  return CATEGORIES.map((c) => ({ key: c.key, label: lang === "en" ? c.labelEn : c.label }));
+}
+
 /** Déduit la catégorie d'un article depuis ses tags (et son titre en secours). */
 export function categoryFor(tags: string[], lang: "fr" | "en" = "fr", fallbackText = ""): Category {
   const hay = [...tags, fallbackText].join(" ").toLowerCase();

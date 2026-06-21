@@ -171,6 +171,7 @@ async function groupStories(items: PendingRow[], breakingThreshold: number): Pro
         role: "system",
         content: `Tu regroupes des news IA par sujet : si plusieurs items couvrent la même actualité, ils forment UN seul groupe (un seul article sera écrit, citant toutes les sources).
 Pour chaque groupe, propose un titre français accrocheur mais factuel, un angle, et 2-3 tags en minuscules.
+Ne traduis jamais les noms propres (médias, entreprises, produits, personnes) : « The Verge » reste « The Verge », jamais « le Verge ».
 Un groupe est "breaking" si au moins un de ses items a un score >= ${breakingThreshold}.
 
 Réponds en JSON strict : {"groups": [{"title": "...", "links": ["url1", "url2"], "angle": "...", "tags": ["..."], "breaking": false}]}`,
@@ -254,6 +255,7 @@ async function writeArticle(group: StoryGroup, items: PendingRow[]): Promise<Wri
 Structure : un chapeau d'une phrase, 2-3 paragraphes, pas de titre (il est fourni à part), pas de conclusion creuse.
 Tu te bases UNIQUEMENT sur les informations fournies — n'invente aucun chiffre, citation ou détail.
 Si l'information est limitée, fais court.
+NOMS PROPRES : ne traduis ni n'altère jamais les noms propres (médias, entreprises, produits, personnes). Écris « The Verge », « The New York Times », « OpenAI » exactement — jamais « le Verge » ni « le New York Times ».
 
 Réponds en JSON strict :
 {"markdown": "le corps de l'article en Markdown", "tldr": ["point clé 1", "point clé 2", "point clé 3"]}
@@ -286,6 +288,7 @@ async function translateArticle(
         {
           role: "system",
           content: `Tu traduis un article de presse du français vers l'anglais. Traduction naturelle et journalistique, pas mot à mot. Conserve la mise en forme Markdown.
+Ne traduis jamais les noms propres (entreprises, produits, médias, personnes) — garde-les exactement à l'identique.
 Réponds en JSON strict : {"title": "...", "excerpt": "...", "markdown": "...", "tldr": ["...", "..."]}`,
         },
         {
