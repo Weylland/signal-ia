@@ -30,7 +30,7 @@ export async function sendNewsletter(subject: string, html: string): Promise<{ s
           from,
           to: s.email,
           subject,
-          html,
+          html: html.replace(/\{\{email\}\}/g, encodeURIComponent(s.email)),
         }))
       ),
     });
