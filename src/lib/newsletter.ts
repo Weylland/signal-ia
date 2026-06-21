@@ -59,45 +59,87 @@ export async function sendNewsletter(subject: string, html: string): Promise<{ s
   return { sent, errors };
 }
 
-export async function generateDigestHtml(articles: { title: string; excerpt: string; slug: string }[]): Promise<string> {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-  const key = process.env.MISTRAL_API_KEY;
-  const { siteName } = getSettings();
+type DigestArticle = { title: string; excerpt: string; slug: string };
 
-  let intro = "Voici les 5 articles IA les plus importants de la semaine.";
-  if (key) {
-    try {
-      const titles = articles.map((a) => `- ${a.title}`).join("\n");
-      const res = await fetch("https://api.mistral.ai/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-        body: JSON.stringify({
-          model: "mistral-small-latest",
-          temperature: 0.6,
-          messages: [{
-            role: "user",
-            content: `Écris une intro de 2 phrases pour une newsletter IA hebdomadaire. Ton : informatif, direct, pas de formules. Résume l'ambiance de la semaine basée sur ces titres :\n${titles}\n\nRetourne uniquement les 2 phrases.`,
-          }],
-        }),
-      });
-      if (res.ok) {
-        const data = await res.json() as { choices: { message: { content: string } }[] };
-        intro = data.choices[0].message.content.trim();
-      }
-    } catch {}
+// Édito d'angle de la semaine + un "pourquoi ça compte" par article, généré en un appel.
+async function generateEditorial(
+  articles: DigestArticle[]
+): Promise<{ intro: string; hooks: Record<string, string> }> {
+  const fallback = {
+    intro: "Les sujets IA qui ont compté cette semaine, et ce qu'ils changent concrètement.",
+    hooks: {} as Record<string, string>,
+  };
+  const key = process.env.MISTRAL_API_KEY;
+  if (!key) return fallback;
+
+  try {
+    const list = articles
+      .map((a, i) => `${i + 1}. [${a.slug}] ${a.title} — ${a.excerpt}`)
+      .join("\n");
+    const res = await fetch("https://api.mistral.ai/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+      body: JSON.stringify({
+        model: "mistral-small-latest",
+        temperature: 0.7,
+        response_format: { type: "json_object" },
+        messages: [{
+          role: "user",
+          content: `Tu es le rédacteur en chef d'une newsletter hebdo sur l'IA, en français. Ton : direct, vivant, concret. Pas de formules creuses, pas de superlatifs marketing, pas de "dans un monde où".
+
+À partir des articles de la semaine, renvoie un JSON STRICT :
+{"intro": "...", "items": [{"slug": "...", "hook": "..."}]}
+
+- "intro" : 2 ou 3 phrases qui dégagent l'angle de la semaine — ce qui relie ces sujets ou la tendance qui ressort. Une vraie accroche éditoriale, pas un sommaire.
+- "hook" : pour chaque article (reprends son slug exact), UNE phrase qui dit ce qu'on y apprend de concret ou pourquoi ça vaut le clic. Surtout pas une reformulation du titre — un angle, une promesse précise.
+
+Articles :
+${list}`,
+        }],
+      }),
+    });
+    if (!res.ok) return fallback;
+    const data = await res.json() as { choices: { message: { content: string } }[] };
+    const raw = data.choices[0].message.content.replace(/```json|```/g, "").trim();
+    const parsed = JSON.parse(raw) as { intro?: string; items?: { slug: string; hook: string }[] };
+    const hooks: Record<string, string> = {};
+    for (const it of parsed.items ?? []) {
+      if (it?.slug && it?.hook) hooks[it.slug] = it.hook;
+    }
+    return { intro: parsed.intro?.trim() || fallback.intro, hooks };
+  } catch {
+    return fallback;
   }
+}
+
+export async function generateDigestHtml(articles: DigestArticle[], customNote?: string): Promise<string> {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const { siteName } = getSettings();
+  const { intro, hooks } = await generateEditorial(articles);
 
   const articlesHtml = articles
-    .map(
-      (a) => `
+    .map((a, i) => {
+      const why = hooks[a.slug] || a.excerpt;
+      const url = `${siteUrl}/articles/${a.slug}`;
+      return `
       <tr>
-        <td style="padding:16px 0;border-bottom:1px solid #2d3b2c;">
-          <a href="${siteUrl}/articles/${a.slug}" style="color:#c8f54e;font-size:18px;font-weight:bold;text-decoration:none;font-family:Georgia,serif;">${a.title}</a>
-          <p style="color:#8a9b88;font-size:14px;margin:6px 0 0;font-family:sans-serif;line-height:1.5;">${a.excerpt}</p>
+        <td style="padding:22px 0;border-bottom:1px solid #2d3b2c;">
+          <span style="font-family:monospace;font-size:12px;color:#c8f54e;letter-spacing:0.05em;">${String(i + 1).padStart(2, "0")}</span>
+          <a href="${url}" style="display:block;color:#f0ede4;font-size:19px;font-weight:bold;text-decoration:none;font-family:Georgia,serif;line-height:1.3;margin:6px 0 8px;">${a.title}</a>
+          <p style="color:#a9bba6;font-size:14px;margin:0 0 12px;font-family:sans-serif;line-height:1.6;">${why}</p>
+          <a href="${url}" style="color:#c8f54e;font-size:13px;font-family:monospace;text-decoration:none;">Lire l'article →</a>
         </td>
-      </tr>`
-    )
+      </tr>`;
+    })
     .join("");
+
+  const noteHtml = customNote
+    ? `<table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;"><tr>
+        <td style="padding:16px 18px;background:#181e17;border-left:3px solid #c8f54e;">
+          <p style="color:#8a9b88;font-size:11px;font-family:monospace;margin:0 0 6px;text-transform:uppercase;letter-spacing:0.1em;">Le mot de la rédaction</p>
+          <p style="color:#f0ede4;font-size:14px;line-height:1.6;font-family:sans-serif;margin:0;">${customNote}</p>
+        </td></tr></table>`
+    : "";
 
   return `
 <!DOCTYPE html>
@@ -114,14 +156,15 @@ export async function generateDigestHtml(articles: { title: string; excerpt: str
           </td>
         </tr>
         <tr>
-          <td style="padding:24px 32px;">
-            <p style="color:#f0ede4;font-size:15px;line-height:1.7;font-family:sans-serif;margin:0 0 24px;">${intro}</p>
+          <td style="padding:28px 32px 8px;">
+            <p style="color:#f0ede4;font-size:16px;line-height:1.7;font-family:Georgia,serif;margin:0 0 24px;">${intro}</p>
+            ${noteHtml}
             <table width="100%" cellpadding="0" cellspacing="0">${articlesHtml}</table>
           </td>
         </tr>
         <tr>
-          <td style="padding:20px 32px;border-top:1px solid #2d3b2c;">
-            <p style="color:#4a5c49;font-size:11px;font-family:monospace;margin:0;">
+          <td style="padding:24px 32px;border-top:1px solid #2d3b2c;">
+            <p style="color:#4a5c49;font-size:11px;font-family:monospace;margin:0;line-height:1.6;">
               ${siteName} — <a href="${siteUrl}" style="color:#c8f54e;">${siteUrl}</a><br>
               Pour vous désabonner : <a href="${siteUrl}/unsubscribe?token={{token}}" style="color:#4a5c49;">cliquez ici</a>
             </p>
