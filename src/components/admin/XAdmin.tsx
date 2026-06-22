@@ -136,9 +136,9 @@ export function XAdmin({ configured, posts, includeLink: initialLink }: { config
         <label style={{ display: "flex", alignItems: "flex-start", gap: "var(--s3)", marginBottom: "var(--s5)", cursor: "pointer" }}>
           <input type="checkbox" checked={includeLink} onChange={toggleLink} style={{ marginTop: 3 }} />
           <span style={{ ...mono, color: "var(--ink)" }}>
-            Ajouter le lien de l&apos;article en réponse au tweet
+            Ajouter le lien de l&apos;article en réponse au tweet (actus uniquement)
             <span style={{ display: "block", fontSize: 11, color: "var(--ink-f)", marginTop: 2 }}>
-              Activé : meilleur trafic, mais X facture ~0,20 $ par post contenant un lien. Désactivé : ~0,015 $ (le site reste visible sur la carte et dans la bio).
+              Activé : meilleur trafic, mais X facture ~0,20 $ par post contenant un lien. Désactivé : ~0,015 $ (le site reste visible sur la carte et dans la bio). Les posts tuto incluent toujours le lien — sans lui, ils sont inutiles.
             </span>
           </span>
         </label>

@@ -181,7 +181,9 @@ export async function runXDigest(
   if (!candidate) return { skipped: "rien de pertinent à poster" };
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://watch-ia.com";
-  const includeLink = getSettings().xIncludeLink;
+  // Un tuto sans lien est inutile (rien à lire) : on force toujours le lien pour les tutos.
+  // Pour une actu, l'angle se suffit, donc on respecte le réglage (le lien coûte plus cher côté X).
+  const includeLink = candidate.type === "tuto" ? true : getSettings().xIncludeLink;
   const text = await generatePostText(candidate, lang);
   const url = `${siteUrl}/articles/${candidate.slug}`;
 
