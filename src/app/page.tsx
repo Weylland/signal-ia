@@ -6,7 +6,6 @@ import {
   getMostViewedArticles,
   isoSince,
   localizeMeta,
-  readingTimeMinutes,
   type ArticleMeta,
 } from "@/lib/articles";
 import { categoryFor } from "@/lib/category";
@@ -144,7 +143,7 @@ export default async function Home() {
                   </p>
                   <div className="flex flex-wrap items-center gap-3 border-t border-line pt-4 font-mono text-[11px] text-[var(--ink-f)]">
                     <span>{time(featured.date)}</span>
-                    <span>{readingTimeMinutes(featured.excerpt)} min</span>
+                    <span>{featured.readingMinutes} min</span>
                     {featured.sources.length > 0 && (
                       <span className="text-[var(--ac)]">
                         {featured.sources.length} {en ? "sources" : "sources"}
@@ -346,7 +345,7 @@ function TutoRow({
   read: string;
 }) {
   const loc = localizeMeta(tuto, lang);
-  const readMin = readingTimeMinutes(tuto.excerpt + " " + (loc.tldr.join(" ") ?? ""));
+  const readMin = tuto.readingMinutes;
   return (
     <Link
       href={`/articles/${tuto.slug}`}

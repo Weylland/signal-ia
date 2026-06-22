@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ArticleMeta } from "@/lib/articles";
-import { localizeMeta, readingTimeMinutes } from "@/lib/articles";
+import { localizeMeta } from "@/lib/articles";
 import type { Lang } from "@/lib/i18n";
 import { CategoryBadge } from "./Tag";
 
@@ -19,7 +19,7 @@ export function ArticleRow({
     hour: "2-digit",
     minute: "2-digit",
   });
-  const readMin = readingTimeMinutes(article.excerpt + " " + (loc.tldr.join(" ") ?? ""));
+  const readMin = article.readingMinutes;
   const nS = article.sources.length;
 
   return (

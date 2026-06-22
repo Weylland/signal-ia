@@ -24,6 +24,7 @@ export type ArticleMeta = {
   excerptEn: string | null;
   tldrEn: string[];
   difficulty: Difficulty | null;
+  readingMinutes: number;
 };
 
 export type Article = ArticleMeta & {
@@ -90,6 +91,7 @@ function rowToMeta(row: ArticleRow): ArticleMeta {
     excerptEn: row.excerpt_en,
     tldrEn: row.tldr_en ? safeJson(row.tldr_en, []) : [],
     difficulty: (row.difficulty as Difficulty | null) ?? null,
+    readingMinutes: readingTimeMinutes(row.content_html),
   };
 }
 
@@ -462,7 +464,7 @@ export async function getStats(): Promise<{
 
 export function readingTimeMinutes(html: string): number {
   const words = html.replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean).length;
-  return Math.max(1, Math.round(words / 200));
+  return Math.max(1, Math.ceil(words / 200));
 }
 
 export function formatDate(iso: string, lang: "fr" | "en" = "fr"): string {

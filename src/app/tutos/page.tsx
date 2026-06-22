@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getAllArticles, localizeMeta, readingTimeMinutes, type Difficulty } from "@/lib/articles";
+import { getAllArticles, localizeMeta, type Difficulty } from "@/lib/articles";
 import { getLang, getDict } from "@/lib/i18n";
 import { Tag } from "@/components/Tag";
 import { PageHeader, PageBand } from "@/components/PageShell";
@@ -42,7 +42,7 @@ export default async function TutosPage({
     <div className="-mt-10">
       <PageHeader
         title={en ? "Practical tutorials" : "Tutoriels pratiques"}
-        subtitle={en ? "Hand-written guides. Code that actually runs." : "Guides écrits à la main. Du code qui tourne vraiment."}
+        subtitle={en ? "Practical guides. Code that actually runs." : "Guides pratiques. Du code qui tourne vraiment."}
       />
       <PageBand>
         {/* Filtres niveau */}
@@ -76,7 +76,7 @@ export default async function TutosPage({
           <div className="flex flex-col gap-6">
             {tutos.map((tuto, i) => {
               const loc = localizeMeta(tuto, lang);
-              const readMin = readingTimeMinutes(tuto.excerpt + " " + (loc.tldr.join(" ") ?? ""));
+              const readMin = tuto.readingMinutes;
               const date = new Date(tuto.date).toLocaleDateString(locale, {
                 day: "numeric",
                 month: "long",

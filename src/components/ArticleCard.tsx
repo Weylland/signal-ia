@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ArticleMeta } from "@/lib/articles";
-import { localizeMeta, readingTimeMinutes } from "@/lib/articles";
+import { localizeMeta } from "@/lib/articles";
 import type { Lang } from "@/lib/i18n";
 import { CoverPattern } from "./CoverPattern";
 import { CategoryBadge } from "./Tag";
@@ -11,7 +11,7 @@ export function ArticleCard({ article, lang = "fr" }: { article: ArticleMeta; la
   const date = new Date(article.date);
   const locale = lang === "en" ? "en-GB" : "fr-FR";
   const dateLabel = date.toLocaleDateString(locale, { day: "numeric", month: "short" });
-  const readMin = readingTimeMinutes(article.excerpt + " " + (loc.tldr.join(" ") ?? ""));
+  const readMin = article.readingMinutes;
   const nSources = article.sources.length;
 
   return (

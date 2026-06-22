@@ -64,8 +64,8 @@ export default async function AProposPage() {
           </p>
           <p>
             {en
-              ? "Tutorials are hand-written, tested, and kept up to date. No mass-generated content."
-              : "Les tutoriels sont écrits à la main, testés, et mis à jour. Pas de contenu généré à la chaîne."}
+              ? "Tutorials are practical, tested, and kept up to date — real, runnable code."
+              : "Les tutoriels sont pratiques, testés et tenus à jour — du concret, du code qui tourne."}
           </p>
           <h2>{en ? "Independence" : "Indépendance"}</h2>
           <p>
