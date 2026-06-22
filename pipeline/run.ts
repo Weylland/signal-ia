@@ -172,6 +172,7 @@ async function groupStories(items: PendingRow[], breakingThreshold: number): Pro
         content: `Tu regroupes des news IA par sujet : si plusieurs items couvrent la même actualité, ils forment UN seul groupe (un seul article sera écrit, citant toutes les sources).
 Pour chaque groupe, propose un titre français accrocheur mais factuel, un angle, et 2-3 tags en minuscules.
 Ne traduis jamais les noms propres (médias, entreprises, produits, personnes) : « The Verge » reste « The Verge », jamais « le Verge ».
+CHIFFRES : si plusieurs valeurs numériques apparaissent (tailles de modèles, paramètres, prix…), ne les formule JAMAIS comme "passe de X à Y" sauf si la source indique explicitement une évolution entre deux versions. Si ces valeurs correspondent à des variantes différentes d'un même produit, présente-les comme une gamme (ex : "de X à Y paramètres selon la variante"), pas comme une progression temporelle.
 Un groupe est "breaking" si au moins un de ses items a un score >= ${breakingThreshold}.
 
 Réponds en JSON strict : {"groups": [{"title": "...", "links": ["url1", "url2"], "angle": "...", "tags": ["..."], "breaking": false}]}`,
@@ -255,6 +256,7 @@ async function writeArticle(group: StoryGroup, items: PendingRow[]): Promise<Wri
 Structure : un chapeau d'une phrase, 2-3 paragraphes, pas de titre (il est fourni à part), pas de conclusion creuse.
 Tu te bases UNIQUEMENT sur les informations fournies — n'invente aucun chiffre, citation ou détail.
 Si l'information est limitée, fais court.
+CHIFFRES ET TENDANCES : n'emploie jamais les mots "réduit", "augmente", "hausse", "baisse", "améliore" pour qualifier un changement entre deux valeurs numériques si la source ne l'indique pas explicitement. Si plusieurs valeurs correspondent à des variantes d'un même produit (ex : tiny/small/medium), présente-les comme une gamme d'options, pas comme une évolution avant/après.
 NOMS PROPRES : ne traduis ni n'altère jamais les noms propres (médias, entreprises, produits, personnes). Écris « The Verge », « The New York Times », « OpenAI » exactement — jamais « le Verge » ni « le New York Times ».
 
 Réponds en JSON strict :
