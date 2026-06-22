@@ -40,7 +40,7 @@ const CATEGORIES: CategoryDef[] = [
     label: "Outils",
     labelEn: "Tools",
     cls: "t-tool",
-    keywords: ["outil", "outils", "dev", "ide", "cursor", "mcp", "agent", "agents", "no-code", "api", "automatisation", "n8n", "coding", "perplexity", "stability", "3d", "assistant", "plugin", "framework"],
+    keywords: ["outil", "outils", "dev", "ide", "cursor", "mcp", "agent", "agents", "no-code", "api", "automatisation", "n8n", "coding", "perplexity", "stability", "3d", "assistant", "plugin", "framework", "ocr", "vision", "reconnaissance optique", "speech", "transcription", "text-to-speech", "diffusion"],
   },
   {
     key: "llm",
