@@ -14,11 +14,33 @@ type XPost = {
   custom_text: string | null;
 };
 
-export function XAdmin({ configured, posts, includeLink: initialLink }: { configured: boolean; posts: XPost[]; includeLink: boolean }) {
+export function XAdmin({
+  configured,
+  posts,
+  includeLink: initialLink,
+  tutoIncludeLink: initialTutoLink,
+  postsPerDay: initialPostsPerDay,
+  firstHour: initialFirstHour,
+  lastHour: initialLastHour,
+}: {
+  configured: boolean;
+  posts: XPost[];
+  includeLink: boolean;
+  tutoIncludeLink: boolean;
+  postsPerDay: number;
+  firstHour: number;
+  lastHour: number;
+}) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [preview, setPreview] = useState<{ text: string; url: string; type: string; slug: string; withLink: boolean } | null>(null);
   const [includeLink, setIncludeLink] = useState(initialLink);
+  const [tutoLink, setTutoLink] = useState(initialTutoLink);
+  const [postsPerDay, setPostsPerDay] = useState(initialPostsPerDay);
+  const [firstHour, setFirstHour] = useState(initialFirstHour);
+  const [lastHour, setLastHour] = useState(initialLastHour);
+  const [schedBusy, setSchedBusy] = useState(false);
+  const [schedMsg, setSchedMsg] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
   const router = useRouter();
 
@@ -86,6 +108,49 @@ export function XAdmin({ configured, posts, includeLink: initialLink }: { config
     });
   }
 
+  async function toggleTutoLink() {
+    const next = !tutoLink;
+    setTutoLink(next);
+    await fetch("/api/admin/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ xTutoIncludeLink: next }),
+    });
+  }
+
+  async function saveSchedule() {
+    setSchedBusy(true);
+    setSchedMsg(null);
+    const res = await fetch("/api/admin/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        xPostsPerDay: postsPerDay,
+        xFirstHour: firstHour,
+        xLastHour: lastHour,
+      }),
+    });
+    setSchedBusy(false);
+    setSchedMsg(res.ok ? "Programmation enregistrée." : "Erreur lors de l'enregistrement.");
+    if (res.ok) router.refresh();
+  }
+
+  // Aperçu des créneaux calculés (mêmes règles que le serveur), pour montrer le résultat.
+  const slotPreview = (() => {
+    if (postsPerDay <= 0) return "Publication en pause (0 post/jour)";
+    if (postsPerDay === 1 || lastHour <= firstHour) return `1 post/jour vers ${firstHour}h`;
+    const first = firstHour * 60;
+    const span = lastHour * 60 - first;
+    const times = Array.from({ length: postsPerDay }, (_, i) => {
+      const m = Math.round(first + (span * i) / (postsPerDay - 1));
+      const h = Math.floor(m / 60);
+      const mm = String(m % 60).padStart(2, "0");
+      const kind = i === postsPerDay - 1 ? "tuto" : "actu";
+      return `${h}h${mm} ${kind}`;
+    });
+    return times.join(" · ");
+  })();
+
   async function run(dryRun: boolean) {
     if (!dryRun && !confirm("Publier réellement ce post sur X maintenant ?")) return;
     setBusy(true);
@@ -128,17 +193,58 @@ export function XAdmin({ configured, posts, includeLink: initialLink }: { config
       )}
 
       <div style={card}>
+        <div style={{ fontFamily: "var(--ff-h)", fontSize: 18, fontWeight: 700, marginBottom: "var(--s3)" }}>Programmation</div>
+        <p style={{ ...mono, color: "var(--ink-f)", marginBottom: "var(--s5)" }}>
+          Combien de posts par jour et dans quelle plage horaire (Paris). Mets 0 pour mettre la publication en pause.
+          Le dernier créneau de la journée est un tuto, les autres des actus.
+        </p>
+        <div style={{ display: "flex", gap: "var(--s4)", flexWrap: "wrap", marginBottom: "var(--s4)" }}>
+          <div style={{ flex: "1 1 120px" }}>
+            <label style={labelS} htmlFor="x-ppd">Posts / jour</label>
+            <input id="x-ppd" className="inp" type="number" min={0} max={6} value={postsPerDay}
+              onChange={(e) => setPostsPerDay(Math.max(0, Math.min(6, Number(e.target.value))))} style={{ width: "100%" }} />
+          </div>
+          <div style={{ flex: "1 1 120px" }}>
+            <label style={labelS} htmlFor="x-fh">1ᵉʳ créneau (h)</label>
+            <input id="x-fh" className="inp" type="number" min={0} max={23} value={firstHour}
+              onChange={(e) => setFirstHour(Math.max(0, Math.min(23, Number(e.target.value))))} style={{ width: "100%" }} />
+          </div>
+          <div style={{ flex: "1 1 120px" }}>
+            <label style={labelS} htmlFor="x-lh">Dernier créneau (h)</label>
+            <input id="x-lh" className="inp" type="number" min={0} max={23} value={lastHour}
+              onChange={(e) => setLastHour(Math.max(0, Math.min(23, Number(e.target.value))))} style={{ width: "100%" }} />
+          </div>
+        </div>
+        <div style={{ ...mono, fontSize: 11, color: "var(--ac)", marginBottom: "var(--s4)" }}>→ {slotPreview}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--s3)", flexWrap: "wrap" }}>
+          <button className="btn btn-p" onClick={saveSchedule} disabled={schedBusy} style={{ ...mono }}>
+            {schedBusy ? "Enregistrement…" : "Enregistrer la programmation"}
+          </button>
+          {schedMsg && <span style={{ ...mono, color: schedMsg.includes("Erreur") ? "var(--er)" : "var(--ok)" }}>{schedMsg}</span>}
+        </div>
+      </div>
+
+      <div style={card}>
         <div style={{ fontFamily: "var(--ff-h)", fontSize: 18, fontWeight: 700, marginBottom: "var(--s3)" }}>Publier sur X</div>
         <p style={{ ...mono, color: "var(--ink-f)", marginBottom: "var(--s5)" }}>
-          Choisit automatiquement une actu importante récente, sinon un tuto evergreen. 2 posts/jour : ~11h30 (actu) et ~18h00 (tuto), heure de Paris.
+          Choisit automatiquement une actu importante récente, sinon un tuto evergreen. Publication auto : {slotPreview}.
         </p>
 
-        <label style={{ display: "flex", alignItems: "flex-start", gap: "var(--s3)", marginBottom: "var(--s5)", cursor: "pointer" }}>
+        <label style={{ display: "flex", alignItems: "flex-start", gap: "var(--s3)", marginBottom: "var(--s4)", cursor: "pointer" }}>
           <input type="checkbox" checked={includeLink} onChange={toggleLink} style={{ marginTop: 3 }} />
           <span style={{ ...mono, color: "var(--ink)" }}>
-            Ajouter le lien de l&apos;article en réponse au tweet (actus uniquement)
+            Lien de l&apos;article dans les posts ACTU
             <span style={{ display: "block", fontSize: 11, color: "var(--ink-f)", marginTop: 2 }}>
-              Activé : meilleur trafic, mais X facture ~0,20 $ par post contenant un lien. Désactivé : ~0,015 $ (le site reste visible sur la carte et dans la bio). Les posts tuto incluent toujours le lien — sans lui, ils sont inutiles.
+              Activé : lien cliquable, meilleur trafic, mais X facture ~0,20 $ par post avec lien. Désactivé : ~0,015 $ (la carte de marque reste en image, le site visible dessus).
+            </span>
+          </span>
+        </label>
+        <label style={{ display: "flex", alignItems: "flex-start", gap: "var(--s3)", marginBottom: "var(--s5)", cursor: "pointer" }}>
+          <input type="checkbox" checked={tutoLink} onChange={toggleTutoLink} style={{ marginTop: 3 }} />
+          <span style={{ ...mono, color: "var(--ink)" }}>
+            Lien de l&apos;article dans les posts TUTO
+            <span style={{ display: "block", fontSize: 11, color: "var(--ink-f)", marginTop: 2 }}>
+              Recommandé activé : un tuto sans lien est inutile (rien à lire). Désactivé : ~0,015 $ mais le post ne renvoie nulle part.
             </span>
           </span>
         </label>

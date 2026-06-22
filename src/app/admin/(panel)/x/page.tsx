@@ -23,6 +23,8 @@ export default async function XPage() {
       process.env.X_ACCESS_SECRET
   );
 
+  const settings = getSettings();
+
   const posts = getDb()
     .prepare(
       `SELECT x.id, x.posted_at, x.tweet_id, x.lang, x.article_slug, x.custom_text, a.title, a.type
@@ -40,7 +42,15 @@ export default async function XPage() {
         </p>
       </div>
 
-      <XAdmin configured={configured} posts={posts} includeLink={getSettings().xIncludeLink} />
+      <XAdmin
+        configured={configured}
+        posts={posts}
+        includeLink={settings.xIncludeLink}
+        tutoIncludeLink={settings.xTutoIncludeLink}
+        postsPerDay={settings.xPostsPerDay}
+        firstHour={settings.xFirstHour}
+        lastHour={settings.xLastHour}
+      />
     </div>
   );
 }

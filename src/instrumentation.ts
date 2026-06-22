@@ -4,7 +4,7 @@ export async function register() {
     const { runPipeline } = await import("../pipeline/run");
     const { runBackup } = await import("./lib/backup");
     const { sendWeeklyDigest } = await import("./lib/newsletter");
-    const { runXDigest, runXCatchUp } = await import("./lib/x");
+    const { runXScheduled } = await import("./lib/x");
 
     const intervalMin = process.env.PIPELINE_INTERVAL_MIN
       ? parseInt(process.env.PIPELINE_INTERVAL_MIN, 10)
@@ -38,37 +38,20 @@ export async function register() {
       { timezone: "Europe/Paris" }
     );
 
-    // Posts X : 2 par jour (heure de Paris) + jitter aléatoire 0-120 min pour ne
-    // pas faire robot. Créneau midi = actu, créneau soir = tuto/insight.
-    const scheduleXSlot = (expr: string, prefer: "news" | "tuto", label: string) => {
-      cron.default.schedule(
-        expr,
-        () => {
-          const jitterMs = Math.floor(Math.random() * 120 * 60_000);
-          setTimeout(() => {
-            runXDigest("fr", { prefer })
-              .then((r) => console.log(`[x] post ${label} :`, JSON.stringify(r)))
-              .catch((err: unknown) =>
-                console.error(`[x] erreur ${label} :`, err instanceof Error ? err.message : err)
-              );
-          }, jitterMs);
-        },
-        { timezone: "Europe/Paris" }
-      );
-    };
-    scheduleXSlot("30 11 * * *", "news", "midi");
-    scheduleXSlot("0 18 * * *", "tuto", "soir");
-
-    // Rattrapage post X : si un redéploiement a eu lieu pendant la fenêtre du
-    // jour, on poste au boot (le setTimeout du cron quotidien est perdu au restart).
-    setTimeout(() => {
-      runXCatchUp()
-        .then((r) => console.log("[x] rattrapage boot :", JSON.stringify(r)))
+    // Posts X : un seul vérificateur toutes les 30 min, piloté par les réglages
+    // (nombre/jour + fenêtre horaire). Il publie le prochain créneau dû et rattrape
+    // un créneau raté après un redéploiement. La logique vit dans runXScheduled.
+    const tickX = (label: string) =>
+      runXScheduled()
+        .then((r) => console.log(`[x] ${label} :`, JSON.stringify(r)))
         .catch((err: unknown) =>
-          console.error("[x] rattrapage erreur :", err instanceof Error ? err.message : err)
+          console.error(`[x] erreur ${label} :`, err instanceof Error ? err.message : err)
         );
-    }, 15_000);
 
-    console.log(`[watch·ia] Pipeline toutes les ${intervalMin} min · backup quotidien 03:00 · newsletter mardi 09:00 · posts X ~11:30 (actu) & ~18:00 (tuto)`);
+    cron.default.schedule("*/30 * * * *", () => void tickX("check"), { timezone: "Europe/Paris" });
+    // Rattrapage immédiat au boot (redéploiement Railway), sans attendre le prochain tick.
+    setTimeout(() => void tickX("check boot"), 15_000);
+
+    console.log(`[watch·ia] Pipeline toutes les ${intervalMin} min · backup quotidien 03:00 · newsletter mardi 09:00 · posts X pilotés par les réglages`);
   }
 }

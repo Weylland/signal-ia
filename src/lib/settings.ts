@@ -19,6 +19,10 @@ export type SiteSettings = {
   blacklistKeywords: string;
   blacklistDomains: string;
   xIncludeLink: boolean;
+  xTutoIncludeLink: boolean;
+  xPostsPerDay: number;
+  xFirstHour: number;
+  xLastHour: number;
   llmProvider: "mistral" | "claude";
 };
 
@@ -42,6 +46,10 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   blacklistKeywords: "",
   blacklistDomains: "",
   xIncludeLink: true,
+  xTutoIncludeLink: true,
+  xPostsPerDay: 2,
+  xFirstHour: 11,
+  xLastHour: 18,
   llmProvider: "mistral",
 };
 

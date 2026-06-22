@@ -4,6 +4,7 @@ import { getSettings } from "./settings";
 import { generateXCard } from "./x-card";
 import { parisOffsetMs } from "./status";
 import { callLLM } from "./llm";
+import { computeSlots } from "./x-schedule";
 
 export type PostLang = "fr" | "en";
 
@@ -146,12 +147,12 @@ Longueur : entre 180 et 240 caractères MAXIMUM (compte-les), et termine TOUJOUR
   }
 }
 
-// Anti double-fire rapproché : a-t-on posté dans les 3 dernières heures ?
-// (les 2 créneaux quotidiens sont espacés de > 4h, donc ils passent tous les deux ;
-// seul un re-déclenchement accidentel proche est bloqué.)
-const MIN_GAP_HOURS = 3;
+// Anti double-fire rapproché : a-t-on posté dans les dernières minutes ?
+// La cadence réelle vient des créneaux (computeSlots) ; ce garde-fou n'évite qu'un
+// re-déclenchement accidentel (ex. tick du cron + appel au boot quasi simultanés).
+const MIN_GAP_MINUTES = 20;
 function postedRecently(lang: PostLang): boolean {
-  const since = new Date(Date.now() - MIN_GAP_HOURS * 3600_000).toISOString();
+  const since = new Date(Date.now() - MIN_GAP_MINUTES * 60_000).toISOString();
   const row = getDb()
     .prepare("SELECT COUNT(*) AS c FROM x_posts WHERE lang = ? AND posted_at >= ?")
     .get(lang, since) as { c: number };
@@ -174,7 +175,7 @@ export async function runXDigest(
   const prefer = opts.prefer ?? "news";
   const client = getClient();
   if (!client && !dryRun) return { skipped: "X non configuré (clés manquantes)" };
-  if (!dryRun && postedRecently(lang)) return { skipped: `déjà posté il y a moins de ${MIN_GAP_HOURS}h` };
+  if (!dryRun && postedRecently(lang)) return { skipped: `déjà posté il y a moins de ${MIN_GAP_MINUTES} min` };
 
   const candidate =
     prefer === "tuto" ? (pickTuto(lang) ?? pickNews(lang)) : (pickNews(lang) ?? pickTuto(lang));
@@ -183,7 +184,8 @@ export async function runXDigest(
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://watch-ia.com";
   // Un tuto sans lien est inutile (rien à lire) : on force toujours le lien pour les tutos.
   // Pour une actu, l'angle se suffit, donc on respecte le réglage (le lien coûte plus cher côté X).
-  const includeLink = candidate.type === "tuto" ? true : getSettings().xIncludeLink;
+  const settings = getSettings();
+  const includeLink = candidate.type === "tuto" ? settings.xTutoIncludeLink : settings.xIncludeLink;
   // Si le lien va dans le tweet, on réserve sa place (X compte une URL pour 23 + 2 sauts de ligne).
   const text = await generatePostText(candidate, lang, includeLink ? MAX_LEN - 25 : MAX_LEN);
   const url = `${siteUrl}/articles/${candidate.slug}`;
@@ -233,10 +235,6 @@ function parisHourMinute(at = new Date()): { mins: number } {
   return { mins: +m.hour * 60 + +m.minute };
 }
 
-// Créneaux quotidiens (minutes depuis minuit, heure de Paris).
-const SLOT_NOON = 11 * 60 + 30; // 11h30 — actu
-const SLOT_EVENING = 18 * 60; // 18h00 — tuto/insight
-
 // ISO UTC de minuit (début de journée) Paris aujourd'hui.
 function todayStartIso(): string {
   const now = new Date();
@@ -254,17 +252,25 @@ function postsTodayParis(lang: PostLang = "fr"): number {
   return row.c;
 }
 
-// Rattrapage au démarrage : si un redéploiement Railway a fait perdre le cron en
-// mémoire, on rattrape le(s) créneau(x) du jour déjà passé(s) et non honoré(s).
-// 2 posts/jour max ; rien après 22h pour éviter un post à une heure incongrue.
-export async function runXCatchUp(): Promise<XResult> {
-  const { mins } = parisHourMinute();
-  if (mins > 22 * 60) return { skipped: "trop tard pour rattraper" };
+// Vérificateur de publication, appelé périodiquement (toutes les 30 min) et au boot.
+// Pilote 100 % des posts auto depuis les réglages : nombre/jour + fenêtre horaire.
+// Publie au plus UN créneau par appel ; rattrape naturellement un créneau raté
+// (redéploiement Railway) au tick suivant. Rien après 22h pour éviter une heure incongrue.
+export async function runXScheduled(): Promise<XResult> {
+  const { xPostsPerDay, xFirstHour, xLastHour } = getSettings();
+  if (xPostsPerDay <= 0) return { skipped: "publication X désactivée (0 post/jour)" };
 
+  const slots = computeSlots(xPostsPerDay, xFirstHour, xLastHour);
   const done = postsTodayParis();
-  if (mins >= SLOT_EVENING && done < 2) return runXDigest("fr", { prefer: "tuto" });
-  if (mins >= SLOT_NOON && done < 1) return runXDigest("fr", { prefer: "news" });
-  return { skipped: "rien à rattraper (créneaux déjà honorés ou pas encore arrivés)" };
+  if (done >= slots.length) return { skipped: "quota du jour atteint" };
+
+  const { mins } = parisHourMinute();
+  if (mins > 22 * 60) return { skipped: "trop tard pour publier aujourd'hui" };
+  if (mins < slots[done]) return { skipped: "prochain créneau pas encore arrivé" };
+
+  // Dernier créneau de la journée = tuto/insight ; les précédents = actu fraîche.
+  const prefer = xPostsPerDay >= 2 && done === slots.length - 1 ? "tuto" : "news";
+  return runXDigest("fr", { prefer });
 }
 
 export type XCustomResult =

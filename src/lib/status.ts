@@ -1,4 +1,6 @@
 import { getDb } from "./db";
+import { getSettings } from "./settings";
+import { computeSlots } from "./x-schedule";
 
 export type SystemStatus = {
   level: "ok" | "degraded" | "stale" | "idle";
@@ -141,6 +143,20 @@ export function getJobs(): Job[] {
     process.env.X_API_KEY && process.env.X_API_SECRET && process.env.X_ACCESS_TOKEN && process.env.X_ACCESS_SECRET
   );
 
+  const { xPostsPerDay, xFirstHour, xLastHour } = getSettings();
+  const xSlots = computeSlots(xPostsPerDay, xFirstHour, xLastHour);
+  const xNextAt = xSlots.length
+    ? Math.min(...xSlots.map((m) => nextParis(Math.floor(m / 60), m % 60)))
+    : null;
+  const xSchedule = xSlots.length
+    ? `${xPostsPerDay}/jour entre ${xFirstHour}h et ${xLastHour}h (Paris)`
+    : "Publication désactivée";
+  const xWarn = !xConfigured
+    ? "Clés X absentes — rien ne sera publié"
+    : xSlots.length === 0
+      ? "0 post/jour — publication en pause"
+      : null;
+
   return [
     {
       key: "pipeline",
@@ -164,13 +180,13 @@ export function getJobs(): Job[] {
     },
     {
       key: "x",
-      label: "Posts X (2/jour)",
-      schedule: "11h30 actu · 18h00 tuto (Paris)",
+      label: `Posts X (${xPostsPerDay}/jour)`,
+      schedule: xSchedule,
       lastAt: x?.ts ?? null,
       lastInfo: x?.info ?? "Aucun post",
       lastOk: x ? x.ok === 1 : null,
-      nextAt: Math.min(nextParis(11, 30), nextParis(18, 0)),
-      warn: xConfigured ? null : "Clés X absentes — rien ne sera publié",
+      nextAt: xNextAt,
+      warn: xWarn,
     },
   ];
 }
