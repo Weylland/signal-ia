@@ -59,8 +59,8 @@ export default async function AProposPage() {
           <h2>{en ? "How it works" : "Notre fonctionnement"}</h2>
           <p>
             {en
-              ? "News is collected automatically via an RSS pipeline, summarized by a language model, then filtered by a relevance score and deduplicated by topic. Borderline items go through manual moderation. Every article cites its sources."
-              : "Les actus sont collectées automatiquement via un pipeline de sources RSS, résumées par un modèle de langage, puis filtrées par un score de pertinence et dédoublonnées par sujet. Les cas limites passent en modération manuelle. Chaque article cite ses sources."}
+              ? "News is collected and summarized automatically via an RSS pipeline, filtered by a relevance score and deduplicated by topic. Borderline items go through manual moderation. Every article cites its sources."
+              : "Les actus sont collectées et résumées automatiquement via un pipeline de sources RSS, filtrées par un score de pertinence et dédoublonnées par sujet. Les cas limites passent en modération manuelle. Chaque article cite ses sources."}
           </p>
           <p>
             {en
