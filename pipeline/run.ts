@@ -16,7 +16,7 @@ try {
   // pas de .env.local : les variables viennent de l'environnement
 }
 import { fetchOgImage } from "./og";
-import { createArticle, getAllArticles, setArticleTranslation } from "../src/lib/articles";
+import { createArticle, getArticleDigestsSince, setArticleTranslation } from "../src/lib/articles";
 import { getSettings } from "../src/lib/settings";
 import { getSources, recordFetchResult } from "../src/lib/sources";
 import { getDb } from "../src/lib/db";
@@ -382,11 +382,9 @@ async function main() {
       const rawGroups = await groupStories(queuedItems, settings.breakingThreshold);
 
       // Dédoublonnage par sujet : on écarte les groupes déjà couverts (sauf vraie mise à jour).
-      const existing = await getAllArticles({ includeDrafts: true });
+      // Résumés légers sur 14 jours uniquement — on ne charge pas les corps HTML (mémoire).
       const recentCutoff = new Date(Date.now() - 14 * 24 * 3600_000).toISOString();
-      const recent = existing
-        .filter((a) => a.date >= recentCutoff)
-        .map((a) => ({ title: a.title, excerpt: a.excerpt, date: a.date }));
+      const recent = getArticleDigestsSince(recentCutoff);
       const groups = await filterAlreadyCovered(rawGroups, recent);
       if (groups.length < rawGroups.length) {
         log(`— ${rawGroups.length - groups.length} sujet(s) déjà couvert(s), écarté(s)`);
@@ -407,7 +405,7 @@ async function main() {
       );
 
       for (const group of toWrite) {
-        if (existing.some((a) => a.title.toLowerCase() === group.title.toLowerCase())) {
+        if (recent.some((a) => a.title.toLowerCase() === group.title.toLowerCase())) {
           log(`— déjà couvert (titre identique) : ${group.title}`);
           continue;
         }

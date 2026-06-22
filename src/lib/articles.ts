@@ -158,6 +158,16 @@ export async function getAllArticles(options?: {
   return rows.map(rowToMeta);
 }
 
+/**
+ * Résumés légers (titre/extrait/date) des articles depuis une date — sans charger les
+ * corps HTML. Utilisé par le pipeline pour la déduplication (économie de mémoire).
+ */
+export function getArticleDigestsSince(sinceIso: string): { title: string; excerpt: string; date: string }[] {
+  return getDb()
+    .prepare("SELECT title, excerpt, date FROM articles WHERE date >= ? ORDER BY date DESC")
+    .all(sinceIso) as { title: string; excerpt: string; date: string }[];
+}
+
 export async function getBreakingArticles(): Promise<ArticleMeta[]> {
   const db = getDb();
   const rows = db
