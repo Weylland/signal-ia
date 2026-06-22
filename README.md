@@ -68,5 +68,3 @@ npm run build && npm start
 ```
 
 Penser à sauvegarder `database.sqlite` et `public/uploads/` (non versionnés).
-Le dossier `content/articles/` est l'archive des anciens articles Markdown,
-déjà importés en base — il ne sert plus au site.
