@@ -183,6 +183,16 @@ export function SiteHeader({ links, lang, labels, isAdmin, siteName = "watch·ia
             {l.label}
           </Link>
         ))}
+        {isAdmin && (
+          <Link
+            href="/admin"
+            onClick={() => setMob(false)}
+            className="block min-h-[56px] border-b border-line py-3 text-[22px] font-semibold"
+            style={{ color: "var(--ac)" }}
+          >
+            Admin ↗
+          </Link>
+        )}
         <div className="mt-auto flex gap-3 pt-6">
           <button onClick={toggleTheme} className="btn flex-1" style={{ minHeight: 48 }}>
             {theme === "dark" ? (lang === "en" ? "Light theme" : "Thème clair") : lang === "en" ? "Dark theme" : "Thème sombre"}
