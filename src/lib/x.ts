@@ -157,12 +157,15 @@ Longueur : entre 180 et 240 caractères MAXIMUM (compte-les), et termine TOUJOUR
   }
 }
 
-// Déjà posté quelque chose dans les 12 dernières heures sur cette langue ? (garde anti double-fire)
+// Anti double-fire rapproché : a-t-on posté dans les 3 dernières heures ?
+// (les 2 créneaux quotidiens sont espacés de > 4h, donc ils passent tous les deux ;
+// seul un re-déclenchement accidentel proche est bloqué.)
+const MIN_GAP_HOURS = 3;
 function postedRecently(lang: PostLang): boolean {
-  const twelveHoursAgo = new Date(Date.now() - 12 * 3600_000).toISOString();
+  const since = new Date(Date.now() - MIN_GAP_HOURS * 3600_000).toISOString();
   const row = getDb()
     .prepare("SELECT COUNT(*) AS c FROM x_posts WHERE lang = ? AND posted_at >= ?")
-    .get(lang, twelveHoursAgo) as { c: number };
+    .get(lang, since) as { c: number };
   return row.c > 0;
 }
 
@@ -171,18 +174,21 @@ export type XResult =
   | { posted: string; type: "news" | "tuto"; tweetId: string }
   | { preview: string; url: string; slug: string; type: "news" | "tuto"; withLink: boolean };
 
-// Cascade : actu importante → sinon tuto evergreen. Le lien part en réponse au tweet (anti-throttle).
+// Choisit le candidat selon la préférence du créneau (midi = actu, soir = tuto),
+// avec repli sur l'autre type si rien de dispo. Le lien part en réponse (anti-throttle).
 // dryRun : génère le post et le retourne SANS rien publier ni enregistrer.
 export async function runXDigest(
   lang: PostLang = "fr",
-  opts: { dryRun?: boolean } = {}
+  opts: { dryRun?: boolean; prefer?: "news" | "tuto" } = {}
 ): Promise<XResult> {
   const dryRun = opts.dryRun ?? false;
+  const prefer = opts.prefer ?? "news";
   const client = getClient();
   if (!client && !dryRun) return { skipped: "X non configuré (clés manquantes)" };
-  if (!dryRun && postedRecently(lang)) return { skipped: "déjà posté dans les 12 dernières heures" };
+  if (!dryRun && postedRecently(lang)) return { skipped: `déjà posté il y a moins de ${MIN_GAP_HOURS}h` };
 
-  const candidate = pickNews(lang) ?? pickTuto(lang);
+  const candidate =
+    prefer === "tuto" ? (pickTuto(lang) ?? pickNews(lang)) : (pickNews(lang) ?? pickTuto(lang));
   if (!candidate) return { skipped: "rien de pertinent à poster" };
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://watch-ia.com";
@@ -234,30 +240,38 @@ function parisHourMinute(at = new Date()): { mins: number } {
   return { mins: +m.hour * 60 + +m.minute };
 }
 
-// ISO UTC du début de la fenêtre du jour (11h30 Paris aujourd'hui).
-function todayWindowStartIso(): string {
+// Créneaux quotidiens (minutes depuis minuit, heure de Paris).
+const SLOT_NOON = 11 * 60 + 30; // 11h30 — actu
+const SLOT_EVENING = 18 * 60; // 18h00 — tuto/insight
+
+// ISO UTC de minuit (début de journée) Paris aujourd'hui.
+function todayStartIso(): string {
   const now = new Date();
   const offset = parisOffsetMs(now);
   const pn = new Date(now.getTime() + offset);
-  const base = new Date(Date.UTC(pn.getUTCFullYear(), pn.getUTCMonth(), pn.getUTCDate(), 11, 30, 0));
+  const base = new Date(Date.UTC(pn.getUTCFullYear(), pn.getUTCMonth(), pn.getUTCDate(), 0, 0, 0));
   return new Date(base.getTime() - offset).toISOString();
 }
 
-// Rattrapage au démarrage : si l'app redémarre pendant la fenêtre quotidienne
-// (11h30–21h Paris) et que rien n'a encore été posté aujourd'hui, on poste.
-// Évite qu'un redéploiement Railway annule le post du jour (cron en mémoire perdu).
+// Nombre de posts auto déjà publiés aujourd'hui (jour calendaire Paris).
+function postsTodayParis(lang: PostLang = "fr"): number {
+  const row = getDb()
+    .prepare("SELECT COUNT(*) AS c FROM x_posts WHERE lang = ? AND posted_at >= ?")
+    .get(lang, todayStartIso()) as { c: number };
+  return row.c;
+}
+
+// Rattrapage au démarrage : si un redéploiement Railway a fait perdre le cron en
+// mémoire, on rattrape le(s) créneau(x) du jour déjà passé(s) et non honoré(s).
+// 2 posts/jour max ; rien après 22h pour éviter un post à une heure incongrue.
 export async function runXCatchUp(): Promise<XResult> {
   const { mins } = parisHourMinute();
-  if (mins < 11 * 60 + 30) return { skipped: "avant la fenêtre quotidienne" };
-  if (mins > 21 * 60) return { skipped: "hors fenêtre (trop tard pour rattraper)" };
+  if (mins > 22 * 60) return { skipped: "trop tard pour rattraper" };
 
-  const startIso = todayWindowStartIso();
-  const row = getDb()
-    .prepare("SELECT COUNT(*) AS c FROM x_posts WHERE lang = 'fr' AND posted_at >= ?")
-    .get(startIso) as { c: number };
-  if (row.c > 0) return { skipped: "déjà posté aujourd'hui" };
-
-  return runXDigest("fr");
+  const done = postsTodayParis();
+  if (mins >= SLOT_EVENING && done < 2) return runXDigest("fr", { prefer: "tuto" });
+  if (mins >= SLOT_NOON && done < 1) return runXDigest("fr", { prefer: "news" });
+  return { skipped: "rien à rattraper (créneaux déjà honorés ou pas encore arrivés)" };
 }
 
 export type XCustomResult =

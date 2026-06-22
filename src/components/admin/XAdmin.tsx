@@ -130,7 +130,7 @@ export function XAdmin({ configured, posts, includeLink: initialLink }: { config
       <div style={card}>
         <div style={{ fontFamily: "var(--ff-h)", fontSize: 18, fontWeight: 700, marginBottom: "var(--s3)" }}>Publier sur X</div>
         <p style={{ ...mono, color: "var(--ink-f)", marginBottom: "var(--s5)" }}>
-          Choisit automatiquement une actu importante récente, sinon un tuto evergreen. Posté chaque jour ~11h30 (heure de Paris).
+          Choisit automatiquement une actu importante récente, sinon un tuto evergreen. 2 posts/jour : ~11h30 (actu) et ~18h00 (tuto), heure de Paris.
         </p>
 
         <label style={{ display: "flex", alignItems: "flex-start", gap: "var(--s3)", marginBottom: "var(--s5)", cursor: "pointer" }}>

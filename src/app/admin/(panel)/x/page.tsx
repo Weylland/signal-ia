@@ -36,7 +36,7 @@ export default async function XPage() {
       <div style={{ marginBottom: "var(--s7)" }}>
         <h1 style={{ fontFamily: "var(--ff-h)", fontSize: 26, fontWeight: 700, letterSpacing: "-.02em" }}>Réseaux — X</h1>
         <p style={{ fontFamily: "var(--ff-m)", fontSize: 12, color: "var(--ink-f)", marginTop: "var(--s2)" }}>
-          Publication automatique quotidienne · cascade actu → tuto
+          Publication automatique · 2 posts/jour (actu ~11h30, tuto ~18h00)
         </p>
       </div>
 

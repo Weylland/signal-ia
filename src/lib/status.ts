@@ -164,12 +164,12 @@ export function getJobs(): Job[] {
     },
     {
       key: "x",
-      label: "Post X quotidien",
-      schedule: "Quotidien 11h30 → 13h30 (Paris)",
+      label: "Posts X (2/jour)",
+      schedule: "11h30 actu · 18h00 tuto (Paris)",
       lastAt: x?.ts ?? null,
       lastInfo: x?.info ?? "Aucun post",
       lastOk: x ? x.ok === 1 : null,
-      nextAt: nextParis(11, 30),
+      nextAt: Math.min(nextParis(11, 30), nextParis(18, 0)),
       warn: xConfigured ? null : "Clés X absentes — rien ne sera publié",
     },
   ];
