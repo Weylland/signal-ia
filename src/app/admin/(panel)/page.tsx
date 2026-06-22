@@ -2,9 +2,46 @@ import Link from "next/link";
 import { getAllArticles, getStats } from "@/lib/articles";
 import { getDb } from "@/lib/db";
 import { getSources } from "@/lib/sources";
+import { getJobs, type Job } from "@/lib/status";
 import { PipelineTrigger } from "@/components/admin/PipelineTrigger";
 
 export const dynamic = "force-dynamic";
+
+function relTime(ms: number | null, future: boolean): string {
+  if (ms === null) return "—";
+  const diff = future ? ms - Date.now() : Date.now() - ms;
+  if (diff < 0) return future ? "imminent" : "à l'instant";
+  const m = Math.round(diff / 60_000);
+  if (m < 60) return `${m} min`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h${String(m % 60).padStart(2, "0")}`;
+  const d = Math.floor(h / 24);
+  return `${d}j ${h % 24}h`;
+}
+
+function JobCard({ job }: { job: Job }) {
+  const dot = job.warn ? "var(--er)" : job.lastOk === false ? "var(--er)" : job.lastOk === null ? "var(--ink-f)" : "var(--ok)";
+  return (
+    <div style={{ background: "var(--bg-r)", border: "1px solid var(--ln-h)", padding: "var(--s5)", display: "flex", flexDirection: "column", gap: "var(--s3)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "var(--s3)" }}>
+        <span style={{ width: 8, height: 8, borderRadius: "50%", background: dot, flexShrink: 0 }} />
+        <span style={{ fontFamily: "var(--ff-h)", fontSize: 14, fontWeight: 600, flex: 1 }}>{job.label}</span>
+        <span style={{ fontFamily: "var(--ff-m)", fontSize: 10, color: "var(--ink-f)", textTransform: "uppercase", letterSpacing: ".06em" }}>{job.schedule}</span>
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: "var(--s4)", fontFamily: "var(--ff-m)", fontSize: 11 }}>
+        <span style={{ color: "var(--ink-f)" }}>
+          Prochain&nbsp;: <span style={{ color: "var(--ink)", fontWeight: 600 }}>dans {relTime(job.nextAt, true)}</span>
+        </span>
+        <span style={{ color: "var(--ink-f)" }}>
+          Dernier&nbsp;: <span style={{ color: "var(--ink-d)" }}>{job.lastAt ? `il y a ${relTime(new Date(job.lastAt).getTime(), false)}` : "jamais"}</span>
+        </span>
+      </div>
+      <div style={{ fontFamily: "var(--ff-m)", fontSize: 11, color: job.warn ? "var(--er)" : "var(--ink-d)" }}>
+        {job.warn ?? job.lastInfo}
+      </div>
+    </div>
+  );
+}
 
 function nextCronMinutes(): number {
   const intervalMin = parseInt(process.env.PIPELINE_INTERVAL_MIN ?? "30", 10);
@@ -29,6 +66,7 @@ export default async function AdminDashboard() {
   const subscriberCount = (db.prepare("SELECT COUNT(*) AS c FROM newsletter_subscribers").get() as { c: number }).c;
   const sources = getSources().slice(0, 6);
   const nextIn = nextCronMinutes();
+  const jobs = getJobs();
 
   const metrics = [
     { label: "Articles publiés", value: stats.published, delta: null },
@@ -64,6 +102,16 @@ export default async function AdminDashboard() {
             <div style={{ fontFamily: "var(--ff-h)", fontSize: 34, fontWeight: 700, letterSpacing: "-.02em", color: m.accent ?? "var(--ink)", lineHeight: 1 }}>{m.value}</div>
           </div>
         ))}
+      </div>
+
+      {/* Automatisations */}
+      <div style={{ marginBottom: "var(--s7)" }}>
+        <h2 style={{ fontFamily: "var(--ff-h)", fontSize: 16, fontWeight: 600, marginBottom: "var(--s5)" }}>Automatisations</h2>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: "var(--s4)" }}>
+          {jobs.map((j) => (
+            <JobCard key={j.key} job={j} />
+          ))}
+        </div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "var(--s6)", alignItems: "start" }}>

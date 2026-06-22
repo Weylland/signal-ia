@@ -2,6 +2,7 @@ import { TwitterApi, EUploadMimeType } from "twitter-api-v2";
 import { getDb } from "./db";
 import { getSettings } from "./settings";
 import { generateXCard } from "./x-card";
+import { parisOffsetMs } from "./status";
 
 export type PostLang = "fr" | "en";
 
@@ -75,12 +76,25 @@ function pickTuto(lang: PostLang): Candidate | null {
 
 const MAX_LEN = 278;
 
-// Coupe proprement sous la limite : à la fin d'une phrase si possible, sinon au dernier mot + …
+// Retire le markdown que X n'interprète pas (astérisques d'emphase, gras).
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, "$1")
+    .replace(/\*(.+?)\*/g, "$1")
+    .replace(/\*/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// Nettoie + ramène sous la limite. Priorité à une PHRASE COMPLÈTE (pas de « … »
+// trompeur). Coupe au mot + « … » seulement en dernier recours.
 function cleanTruncate(text: string): string {
-  if (text.length <= MAX_LEN) return text;
-  const slice = text.slice(0, MAX_LEN);
+  const clean = stripMarkdown(text);
+  if (clean.length <= MAX_LEN) return clean;
+  const slice = clean.slice(0, MAX_LEN);
   const lastSentence = Math.max(slice.lastIndexOf(". "), slice.lastIndexOf("! "), slice.lastIndexOf("? "));
-  if (lastSentence > 140) return slice.slice(0, lastSentence + 1);
+  // Fin de phrase exploitable → on garde jusque-là, terminé proprement.
+  if (lastSentence >= 80) return slice.slice(0, lastSentence + 1).trim();
   const lastSpace = slice.lastIndexOf(" ");
   return (lastSpace > 0 ? slice.slice(0, lastSpace) : slice).trimEnd() + "…";
 }
@@ -119,13 +133,15 @@ INTERDIT :
 - Recopier ou paraphraser le titre.
 - Empiler des questions rhétoriques ("et si… ? le pari de… ?") — au plus UNE question, et seulement si elle fait mouche.
 - Hashtags, liens, emojis en rafale (un seul emoji max, et seulement s'il est naturel).
+- Tout markdown : pas d'astérisques *, pas de gras, pas de _ ni de backticks. X affiche ces signes en clair. Pour insister, choisis tes mots, pas du formatage.
+- Terminer par « … » ou laisser une phrase en suspens.
 - Formules creuses : "découvrez", "à ne pas manquer", "dans un monde où", "révolution", "🚀", "game changer".
 
 Exemples du NIVEAU attendu (ton, densité — invente sur TON sujet) :
 - "OpenAI casse ses prix de 40%. Traduction : la bataille des modèles ne se joue plus sur le benchmark mais sur le coût par token. Anthropic et Google vont devoir suivre."
 - "Un agent qui lit tes mails peut être détourné par un simple mail piégé. La prompt injection n'a aucun équivalent en sécu classique — et la majorité des apps IA y sont vulnérables par défaut."
 
-Longueur : entre 180 et 250 caractères, et termine TOUJOURS sur une phrase complète (jamais coupé au milieu). Renvoie un JSON STRICT : {"text": "..."}`,
+Longueur : entre 180 et 240 caractères MAXIMUM (compte-les), et termine TOUJOURS sur une phrase complète ponctuée (. ! ?) — jamais coupé, jamais de « … » final. Renvoie un JSON STRICT : {"text": "..."}`,
         }],
       }),
     });
@@ -203,6 +219,45 @@ export async function runXDigest(
     .run(candidate.slug, tweetId, lang);
 
   return { posted: candidate.slug, type: candidate.type, tweetId };
+}
+
+// Heure murale Paris (heures, minutes) à l'instant donné.
+function parisHourMinute(at = new Date()): { mins: number } {
+  const dtf = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Paris",
+    hour12: false,
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const m: Record<string, string> = {};
+  for (const p of dtf.formatToParts(at)) m[p.type] = p.value;
+  return { mins: +m.hour * 60 + +m.minute };
+}
+
+// ISO UTC du début de la fenêtre du jour (11h30 Paris aujourd'hui).
+function todayWindowStartIso(): string {
+  const now = new Date();
+  const offset = parisOffsetMs(now);
+  const pn = new Date(now.getTime() + offset);
+  const base = new Date(Date.UTC(pn.getUTCFullYear(), pn.getUTCMonth(), pn.getUTCDate(), 11, 30, 0));
+  return new Date(base.getTime() - offset).toISOString();
+}
+
+// Rattrapage au démarrage : si l'app redémarre pendant la fenêtre quotidienne
+// (11h30–21h Paris) et que rien n'a encore été posté aujourd'hui, on poste.
+// Évite qu'un redéploiement Railway annule le post du jour (cron en mémoire perdu).
+export async function runXCatchUp(): Promise<XResult> {
+  const { mins } = parisHourMinute();
+  if (mins < 11 * 60 + 30) return { skipped: "avant la fenêtre quotidienne" };
+  if (mins > 21 * 60) return { skipped: "hors fenêtre (trop tard pour rattraper)" };
+
+  const startIso = todayWindowStartIso();
+  const row = getDb()
+    .prepare("SELECT COUNT(*) AS c FROM x_posts WHERE lang = 'fr' AND posted_at >= ?")
+    .get(startIso) as { c: number };
+  if (row.c > 0) return { skipped: "déjà posté aujourd'hui" };
+
+  return runXDigest("fr");
 }
 
 export type XCustomResult =

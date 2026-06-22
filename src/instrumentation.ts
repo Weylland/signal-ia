@@ -4,7 +4,7 @@ export async function register() {
     const { runPipeline } = await import("../pipeline/run");
     const { runBackup } = await import("./lib/backup");
     const { sendWeeklyDigest } = await import("./lib/newsletter");
-    const { runXDigest } = await import("./lib/x");
+    const { runXDigest, runXCatchUp } = await import("./lib/x");
 
     const intervalMin = process.env.PIPELINE_INTERVAL_MIN
       ? parseInt(process.env.PIPELINE_INTERVAL_MIN, 10)
@@ -53,6 +53,16 @@ export async function register() {
       },
       { timezone: "Europe/Paris" }
     );
+
+    // Rattrapage post X : si un redéploiement a eu lieu pendant la fenêtre du
+    // jour, on poste au boot (le setTimeout du cron quotidien est perdu au restart).
+    setTimeout(() => {
+      runXCatchUp()
+        .then((r) => console.log("[x] rattrapage boot :", JSON.stringify(r)))
+        .catch((err: unknown) =>
+          console.error("[x] rattrapage erreur :", err instanceof Error ? err.message : err)
+        );
+    }, 15_000);
 
     console.log(`[watch·ia] Pipeline toutes les ${intervalMin} min · backup quotidien 03:00 · newsletter mardi 09:00 · post X quotidien ~11:30`);
   }
