@@ -20,11 +20,8 @@ import { createArticle, getAllArticles, setArticleTranslation } from "../src/lib
 import { getSettings } from "../src/lib/settings";
 import { getSources, recordFetchResult } from "../src/lib/sources";
 import { getDb } from "../src/lib/db";
+import { callLLM } from "../src/lib/llm";
 
-const MISTRAL_API_URL = "https://api.mistral.ai/v1/chat/completions";
-const MISTRAL_MODEL = "mistral-small-latest";
-const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
-const CLAUDE_MODEL = "claude-haiku-4-5-20251001";
 const MAX_ITEMS_PER_SOURCE = 10;
 
 type PendingRow = {
@@ -60,79 +57,6 @@ function log(line: string): void {
 
 export async function runPipeline(): Promise<void> {
   await main();
-}
-
-async function callMistral(
-  messages: { role: string; content: string }[],
-  json = false
-): Promise<string> {
-  const apiKey = process.env.MISTRAL_API_KEY;
-  if (!apiKey) throw new Error("MISTRAL_API_KEY manquante — https://console.mistral.ai");
-
-  const res = await fetch(MISTRAL_API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      model: MISTRAL_MODEL,
-      messages,
-      temperature: 0.4,
-      ...(json ? { response_format: { type: "json_object" } } : {}),
-    }),
-  });
-  if (!res.ok) throw new Error(`Mistral API ${res.status} : ${await res.text()}`);
-  const data = await res.json();
-  return data.choices[0].message.content;
-}
-
-async function callClaude(
-  messages: { role: string; content: string }[],
-  json = false
-): Promise<string> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY manquante — https://console.anthropic.com");
-
-  const systemMsg = messages.find((m) => m.role === "system");
-  const userMsgs = messages.filter((m) => m.role !== "system");
-  const systemPrompt = [
-    systemMsg?.content ?? "",
-    json ? "Réponds uniquement avec du JSON valide, sans bloc markdown ni commentaire." : "",
-  ].filter(Boolean).join("\n");
-
-  const res = await fetch(ANTHROPIC_API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: CLAUDE_MODEL,
-      max_tokens: 2048,
-      system: systemPrompt,
-      messages: userMsgs,
-    }),
-  });
-  if (!res.ok) throw new Error(`Anthropic API ${res.status} : ${await res.text()}`);
-  const data = await res.json();
-  let text: string = data.content[0].text;
-  // Strip potential markdown code blocks Claude might add despite instructions
-  const match = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (match) text = match[1].trim();
-  return text;
-}
-
-// Le mode "claude" est hybride pour économiser les crédits : seuls les appels
-// "premium" (rédaction, traduction) passent sur Claude. Le scoring/groupage/dédup
-// — de la simple classification — restent sur Mistral (gratuit) dans tous les cas.
-async function callLLM(
-  messages: { role: string; content: string }[],
-  json = false,
-  premium = false
-): Promise<string> {
-  const { llmProvider } = getSettings();
-  return premium && llmProvider === "claude"
-    ? callClaude(messages, json)
-    : callMistral(messages, json);
 }
 
 async function fetchFeeds(): Promise<number> {
@@ -211,10 +135,22 @@ async function groupStories(items: PendingRow[], breakingThreshold: number): Pro
     [
       {
         role: "system",
-        content: `Tu regroupes des news IA par sujet : si plusieurs items couvrent la même actualité, ils forment UN seul groupe (un seul article sera écrit, citant toutes les sources).
-Pour chaque groupe, propose un titre français accrocheur mais factuel, un angle, et 2-3 tags en minuscules.
-Ne traduis jamais les noms propres (médias, entreprises, produits, personnes) : « The Verge » reste « The Verge », jamais « le Verge ».
-CHIFFRES : si plusieurs valeurs numériques apparaissent (tailles de modèles, paramètres, prix…), ne les formule JAMAIS comme "passe de X à Y" sauf si la source indique explicitement une évolution entre deux versions. Si ces valeurs correspondent à des variantes différentes d'un même produit, présente-les comme une gamme (ex : "de X à Y paramètres selon la variante"), pas comme une progression temporelle.
+        content: `Tu es rédacteur en chef d'un média de veille IA francophone. Tu regroupes des news par sujet : si plusieurs items couvrent la même actualité, ils forment UN seul groupe (un seul article sera écrit, citant toutes les sources).
+
+TITRE (le plus important) :
+- Factuel avant tout : il doit être 100 % vérifiable depuis les sources fournies. N'invente aucun chiffre, superlatif ni conséquence.
+- Informatif, pas putaclic : il dit CE QUI s'est passé, pas "vous n'allez pas croire…". Pas de question rhétorique, pas de "voici pourquoi".
+- Concis : 60 à 100 caractères idéalement. Une seule idée principale.
+- Si tu hésites sur un fait, ne le mets pas dans le titre.
+
+CHIFFRES : ne formule JAMAIS "passe de X à Y" sauf si la source indique explicitement une évolution entre deux versions. Si les valeurs sont des variantes d'un même produit (tiny/small/medium…), présente-les comme une gamme ("de X à Y selon la variante"), jamais comme une progression.
+
+NOMS PROPRES : ne traduis ni n'altère jamais les noms propres (médias, entreprises, produits, personnes). « The Verge » reste « The Verge », jamais « le Verge ».
+
+ANGLE : une phrase qui résume l'intérêt concret pour le lecteur (dev, indépendant, curieux IA).
+
+TAGS : 2-3, en minuscules, spécifiques (entreprise, produit, ou thème précis). Évite les tags vagues comme "ia" ou "tech".
+
 Un groupe est "breaking" si au moins un de ses items a un score >= ${breakingThreshold}.
 
 Réponds en JSON strict : {"groups": [{"title": "...", "links": ["url1", "url2"], "angle": "...", "tags": ["..."], "breaking": false}]}`,
@@ -294,16 +230,24 @@ async function writeArticle(group: StoryGroup, items: PendingRow[]): Promise<Wri
     [
       {
         role: "system",
-        content: `Tu rédiges un article de veille IA en français (250-400 mots), ton factuel et direct, sans emphase marketing.
-Structure : un chapeau d'une phrase, 2-3 paragraphes, pas de titre (il est fourni à part), pas de conclusion creuse.
-Tu te bases UNIQUEMENT sur les informations fournies — n'invente aucun chiffre, citation ou détail.
-Si l'information est limitée, fais court.
-CHIFFRES ET TENDANCES : n'emploie jamais les mots "réduit", "augmente", "hausse", "baisse", "améliore" pour qualifier un changement entre deux valeurs numériques si la source ne l'indique pas explicitement. Si plusieurs valeurs correspondent à des variantes d'un même produit (ex : tiny/small/medium), présente-les comme une gamme d'options, pas comme une évolution avant/après.
-NOMS PROPRES : ne traduis ni n'altère jamais les noms propres (médias, entreprises, produits, personnes). Écris « The Verge », « The New York Times », « OpenAI » exactement — jamais « le Verge » ni « le New York Times ».
+        content: `Tu es journaliste pour un média de veille IA francophone destiné aux devs, indépendants et curieux. Tu rédiges un article de 250-400 mots, ton factuel et direct, sans emphase marketing ni remplissage.
+
+RÈGLE ABSOLUE — ZÉRO INVENTION : tu te bases UNIQUEMENT sur les informations fournies. N'invente aucun chiffre, citation, date, nom ou conséquence. Si une information manque, ne la comble pas : fais plus court. Mieux vaut un article bref et exact qu'un article étoffé et approximatif.
+
+STRUCTURE :
+- Première phrase (chapeau) : énonce le fait central — qui, quoi, et pourquoi ça compte. Pas d'introduction qui tourne autour.
+- 2-3 paragraphes courts qui développent les faits, le contexte, les implications concrètes.
+- Pas de titre (fourni à part). Pas de conclusion creuse du type "l'avenir nous le dira".
+
+MISE EN FORME : Markdown sobre — paragraphes séparés par une ligne vide, gras (**...**) seulement pour un terme clé occasionnel. Pas de titre #, pas de listes sauf si vraiment justifié.
+
+CHIFFRES ET TENDANCES : n'emploie jamais "réduit", "augmente", "hausse", "baisse", "améliore" pour qualifier un écart entre deux valeurs si la source ne l'indique pas explicitement. Des variantes d'un même produit (tiny/small/medium…) sont une gamme d'options, pas une évolution avant/après.
+
+NOMS PROPRES : ne traduis ni n'altère jamais les noms propres (médias, entreprises, produits, personnes). « The Verge », « The New York Times », « OpenAI » exactement — jamais « le Verge » ni « le New York Times ».
 
 Réponds en JSON strict :
 {"markdown": "le corps de l'article en Markdown", "tldr": ["point clé 1", "point clé 2", "point clé 3"]}
-Le tldr résume l'essentiel en 3 phrases courtes et autonomes.`,
+Le tldr : 3 phrases courtes, autonomes (lisibles hors contexte), sans se répéter entre elles, chacune portant un fait distinct.`,
       },
       {
         role: "user",
@@ -332,8 +276,9 @@ async function translateArticle(
       [
         {
           role: "system",
-          content: `Tu traduis un article de presse du français vers l'anglais. Traduction naturelle et journalistique, pas mot à mot. Conserve la mise en forme Markdown.
-Ne traduis jamais les noms propres (entreprises, produits, médias, personnes) — garde-les exactement à l'identique.
+          content: `Tu traduis un article de presse du français vers l'anglais. Traduction naturelle et journalistique, idiomatique, pas mot à mot. Conserve exactement la mise en forme Markdown (paragraphes, gras, liens).
+Ne traduis jamais les noms propres (entreprises, produits, médias, personnes) — garde-les à l'identique.
+Conserve tous les chiffres, unités et nombres exactement tels quels (34,5M reste 34.5M en notation anglaise, les paramètres restent des paramètres). N'ajoute, ne retire et ne reformule aucun fait : tu traduis, tu n'édites pas.
 Réponds en JSON strict : {"title": "...", "excerpt": "...", "markdown": "...", "tldr": ["...", "..."]}`,
         },
         {

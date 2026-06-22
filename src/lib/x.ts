@@ -3,6 +3,7 @@ import { getDb } from "./db";
 import { getSettings } from "./settings";
 import { generateXCard } from "./x-card";
 import { parisOffsetMs } from "./status";
+import { callLLM } from "./llm";
 
 export type PostLang = "fr" | "en";
 
@@ -102,24 +103,15 @@ function cleanTruncate(text: string): string {
 // Génère le texte du tweet : un angle, voix humaine, pas de hashtag ni emoji en rafale.
 async function generatePostText(a: Candidate, lang: PostLang): Promise<string> {
   const fallback = cleanTruncate(a.title);
-  const key = process.env.MISTRAL_API_KEY;
-  if (!key) return fallback;
 
   const kind = a.type === "tuto" ? "tutoriel pratique (contenu intemporel)" : "actualité du moment";
   const points = a.tldr.length ? `\nFaits / points clés (sers-t'en) :\n- ${a.tldr.join("\n- ")}` : "";
   const langRule = lang === "fr" ? "Écris en français." : "Write in English.";
 
   try {
-    const res = await fetch("https://api.mistral.ai/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-      body: JSON.stringify({
-        model: "mistral-small-latest",
-        temperature: 0.8,
-        response_format: { type: "json_object" },
-        messages: [{
-          role: "user",
-          content: `Tu animes un compte X de veille IA qu'on suit pour ses PRISES DE POSITION, pas pour relayer des titres. ${langRule}
+    const raw = await callLLM([{
+      role: "user",
+      content: `Tu animes un compte X de veille IA qu'on suit pour ses PRISES DE POSITION, pas pour relayer des titres. ${langRule}
 
 Sujet (${kind}) : "${a.title}"
 ${a.excerpt}${points}
@@ -131,6 +123,8 @@ ${a.excerpt}${points}
 
 INTERDIT :
 - Recopier ou paraphraser le titre.
+- Inventer un chiffre, un fait ou une conséquence absent du sujet. Reste strictement sur ce qui est fourni.
+- Mal interpréter les chiffres : ne dis jamais "passe de X à Y" ou "réduit/augmente" sauf si le sujet l'affirme explicitement. Des variantes d'un même produit (tiny/small/medium…) sont une gamme, pas une évolution.
 - Empiler des questions rhétoriques ("et si… ? le pari de… ?") — au plus UNE question, et seulement si elle fait mouche.
 - Hashtags, liens, emojis en rafale (un seul emoji max, et seulement s'il est naturel).
 - Tout markdown : pas d'astérisques *, pas de gras, pas de _ ni de backticks. X affiche ces signes en clair. Pour insister, choisis tes mots, pas du formatage.
@@ -142,12 +136,7 @@ Exemples du NIVEAU attendu (ton, densité — invente sur TON sujet) :
 - "Un agent qui lit tes mails peut être détourné par un simple mail piégé. La prompt injection n'a aucun équivalent en sécu classique — et la majorité des apps IA y sont vulnérables par défaut."
 
 Longueur : entre 180 et 240 caractères MAXIMUM (compte-les), et termine TOUJOURS sur une phrase complète ponctuée (. ! ?) — jamais coupé, jamais de « … » final. Renvoie un JSON STRICT : {"text": "..."}`,
-        }],
-      }),
-    });
-    if (!res.ok) return fallback;
-    const data = await res.json() as { choices: { message: { content: string } }[] };
-    const raw = data.choices[0].message.content.replace(/```json|```/g, "").trim();
+    }], true, true, 0.8);
     const parsed = JSON.parse(raw) as { text?: string };
     const text = parsed.text?.trim();
     if (!text) return fallback;
