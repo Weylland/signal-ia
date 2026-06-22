@@ -167,9 +167,9 @@ export function XAdmin({ configured, posts, includeLink: initialLink }: { config
               />
             )}
             {preview.withLink ? (
-              <div style={{ ...mono, fontSize: 11, color: "var(--ac)", marginTop: "var(--s3)" }}>↳ en réponse : → {preview.url}</div>
+              <div style={{ ...mono, fontSize: 11, color: "var(--ac)", marginTop: "var(--s3)" }}>↳ lien dans le tweet (X déplie la carte) : {preview.url}</div>
             ) : (
-              <div style={{ ...mono, fontSize: 11, color: "var(--ink-f)", marginTop: "var(--s3)" }}>Aucun lien posté (le site est sur la carte).</div>
+              <div style={{ ...mono, fontSize: 11, color: "var(--ink-f)", marginTop: "var(--s3)" }}>Aucun lien posté (la carte de marque est en image).</div>
             )}
             <div style={{ ...mono, fontSize: 10, color: "var(--ink-f)", marginTop: "var(--s2)" }}>{preview.text.length} / 280 caractères</div>
           </div>

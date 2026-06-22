@@ -89,10 +89,10 @@ function stripMarkdown(text: string): string {
 
 // Nettoie + ramène sous la limite. Priorité à une PHRASE COMPLÈTE (pas de « … »
 // trompeur). Coupe au mot + « … » seulement en dernier recours.
-function cleanTruncate(text: string): string {
+function cleanTruncate(text: string, max: number = MAX_LEN): string {
   const clean = stripMarkdown(text);
-  if (clean.length <= MAX_LEN) return clean;
-  const slice = clean.slice(0, MAX_LEN);
+  if (clean.length <= max) return clean;
+  const slice = clean.slice(0, max);
   const lastSentence = Math.max(slice.lastIndexOf(". "), slice.lastIndexOf("! "), slice.lastIndexOf("? "));
   // Fin de phrase exploitable → on garde jusque-là, terminé proprement.
   if (lastSentence >= 80) return slice.slice(0, lastSentence + 1).trim();
@@ -101,8 +101,8 @@ function cleanTruncate(text: string): string {
 }
 
 // Génère le texte du tweet : un angle, voix humaine, pas de hashtag ni emoji en rafale.
-async function generatePostText(a: Candidate, lang: PostLang): Promise<string> {
-  const fallback = cleanTruncate(a.title);
+async function generatePostText(a: Candidate, lang: PostLang, maxLen: number = MAX_LEN): Promise<string> {
+  const fallback = cleanTruncate(a.title, maxLen);
 
   const kind = a.type === "tuto" ? "tutoriel pratique (contenu intemporel)" : "actualité du moment";
   const points = a.tldr.length ? `\nFaits / points clés (sers-t'en) :\n- ${a.tldr.join("\n- ")}` : "";
@@ -140,7 +140,7 @@ Longueur : entre 180 et 240 caractères MAXIMUM (compte-les), et termine TOUJOUR
     const parsed = JSON.parse(raw) as { text?: string };
     const text = parsed.text?.trim();
     if (!text) return fallback;
-    return cleanTruncate(text);
+    return cleanTruncate(text, maxLen);
   } catch {
     return fallback;
   }
@@ -184,32 +184,34 @@ export async function runXDigest(
   // Un tuto sans lien est inutile (rien à lire) : on force toujours le lien pour les tutos.
   // Pour une actu, l'angle se suffit, donc on respecte le réglage (le lien coûte plus cher côté X).
   const includeLink = candidate.type === "tuto" ? true : getSettings().xIncludeLink;
-  const text = await generatePostText(candidate, lang);
+  // Si le lien va dans le tweet, on réserve sa place (X compte une URL pour 23 + 2 sauts de ligne).
+  const text = await generatePostText(candidate, lang, includeLink ? MAX_LEN - 25 : MAX_LEN);
   const url = `${siteUrl}/articles/${candidate.slug}`;
 
   if (dryRun) {
     return { preview: text, url, slug: candidate.slug, type: candidate.type, withLink: includeLink };
   }
 
-  // Carte de marque en illustration ; si la génération/upload échoue, on poste sans image.
-  let mediaIds: string[] = [];
-  try {
-    const card = await generateXCard({ title: candidate.title, kind: candidate.type });
-    const mediaId = await client!.v1.uploadMedia(card, { mimeType: EUploadMimeType.Png });
-    mediaIds = [mediaId];
-  } catch {
-    mediaIds = [];
-  }
-
-  const main = mediaIds.length
-    ? await client!.v2.tweet(text, { media: { media_ids: mediaIds as [string] } })
-    : await client!.v2.tweet(text);
-  const tweetId = main.data.id;
-
-  // Lien en réponse uniquement si activé (un post avec lien coûte plus cher côté X).
+  // Avec lien : on le place dans le tweet principal pour que X déplie la carte de marque
+  // (image OG de l'article). Une seule carte, pas de doublon image+aperçu, et un seul post.
+  // Sans lien : on uploade la carte de marque en illustration (aucun lien à déplier).
+  let main;
   if (includeLink) {
-    await client!.v2.tweet(`→ ${url}`, { reply: { in_reply_to_tweet_id: tweetId } });
+    main = await client!.v2.tweet(`${text}\n\n${url}`);
+  } else {
+    let mediaIds: string[] = [];
+    try {
+      const card = await generateXCard({ title: candidate.title, kind: candidate.type });
+      const mediaId = await client!.v1.uploadMedia(card, { mimeType: EUploadMimeType.Png });
+      mediaIds = [mediaId];
+    } catch {
+      mediaIds = [];
+    }
+    main = mediaIds.length
+      ? await client!.v2.tweet(text, { media: { media_ids: mediaIds as [string] } })
+      : await client!.v2.tweet(text);
   }
+  const tweetId = main.data.id;
 
   getDb()
     .prepare("INSERT INTO x_posts (article_slug, tweet_id, lang) VALUES (?, ?, ?)")
