@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getAllArticles } from "@/lib/articles";
+import { getAllArticles, isoSince } from "@/lib/articles";
 import { getLang, getDict } from "@/lib/i18n";
 import { ArticleRow } from "@/components/ArticleRow";
 import { PageHeader, PageBand } from "@/components/PageShell";
@@ -24,7 +24,7 @@ export default async function CetteSemainePage({
   const en = lang === "en";
   const locale = en ? "en-GB" : "fr-FR";
 
-  const weekAgo = new Date(Date.now() - 7 * 24 * 3600_000).toISOString();
+  const weekAgo = isoSince(7 * 24 * 3600_000);
   const all = await getAllArticles({ type: "news" });
   const articles = all.filter((a) => a.date >= weekAgo);
   const distinctSources = new Set(articles.flatMap((a) => a.sources.map((s) => s.name))).size;

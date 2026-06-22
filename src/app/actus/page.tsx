@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getAllArticles, getAllTags, localizeMeta } from "@/lib/articles";
+import { getAllArticles, getAllTags, isoSince, localizeMeta } from "@/lib/articles";
 import { getLang, getDict } from "@/lib/i18n";
 import { categoryFor, categoryList } from "@/lib/category";
 import { ArticleCard } from "@/components/ArticleCard";
@@ -41,7 +41,7 @@ export default async function ActusPage({ searchParams }: PageProps<"/actus">) {
   }
   if (sourceFilter) articles = articles.filter((a) => a.sources.some((s) => s.name === sourceFilter));
   if (PERIODS[periodFilter]) {
-    const since = new Date(Date.now() - PERIODS[periodFilter] * 24 * 3600_000).toISOString();
+    const since = isoSince(PERIODS[periodFilter] * 24 * 3600_000);
     articles = articles.filter((a) => a.date >= since);
   }
 

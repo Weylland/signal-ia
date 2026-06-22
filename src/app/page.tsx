@@ -4,6 +4,7 @@ import {
   getAllArticles,
   getAllTags,
   getMostViewedArticles,
+  isoSince,
   localizeMeta,
   readingTimeMinutes,
   type ArticleMeta,
@@ -71,7 +72,7 @@ export default async function Home() {
 
   const [featured, ...rest] = articles;
   const featuredLoc = featured ? localizeMeta(featured, lang) : null;
-  const dayAgo = new Date(Date.now() - 24 * 3600_000).toISOString();
+  const dayAgo = isoSince(24 * 3600_000);
   const last24h = articles.filter((a) => a.date >= dayAgo).slice(0, 5);
   const magArticles = rest.slice(0, 5);
   const recurringTags = tags.filter((x) => x.count >= 2);

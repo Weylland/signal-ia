@@ -17,6 +17,12 @@ type Labels = {
   subjects: string[];
 };
 
+const Label = ({ children }: { children: React.ReactNode }) => (
+  <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--ink-f)]">
+    {children}
+  </span>
+);
+
 export function ContactForm({ labels }: { labels: Labels }) {
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [form, setForm] = useState({ name: "", email: "", subject: "", message: "", website: "" });
@@ -57,12 +63,6 @@ export function ContactForm({ labels }: { labels: Labels }) {
       </div>
     );
   }
-
-  const Label = ({ children }: { children: React.ReactNode }) => (
-    <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--ink-f)]">
-      {children}
-    </span>
-  );
 
   return (
     <form

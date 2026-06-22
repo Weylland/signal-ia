@@ -21,6 +21,8 @@ export function FavorisList({ labels }: Props) {
   const [items, setItems] = useState<BookmarkItem[] | null>(null);
 
   useEffect(() => {
+    // localStorage indisponible au SSR : on charge les favoris après montage.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setItems(getBookmarks());
   }, []);
 

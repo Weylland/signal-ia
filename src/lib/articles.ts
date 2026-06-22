@@ -463,6 +463,13 @@ export function formatDate(iso: string, lang: "fr" | "en" = "fr"): string {
   });
 }
 
+// ISO d'un instant passé (il y a `ms` millisecondes). Helper module-level pour
+// éviter d'appeler Date.now() directement dans le corps d'un composant (règle
+// react-hooks/purity), tout en restant correct sur les pages force-dynamic.
+export function isoSince(ms: number): string {
+  return new Date(Date.now() - ms).toISOString();
+}
+
 export function indexArticleFts(slug: string): void {
   const db = getDb();
   const row = db.prepare("SELECT id, title, excerpt, content_html FROM articles WHERE slug = ?").get(slug) as

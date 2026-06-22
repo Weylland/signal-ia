@@ -17,6 +17,8 @@ export function BookmarkButton({ slug, title, lang }: { slug: string; title: str
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
+    // localStorage indisponible au SSR : on lit l'état réel après montage.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSaved(getBookmarks().some((b) => b.slug === slug));
   }, [slug]);
 
@@ -51,6 +53,8 @@ export function BookmarkButton({ slug, title, lang }: { slug: string; title: str
 export function useBookmarks() {
   const [bookmarks, setBookmarks] = useState<BookmarkItem[]>([]);
   useEffect(() => {
+    // Sync initiale depuis localStorage (client-only) + écoute des changements.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setBookmarks(getBookmarks());
     const handler = () => setBookmarks(getBookmarks());
     window.addEventListener("storage", handler);

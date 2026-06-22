@@ -27,10 +27,15 @@ export function SiteHeader({ links, lang, labels, isAdmin, siteName = "watch·ia
   const [theme, setTheme] = useState<"dark" | "light">("dark");
 
   useEffect(() => {
+    // Le thème réel vit sur <html data-theme> (posé avant l'hydratation) : on le
+    // relit après montage pour synchroniser l'icône.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTheme(document.documentElement.dataset.theme === "light" ? "light" : "dark");
   }, []);
 
   useEffect(() => {
+    // Ferme le menu mobile à chaque navigation.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMob(false);
   }, [pathname]);
 

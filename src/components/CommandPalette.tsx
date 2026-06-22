@@ -44,8 +44,11 @@ export function CommandPalette({ pages, lang, placeholder, pagesLabel, searchLab
 
   useEffect(() => {
     if (open) {
+      // Réinitialise la recherche à chaque ouverture de la palette.
+      /* eslint-disable react-hooks/set-state-in-effect */
       setQuery("");
       setActive(0);
+      /* eslint-enable react-hooks/set-state-in-effect */
       requestAnimationFrame(() => inputRef.current?.focus());
     }
   }, [open]);

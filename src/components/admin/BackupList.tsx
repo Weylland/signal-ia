@@ -85,6 +85,8 @@ export function BackupList({ backups }: { backups: Backup[] }) {
               <td style={{ padding: "var(--s3)", textAlign: "right" }}>
                 <div style={{ display: "flex", gap: "var(--s2)", justifyContent: "flex-end" }}>
                   {i === 0 && (
+                    // Téléchargement de fichier (route API), pas une navigation de page → <a> volontaire.
+                    // eslint-disable-next-line @next/next/no-html-link-for-pages
                     <a href="/api/admin/backup" className="btn btn-sm btn-g" style={{ fontFamily: "var(--ff-m)", fontSize: 10 }}>
                       ↓ Télécharger
                     </a>

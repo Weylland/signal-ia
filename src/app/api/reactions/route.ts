@@ -28,6 +28,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Réaction invalide" }, { status: 400 });
   }
 
+  // L'article doit exister avant d'enregistrer quoi que ce soit.
+  const db = getDb();
+  const article = db.prepare("SELECT id FROM articles WHERE slug = ?").get(slug) as { id: number } | undefined;
+  if (!article) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
+
   // Simple rate-limit: 1 reaction per slug per IP per session (stored in memory)
   const key = `${ip}:${slug}:${reaction}`;
   if (recentReactions.has(key)) {
@@ -37,10 +42,6 @@ export async function POST(req: NextRequest) {
   setTimeout(() => recentReactions.delete(key), 10 * 60_000);
 
   addReaction(slug, reaction as "useful" | "fire" | "think");
-
-  const db = getDb();
-  const article = db.prepare("SELECT id FROM articles WHERE slug = ?").get(slug) as { id: number } | undefined;
-  if (!article) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
   return NextResponse.json(getReactions(article.id));
 }
 

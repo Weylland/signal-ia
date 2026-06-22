@@ -1,5 +1,5 @@
 import { getSubscribers } from "@/lib/newsletter";
-import { getAllArticles } from "@/lib/articles";
+import { getAllArticles, isoSince } from "@/lib/articles";
 import { NewsletterAdmin } from "@/components/admin/NewsletterAdmin";
 import { getDb } from "@/lib/db";
 
@@ -11,7 +11,7 @@ export default async function NewsletterPage() {
     getAllArticles({ limit: 20 }),
   ]);
 
-  const weekAgo = new Date(Date.now() - 7 * 24 * 3600_000).toISOString();
+  const weekAgo = isoSince(7 * 24 * 3600_000);
   const weekArticles = articles.filter((a) => a.date >= weekAgo).slice(0, 5);
 
   const db = getDb();
