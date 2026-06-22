@@ -19,6 +19,7 @@ export type SiteSettings = {
   blacklistKeywords: string;
   blacklistDomains: string;
   xIncludeLink: boolean;
+  llmProvider: "mistral" | "claude";
 };
 
 export const DEFAULT_SETTINGS: SiteSettings = {
@@ -41,6 +42,7 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   blacklistKeywords: "",
   blacklistDomains: "",
   xIncludeLink: true,
+  llmProvider: "mistral",
 };
 
 export function getSettings(): SiteSettings {

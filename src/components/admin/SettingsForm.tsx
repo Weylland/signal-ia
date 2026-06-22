@@ -115,6 +115,22 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
               onChange={(e) => set("breakingDurationHours", Number(e.target.value))}
             />
           </label>
+          <label className="flex flex-col gap-1 text-sm font-semibold sm:col-span-2">
+            Modèle LLM (rédaction des articles)
+            <select
+              className="field"
+              value={settings.llmProvider}
+              onChange={(e) => set("llmProvider", e.target.value as "mistral" | "claude")}
+            >
+              <option value="mistral">Tout Mistral — mistral-small-latest (gratuit)</option>
+              <option value="claude">Hybride Claude — rédaction + traduction sur claude-haiku-4-5</option>
+            </select>
+            <span className="text-xs font-normal text-ink/50">
+              En mode hybride, le scoring et le groupage restent sur Mistral (gratuit) ; seules la
+              rédaction et la traduction passent sur Claude pour économiser les crédits. Nécessite
+              ANTHROPIC_API_KEY dans les variables Railway. Repasse sur « Tout Mistral » si les crédits s&apos;épuisent.
+            </span>
+          </label>
         </div>
       </section>
 

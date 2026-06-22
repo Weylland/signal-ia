@@ -22,7 +22,9 @@ import { getSources, recordFetchResult } from "../src/lib/sources";
 import { getDb } from "../src/lib/db";
 
 const MISTRAL_API_URL = "https://api.mistral.ai/v1/chat/completions";
-const MODEL = "mistral-small-latest";
+const MISTRAL_MODEL = "mistral-small-latest";
+const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
+const CLAUDE_MODEL = "claude-haiku-4-5-20251001";
 const MAX_ITEMS_PER_SOURCE = 10;
 
 type PendingRow = {
@@ -65,32 +67,72 @@ async function callMistral(
   json = false
 ): Promise<string> {
   const apiKey = process.env.MISTRAL_API_KEY;
-  if (!apiKey) {
-    throw new Error(
-      "MISTRAL_API_KEY manquante. Crée une clé gratuite sur https://console.mistral.ai"
-    );
-  }
+  if (!apiKey) throw new Error("MISTRAL_API_KEY manquante — https://console.mistral.ai");
 
   const res = await fetch(MISTRAL_API_URL, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
-      model: MODEL,
+      model: MISTRAL_MODEL,
       messages,
       temperature: 0.4,
       ...(json ? { response_format: { type: "json_object" } } : {}),
     }),
   });
-
-  if (!res.ok) {
-    throw new Error(`Mistral API ${res.status} : ${await res.text()}`);
-  }
-
+  if (!res.ok) throw new Error(`Mistral API ${res.status} : ${await res.text()}`);
   const data = await res.json();
   return data.choices[0].message.content;
+}
+
+async function callClaude(
+  messages: { role: string; content: string }[],
+  json = false
+): Promise<string> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY manquante — https://console.anthropic.com");
+
+  const systemMsg = messages.find((m) => m.role === "system");
+  const userMsgs = messages.filter((m) => m.role !== "system");
+  const systemPrompt = [
+    systemMsg?.content ?? "",
+    json ? "Réponds uniquement avec du JSON valide, sans bloc markdown ni commentaire." : "",
+  ].filter(Boolean).join("\n");
+
+  const res = await fetch(ANTHROPIC_API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: CLAUDE_MODEL,
+      max_tokens: 2048,
+      system: systemPrompt,
+      messages: userMsgs,
+    }),
+  });
+  if (!res.ok) throw new Error(`Anthropic API ${res.status} : ${await res.text()}`);
+  const data = await res.json();
+  let text: string = data.content[0].text;
+  // Strip potential markdown code blocks Claude might add despite instructions
+  const match = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (match) text = match[1].trim();
+  return text;
+}
+
+// Le mode "claude" est hybride pour économiser les crédits : seuls les appels
+// "premium" (rédaction, traduction) passent sur Claude. Le scoring/groupage/dédup
+// — de la simple classification — restent sur Mistral (gratuit) dans tous les cas.
+async function callLLM(
+  messages: { role: string; content: string }[],
+  json = false,
+  premium = false
+): Promise<string> {
+  const { llmProvider } = getSettings();
+  return premium && llmProvider === "claude"
+    ? callClaude(messages, json)
+    : callMistral(messages, json);
 }
 
 async function fetchFeeds(): Promise<number> {
@@ -135,7 +177,7 @@ async function scoreNewItems(items: PendingRow[]): Promise<ScoredItem[]> {
     .map((item) => `- url: ${item.url}\n  [${item.source_name}] ${item.title}\n  ${item.summary}`)
     .join("\n");
 
-  const content = await callMistral(
+  const content = await callLLM(
     [
       {
         role: "system",
@@ -165,7 +207,7 @@ async function groupStories(items: PendingRow[], breakingThreshold: number): Pro
     )
     .join("\n");
 
-  const content = await callMistral(
+  const content = await callLLM(
     [
       {
         role: "system",
@@ -205,7 +247,7 @@ async function filterAlreadyCovered(
       .map((g, i) => `[${i}] ${g.title} — ${g.angle}`)
       .join("\n");
 
-    const content = await callMistral(
+    const content = await callLLM(
       [
         {
           role: "system",
@@ -248,7 +290,7 @@ async function writeArticle(group: StoryGroup, items: PendingRow[]): Promise<Wri
     .map((s) => `[${s.source_name}] ${s.title}\n${s.summary}\n${s.url}`)
     .join("\n\n");
 
-  const content = await callMistral(
+  const content = await callLLM(
     [
       {
         role: "system",
@@ -268,6 +310,7 @@ Le tldr résume l'essentiel en 3 phrases courtes et autonomes.`,
         content: `Titre de l'article : ${group.title}\nAngle : ${group.angle}\n\nSources :\n${context}`,
       },
     ],
+    true,
     true
   );
 
@@ -285,7 +328,7 @@ async function translateArticle(
   tldr: string[]
 ): Promise<{ title: string; excerpt: string; markdown: string; tldr: string[] } | null> {
   try {
-    const content = await callMistral(
+    const content = await callLLM(
       [
         {
           role: "system",
@@ -298,6 +341,7 @@ Réponds en JSON strict : {"title": "...", "excerpt": "...", "markdown": "...", 
           content: `Titre : ${title}\nChapeau : ${excerpt}\nTL;DR : ${JSON.stringify(tldr)}\n\nArticle :\n${markdown}`,
         },
       ],
+      true,
       true
     );
     const parsed = JSON.parse(content);
