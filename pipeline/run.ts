@@ -284,7 +284,7 @@ async function writeArticle(
   const hasRichContext = sources.some((s) => richest(s).length > 500);
   const wordTarget = hasRichContext ? "500 à 700 mots" : "250 à 400 mots";
   const analysisRule = hasRichContext
-    ? "\nANALYSE : tu peux formuler les implications qui découlent logiquement des faits fournis. N'invente aucun chiffre, citation ou décision absent du texte source — mais relier les faits entre eux et en dégager le sens est attendu."
+    ? "\nANALYSE : tu peux expliciter les implications qui découlent DIRECTEMENT des faits du texte source (une limite, un risque, un cas d'usage déjà évoqué dans la source). Relier des faits présents entre eux est attendu. Mais ne fais jamais un pas de plus que ce que la source permet : si une implication demande une information que tu n'as pas, ne l'écris pas. Dans le doute sur la présence d'un fait, omets-le."
     : "";
 
   const content = await callLLM(
@@ -303,6 +303,8 @@ STRUCTURE :
 MISE EN FORME : Markdown sobre — paragraphes séparés par une ligne vide, gras (**...**) seulement pour un terme clé occasionnel. Pas de titre #, pas de listes sauf si vraiment justifié.
 
 CHIFFRES ET TENDANCES : n'emploie jamais "réduit", "augmente", "hausse", "baisse", "améliore" pour qualifier un écart entre deux valeurs si la source ne l'indique pas explicitement. Des variantes d'un même produit (tiny/small/medium…) sont une gamme d'options, pas une évolution avant/après.
+
+PÉRIMÈTRE — ne dis rien que la source ne dit pas : n'introduis aucune entreprise, produit, personne, prix, abonnement, date ou comparaison concurrentielle qui n'apparaît pas explicitement dans les sources. Pas de positionnement marché ni de motivation stratégique supposée. Pas de promesse de résultat ("plus précis", "plus efficace") non formulée par la source. Décris l'annonce et ses faits, pas ce que tu imagines autour.
 
 NOMS PROPRES : ne traduis ni n'altère jamais les noms propres (médias, entreprises, produits, personnes). « The Verge », « The New York Times », « OpenAI » exactement — jamais « le Verge » ni « le New York Times ».
 
