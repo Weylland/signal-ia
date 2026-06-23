@@ -105,26 +105,48 @@ function cleanTruncate(text: string, max: number = MAX_LEN): string {
 async function generatePostText(a: Candidate, lang: PostLang, maxLen: number = MAX_LEN): Promise<string> {
   const fallback = cleanTruncate(a.title, maxLen);
 
-  const kind = a.type === "tuto" ? "tutoriel pratique (contenu intemporel)" : "actualité du moment";
+  const isTuto = a.type === "tuto";
+  const kind = isTuto ? "tutoriel pratique (contenu intemporel)" : "actualité du moment";
   const points = a.tldr.length ? `\nFaits / points clés (sers-t'en) :\n- ${a.tldr.join("\n- ")}` : "";
   const langRule = lang === "fr" ? "Écris en français." : "Write in English.";
+
+  // Un tuto se vend par la VALEUR REPRODUCTIBLE (ce que le lecteur saura faire),
+  // pas par une prise de position comme une actu. D'où deux briefs distincts.
+  const intro = isTuto
+    ? `Tu animes un compte X de veille IA. Ce post présente un TUTO pratique du site : ton job est de donner envie de le faire en montrant la valeur concrète qu'on en retire. ${langRule}`
+    : `Tu animes un compte X de veille IA qu'on suit pour ses PRISES DE POSITION, pas pour relayer des titres. ${langRule}`;
+
+  const goal = isTuto
+    ? `Écris UN post (1 à 3 phrases) qui donne envie de suivre le tuto :
+- Pars d'un RÉSULTAT CONCRET ou d'un point de friction réel traité dans le tuto (une commande, un vrai piège, un gain de temps, un "ça marche enfin"). Sers-toi des points clés fournis.
+- Dis ce que le lecteur saura FAIRE après l'avoir suivi — concret et reproductible, jamais "découvrez comment".
+- Ton de quelqu'un qui l'a vraiment fait et partage le raccourci ou le piège qu'il aurait aimé connaître avant.`
+    : `Écris UN post (1 à 3 phrases) qui apporte une vraie valeur :
+- Pars d'un FAIT CONCRET du sujet (un chiffre, un nom, une décision, une conséquence) et ajoute TON ANGLE : ce que ça révèle, pourquoi c'est important, ou une opinion assumée.
+- Donne envie de lire la suite par la substance, pas par le racolage.
+- Ton humain, vif, comme quelqu'un de calé qui balance une observation à ses abonnés.`;
+
+  const examples = isTuto
+    ? `Exemples du NIVEAU attendu (ton, densité — invente sur TON sujet) :
+- "Faire tourner un modèle IA en local, c'est une install et une commande, et ça tourne hors ligne. Le seul vrai arbitrage c'est la RAM : sous 16 Go, reste sur un 7B quantisé plutôt qu'un gros modèle qui va ramer."
+- "Un RAG qui répond à côté, 9 fois sur 10 le problème c'est le découpage des documents, pas le modèle. Le tuto montre comment chunker proprement avant de vectoriser, étape par étape."`
+    : `Exemples du NIVEAU attendu (ton, densité — invente sur TON sujet) :
+- "OpenAI casse ses prix de 40%. Traduction : la bataille des modèles ne se joue plus sur le benchmark mais sur le coût par token. Anthropic et Google vont devoir suivre."
+- "Un agent qui lit tes mails peut être détourné par un simple mail piégé. La prompt injection n'a aucun équivalent en sécu classique — et la majorité des apps IA y sont vulnérables par défaut."`;
 
   try {
     const raw = await callLLM([{
       role: "user",
-      content: `Tu animes un compte X de veille IA qu'on suit pour ses PRISES DE POSITION, pas pour relayer des titres. ${langRule}
+      content: `${intro}
 
 Sujet (${kind}) : "${a.title}"
 ${a.excerpt}${points}
 
-Écris UN post (1 à 3 phrases) qui apporte une vraie valeur :
-- Pars d'un FAIT CONCRET du sujet (un chiffre, un nom, une décision, une conséquence) et ajoute TON ANGLE : ce que ça révèle, pourquoi c'est important, ou une opinion assumée.
-- Donne envie de lire la suite par la substance, pas par le racolage.
-- Ton humain, vif, comme quelqu'un de calé qui balance une observation à ses abonnés.
+${goal}
 
 INTERDIT :
 - Recopier ou paraphraser le titre.
-- Inventer un chiffre, un fait ou une conséquence absent du sujet. Reste strictement sur ce qui est fourni.
+- Inventer un chiffre, un fait, une commande ou une conséquence absent du sujet. Reste strictement sur ce qui est fourni.
 - Mal interpréter les chiffres : ne dis jamais "passe de X à Y" ou "réduit/augmente" sauf si le sujet l'affirme explicitement. Des variantes d'un même produit (tiny/small/medium…) sont une gamme, pas une évolution.
 - Empiler des questions rhétoriques ("et si… ? le pari de… ?") — au plus UNE question, et seulement si elle fait mouche.
 - Hashtags, liens, emojis en rafale (un seul emoji max, et seulement s'il est naturel).
@@ -132,9 +154,7 @@ INTERDIT :
 - Terminer par « … » ou laisser une phrase en suspens.
 - Formules creuses : "découvrez", "à ne pas manquer", "dans un monde où", "révolution", "🚀", "game changer".
 
-Exemples du NIVEAU attendu (ton, densité — invente sur TON sujet) :
-- "OpenAI casse ses prix de 40%. Traduction : la bataille des modèles ne se joue plus sur le benchmark mais sur le coût par token. Anthropic et Google vont devoir suivre."
-- "Un agent qui lit tes mails peut être détourné par un simple mail piégé. La prompt injection n'a aucun équivalent en sécu classique — et la majorité des apps IA y sont vulnérables par défaut."
+${examples}
 
 Longueur : entre 180 et 240 caractères MAXIMUM (compte-les), et termine TOUJOURS sur une phrase complète ponctuée (. ! ?) — jamais coupé, jamais de « … » final. Renvoie un JSON STRICT : {"text": "..."}`,
     }], true, true, 0.8);
