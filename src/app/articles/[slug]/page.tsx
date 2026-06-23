@@ -20,6 +20,7 @@ import { ShareButtons } from "@/components/ShareButtons";
 import { ReactionBar } from "@/components/ReactionBar";
 import { BookmarkButton } from "@/components/BookmarkButton";
 import { ViewTracker } from "@/components/ViewTracker";
+import { ArticleBody } from "@/components/ArticleBody";
 
 export const dynamic = "force-dynamic";
 
@@ -194,7 +195,11 @@ export default async function ArticlePage({ params }: PageProps<"/articles/[slug
       {/* ── Corps ── */}
       <section style={{ paddingBottom: "var(--s7)" }}>
         <div className="wrap-n">
-          <div className="prose" dangerouslySetInnerHTML={{ __html: html }} />
+          <ArticleBody
+            html={html}
+            copyLabel={en ? "Copy" : "Copier"}
+            copiedLabel={en ? "Copied" : "Copié"}
+          />
 
           <AdSlot position="article-bottom" />
 
