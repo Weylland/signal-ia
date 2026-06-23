@@ -220,23 +220,74 @@ Réponds en JSON strict : {"results":[{"index":0,"verdict":"new|update|duplicate
   }
 }
 
-async function writeArticle(group: StoryGroup, items: PendingRow[]): Promise<WrittenArticle> {
+async function fetchArticleBody(url: string): Promise<string> {
+  try {
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; watch-ia/1.0)" },
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (!res.ok) return "";
+    const reader = res.body!.getReader();
+    const decoder = new TextDecoder();
+    let html = "";
+    let read = 0;
+    try {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        read += value.length;
+        html += decoder.decode(value, { stream: true });
+        if (read >= 256 * 1024) break;
+      }
+    } finally {
+      await reader.cancel().catch(() => {});
+    }
+    const text = html
+      .replace(/<script[\s\S]*?<\/script>/gi, "")
+      .replace(/<style[\s\S]*?<\/style>/gi, "")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+    // Repli sur snippet si extraction insuffisante (paywall, JS-only, etc.)
+    const wordCount = text.split(/\s+/).filter((w) => w.length > 3).length;
+    if (wordCount < 200) return "";
+    return text.slice(0, 3_500);
+  } catch {
+    return "";
+  }
+}
+
+async function writeArticle(
+  group: StoryGroup,
+  items: PendingRow[],
+  bodies: Map<string, string> = new Map()
+): Promise<WrittenArticle> {
   const sources = items.filter((item) => group.links.includes(item.url));
   const context = sources
-    .map((s) => `[${s.source_name}] ${s.title}\n${s.summary}\n${s.url}`)
+    .map((s) => {
+      const body = bodies.get(s.url);
+      const content = body && body.length > s.summary.length ? body : s.summary;
+      return `[${s.source_name}] ${s.title}\n${content}\n${s.url}`;
+    })
     .join("\n\n");
+
+  const hasRichContext = sources.some((s) => (bodies.get(s.url) ?? "").length > 500);
+  const wordTarget = hasRichContext ? "500 à 700 mots" : "250 à 400 mots";
+  const analysisRule = hasRichContext
+    ? "\nANALYSE : tu peux formuler les implications qui découlent logiquement des faits fournis. N'invente aucun chiffre, citation ou décision absent du texte source — mais relier les faits entre eux et en dégager le sens est attendu."
+    : "";
 
   const content = await callLLM(
     [
       {
         role: "system",
-        content: `Tu es journaliste pour un média de veille IA francophone destiné aux devs, indépendants et curieux. Tu rédiges un article de 250-400 mots, ton factuel et direct, sans emphase marketing ni remplissage.
+        content: `Tu es journaliste pour un média de veille IA francophone destiné aux devs, indépendants et curieux. Tu rédiges un article de ${wordTarget}, ton factuel et direct, sans emphase marketing ni remplissage.
 
-RÈGLE ABSOLUE — ZÉRO INVENTION : tu te bases UNIQUEMENT sur les informations fournies. N'invente aucun chiffre, citation, date, nom ou conséquence. Si une information manque, ne la comble pas : fais plus court. Mieux vaut un article bref et exact qu'un article étoffé et approximatif.
+RÈGLE ABSOLUE — ZÉRO INVENTION : tu te bases UNIQUEMENT sur les informations fournies. N'invente aucun chiffre, citation, date, nom ou conséquence. Si une information manque, ne la comble pas : fais plus court. Mieux vaut un article bref et exact qu'un article étoffé et approximatif.${analysisRule}
 
 STRUCTURE :
 - Première phrase (chapeau) : énonce le fait central — qui, quoi, et pourquoi ça compte. Pas d'introduction qui tourne autour.
-- 2-3 paragraphes courts qui développent les faits, le contexte, les implications concrètes.
+- 2-3 paragraphes qui développent les faits, le contexte, les implications concrètes.
 - Pas de titre (fourni à part). Pas de conclusion creuse du type "l'avenir nous le dira".
 
 MISE EN FORME : Markdown sobre — paragraphes séparés par une ligne vide, gras (**...**) seulement pour un terme clé occasionnel. Pas de titre #, pas de listes sauf si vraiment justifié.
@@ -404,6 +455,19 @@ async function main() {
         "UPDATE pending_news SET status = 'published', article_slug = ? WHERE url = ?"
       );
 
+      // Fetch du corps réel pour les groupes retenus (~5/run, séquentiel, cap 256Ko).
+      // Repli silencieux sur le snippet si échec (paywall, JS-only, timeout).
+      const bodies = new Map<string, string>();
+      for (const group of toWrite) {
+        for (const url of group.links) {
+          if (bodies.has(url)) continue;
+          const body = await fetchArticleBody(url);
+          if (body) { bodies.set(url, body); break; }
+        }
+      }
+      const fetchedCount = bodies.size;
+      if (fetchedCount > 0) log(`Corps fetchés : ${fetchedCount}/${toWrite.length}`);
+
       for (const group of toWrite) {
         if (recent.some((a) => a.title.toLowerCase() === group.title.toLowerCase())) {
           log(`— déjà couvert (titre identique) : ${group.title}`);
@@ -411,7 +475,7 @@ async function main() {
         }
 
         log(`${group.breaking ? "🔴 BREAKING" : "Rédaction"} : ${group.title}`);
-        const written = await writeArticle(group, queuedItems);
+        const written = await writeArticle(group, queuedItems, bodies);
         if (!written.markdown) {
           log(`✗ rédaction vide, abandon : ${group.title}`);
           continue;
