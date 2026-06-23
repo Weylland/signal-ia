@@ -32,6 +32,7 @@ type PendingRow = {
   summary: string;
   published_at: string | null;
   score: number | null;
+  body_html: string | null;
 };
 
 type ScoredItem = { url: string; score: number };
@@ -64,8 +65,8 @@ async function fetchFeeds(): Promise<number> {
   const parser = new Parser({ timeout: 15_000 });
   const sources = getSources({ activeOnly: true });
   const insert = db.prepare(
-    `INSERT OR IGNORE INTO pending_news (url, title, source_name, summary, published_at)
-     VALUES (?, ?, ?, ?, ?)`
+    `INSERT OR IGNORE INTO pending_news (url, title, source_name, summary, published_at, body_html)
+     VALUES (?, ?, ?, ?, ?, ?)`
   );
 
   let totalNew = 0;
@@ -75,12 +76,19 @@ async function fetchFeeds(): Promise<number> {
       let added = 0;
       for (const item of (feed.items ?? []).slice(0, MAX_ITEMS_PER_SOURCE)) {
         if (!item.link || !item.title) continue;
+        // Certains flux (VentureBeat…) livrent l'article complet ; on le garde
+        // (plafonné) pour writeArticle, sans alourdir le scoring qui n'utilise que summary.
+        const raw = (item.contentSnippet ?? "").length >= (item.content ?? "").length
+          ? (item.contentSnippet ?? "")
+          : (item.content ?? "");
+        const fullText = raw.replace(/<[^>]+>/g, " ").replace(/\s{2,}/g, " ").trim().slice(0, 5_000);
         const result = insert.run(
           item.link,
           item.title.trim(),
           source.name,
           (item.contentSnippet ?? "").trim().slice(0, 500),
-          item.isoDate ?? item.pubDate ?? null
+          item.isoDate ?? item.pubDate ?? null,
+          fullText.length > 500 ? fullText : null
         );
         added += Number(result.changes);
       }
@@ -263,15 +271,17 @@ async function writeArticle(
   bodies: Map<string, string> = new Map()
 ): Promise<WrittenArticle> {
   const sources = items.filter((item) => group.links.includes(item.url));
+  // Tier de contenu, du plus riche au moins riche : corps fetché → contenu du flux RSS
+  // (certains flux livrent l'article complet) → snippet tronqué.
+  const richest = (s: PendingRow) => {
+    const candidates = [bodies.get(s.url) ?? "", s.body_html ?? "", s.summary];
+    return candidates.reduce((a, b) => (b.length > a.length ? b : a), "");
+  };
   const context = sources
-    .map((s) => {
-      const body = bodies.get(s.url);
-      const content = body && body.length > s.summary.length ? body : s.summary;
-      return `[${s.source_name}] ${s.title}\n${content}\n${s.url}`;
-    })
+    .map((s) => `[${s.source_name}] ${s.title}\n${richest(s)}\n${s.url}`)
     .join("\n\n");
 
-  const hasRichContext = sources.some((s) => (bodies.get(s.url) ?? "").length > 500);
+  const hasRichContext = sources.some((s) => richest(s).length > 500);
   const wordTarget = hasRichContext ? "500 à 700 mots" : "250 à 400 mots";
   const analysisRule = hasRichContext
     ? "\nANALYSE : tu peux formuler les implications qui découlent logiquement des faits fournis. N'invente aucun chiffre, citation ou décision absent du texte source — mais relier les faits entre eux et en dégager le sens est attendu."
