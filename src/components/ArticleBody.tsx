@@ -40,7 +40,7 @@ export function ArticleBody({ html, copyLabel = "Copier", copiedLabel = "Copié"
     if (!root) return;
 
     const pres = Array.from(root.querySelectorAll("pre"));
-    const wrappers: HTMLElement[] = [];
+    const wrappers: { win: HTMLElement; pre: HTMLElement }[] = [];
     const timers: ReturnType<typeof setTimeout>[] = [];
 
     for (const pre of pres) {
@@ -100,30 +100,44 @@ export function ArticleBody({ html, copyLabel = "Copier", copiedLabel = "Copié"
       });
       bar.append(dots, label, btn);
 
-      // Corps : gouttière de numéros de ligne (sauf terminal) + le <pre>
+      // Corps. Les lignes reviennent toujours à la ligne (aucun débordement
+      // horizontal). Pour le code, chaque ligne logique est une rangée
+      // [numéro][texte] : le numéro reste en haut quand le texte wrappe.
       const body = document.createElement("div");
-      body.className = "cw-body";
-      if (!shell) {
-        const count = raw.split("\n").length;
-        const gutter = document.createElement("div");
-        gutter.className = "cw-gutter";
-        gutter.setAttribute("aria-hidden", "true");
-        gutter.textContent = Array.from({ length: count }, (_, i) => i + 1).join("\n");
-        body.appendChild(gutter);
+      if (shell) {
+        body.className = "cw-code cw-code--term";
+        const txt = document.createElement("div");
+        txt.className = "cw-txt";
+        txt.textContent = raw;
+        body.appendChild(txt);
+      } else {
+        body.className = "cw-code";
+        raw.split("\n").forEach((line, i) => {
+          const row = document.createElement("div");
+          row.className = "cw-row";
+          const ln = document.createElement("span");
+          ln.className = "cw-ln";
+          ln.setAttribute("aria-hidden", "true");
+          ln.textContent = String(i + 1);
+          const tx = document.createElement("span");
+          tx.className = "cw-txt";
+          tx.textContent = line;
+          row.append(ln, tx);
+          body.appendChild(row);
+        });
       }
 
       pre.parentNode?.insertBefore(win, pre);
-      body.appendChild(pre); // déplace le <pre> dans le corps
+      pre.remove(); // détaché, conservé pour le nettoyage (HMR/démontage)
       win.append(bar, body);
-      wrappers.push(win);
+      wrappers.push({ win, pre });
     }
 
     return () => {
       timers.forEach(clearTimeout);
-      for (const w of wrappers) {
-        const pre = w.querySelector("pre");
-        if (pre) w.parentNode?.insertBefore(pre, w);
-        w.remove();
+      for (const { win, pre } of wrappers) {
+        win.parentNode?.insertBefore(pre, win);
+        win.remove();
       }
     };
   }, [html, copyLabel, copiedLabel]);

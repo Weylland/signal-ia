@@ -895,8 +895,8 @@ a.tag:hover { color: var(--ac); border-color: var(--ac); }
 .prose em { font-style: italic; }
 .prose blockquote { border-left: 3px solid var(--ac); padding-left: var(--s5); color: var(--ink-d); font-style: italic; margin: 2rem 0; }
 .prose code { font-family: var(--ff-m); font-size: 0.85em; background: var(--bg-e); padding: 1px 5px; border: 1px solid var(--ln); word-break: break-word; }
-.prose pre { position: relative; background: var(--bg-d); border: 1px solid var(--ln); padding: var(--s5) var(--s4) var(--s4); overflow-x: auto; margin: 1.5rem 0; font-family: var(--ff-m); font-size: 13.5px; line-height: 1.6; -webkit-overflow-scrolling: touch; }
-.prose pre code { display: block; background: none; border: none; padding: 0; font-size: inherit; word-break: normal; white-space: pre; min-width: 0; }
+.prose pre { position: relative; background: var(--bg-d); border: 1px solid var(--ln); padding: var(--s5) var(--s4) var(--s4); overflow-x: hidden; margin: 1.5rem 0; font-family: var(--ff-m); font-size: 13.5px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; }
+.prose pre code { display: block; background: none; border: none; padding: 0; font-size: inherit; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; min-width: 0; }
 /* Fenêtre type éditeur / terminal autour de chaque bloc de code (voir ArticleBody.tsx) */
 .code-window { margin: 1.5rem 0; border: 1px solid var(--ln); background: var(--bg-d); overflow: hidden; box-shadow: 2px 2px 0 var(--ln-h); }
 .cw-bar { display: flex; align-items: center; gap: 10px; padding: 7px 12px; background: var(--bg-r); border-bottom: 1px solid var(--ln); }
@@ -908,10 +908,12 @@ a.tag:hover { color: var(--ac); border-color: var(--ac); }
 .cw-copy { margin-left: auto; flex-shrink: 0; font-family: var(--ff-m); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; padding: 3px 8px; cursor: pointer; color: var(--ink-d); background: var(--bg-d); border: 1px solid var(--ln-h); transition: color .15s, border-color .15s; }
 .cw-copy:hover { color: var(--ac); border-color: var(--ac); }
 .cw-copy.is-copied { color: var(--ac); border-color: var(--ac); }
-.cw-body { display: flex; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.cw-gutter { flex: 0 0 auto; position: sticky; left: 0; user-select: none; text-align: right; padding: 14px 12px; white-space: pre; font-family: var(--ff-m); font-size: 13.5px; line-height: 1.6; color: var(--ink-f); opacity: .45; background: var(--bg-d); border-right: 1px solid var(--ln); }
-.code-window pre { margin: 0 !important; border: 0 !important; box-shadow: none !important; overflow: visible; padding: 14px 16px; flex: 1 1 auto; background: transparent; }
-.code-window--term pre { padding-left: 16px; }
+.cw-code { font-family: var(--ff-m); font-size: 13.5px; line-height: 1.6; padding: 12px 0; overflow: hidden; }
+.cw-code--term { padding: 14px 16px; }
+.cw-row { display: flex; align-items: flex-start; padding: 0 16px; }
+.cw-ln { flex: 0 0 2.2em; margin-right: 14px; text-align: right; color: var(--ink-f); opacity: .4; user-select: none; }
+.cw-txt { flex: 1 1 auto; min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; }
+.cw-row .cw-txt { min-height: 1.6em; }
 .prose ul { padding-left: 1.5em; margin-bottom: 1.4em; }
 .prose ul li { list-style: disc; margin-bottom: 0.4em; }
 
