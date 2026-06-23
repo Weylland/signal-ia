@@ -21,10 +21,13 @@ const DIFFICULTIES: { value: Difficulty; labelFr: string; labelEn: string }[] = 
   { value: "avance", labelFr: "avancé", labelEn: "advanced" },
 ];
 
+const normalize = (s: string) =>
+  s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+
 export default async function TutosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ difficulty?: string; page?: string }>;
+  searchParams: Promise<{ difficulty?: string; page?: string; q?: string }>;
 }) {
   const params = await searchParams;
   const lang = await getLang();
@@ -33,10 +36,23 @@ export default async function TutosPage({
   const locale = en ? "en-GB" : "fr-FR";
 
   const difficulty = DIFFICULTIES.find((d) => d.value === params.difficulty)?.value;
+  const q = (params.q ?? "").trim();
   const page = parsePage(params.page);
-  const allTutos = await getAllArticles({ type: "tuto", difficulty });
+
+  let allTutos = await getAllArticles({ type: "tuto", difficulty });
+  if (q) {
+    const needle = normalize(q);
+    allTutos = allTutos.filter((tt) => {
+      const loc = localizeMeta(tt, lang);
+      return normalize(`${loc.title} ${loc.excerpt} ${tt.tags.join(" ")}`).includes(needle);
+    });
+  }
+
   const { slice: tutos, totalPages } = paginate(allTutos, page);
   const offset = (Math.min(page, totalPages) - 1) * 9;
+  const pageQuery: Record<string, string> = {};
+  if (difficulty) pageQuery.difficulty = difficulty;
+  if (q) pageQuery.q = q;
 
   return (
     <div className="-mt-10">
@@ -45,14 +61,61 @@ export default async function TutosPage({
         subtitle={en ? "Practical guides. Code that actually runs." : "Guides pratiques. Du code qui tourne vraiment."}
       />
       <PageBand>
+        {/* Recherche */}
+        <form method="get" className="mb-6 flex flex-wrap items-center gap-3">
+          {difficulty && <input type="hidden" name="difficulty" value={difficulty} />}
+          <input
+            type="search"
+            name="q"
+            defaultValue={q}
+            placeholder={en ? "Search tutorials…" : "Rechercher un tuto…"}
+            aria-label={en ? "Search tutorials" : "Rechercher un tuto"}
+            className="inp inp-sm"
+            style={{ width: 280, maxWidth: "100%" }}
+          />
+          <button type="submit" className="btn btn-sm btn-p">
+            {en ? "Search" : "Rechercher"}
+          </button>
+          {q && (
+            <Link
+              href={difficulty ? `/tutos?difficulty=${difficulty}` : "/tutos"}
+              className="btn btn-sm btn-g"
+              style={{ color: "var(--ink-f)" }}
+            >
+              × {en ? "Clear" : "Effacer"}
+            </Link>
+          )}
+        </form>
+
         {/* Filtres niveau */}
         <TutosFilter
           current={difficulty ?? null}
+          q={q || undefined}
           difficulties={DIFFICULTIES.map((d) => ({ value: d.value, label: en ? d.labelEn : d.labelFr }))}
           allLabel={en ? "All levels" : "Tous niveaux"}
         />
 
-        {tutos.length === 0 ? (
+        {q && (
+          <p className="mb-6 font-mono text-[11px] text-[var(--ink-f)]">
+            {allTutos.length}{" "}
+            {en
+              ? `result${allTutos.length > 1 ? "s" : ""} for "${q}"`
+              : `résultat${allTutos.length > 1 ? "s" : ""} pour « ${q} »`}
+          </p>
+        )}
+
+        {tutos.length === 0 && q ? (
+          <p className="font-serif text-[15px] text-[var(--ink-d)]">
+            {en ? `No tutorial matches "${q}".` : `Aucun tuto ne correspond à « ${q} ».`}{" "}
+            <Link
+              href={difficulty ? `/tutos?difficulty=${difficulty}` : "/tutos"}
+              className="text-[var(--ac)] underline"
+            >
+              {en ? "Clear the search" : "Effacer la recherche"}
+            </Link>
+            .
+          </p>
+        ) : tutos.length === 0 ? (
           <div className="flex flex-col gap-6">
             <p className="font-serif text-[15px] text-[var(--ink-d)]">
               {t.tutosEmpty}{" "}
@@ -128,7 +191,7 @@ export default async function TutosPage({
           page={page}
           totalPages={totalPages}
           basePath="/tutos"
-          query={difficulty ? { difficulty } : undefined}
+          query={Object.keys(pageQuery).length ? pageQuery : undefined}
         />
       </PageBand>
     </div>

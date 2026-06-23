@@ -4,17 +4,21 @@ import { useRouter, usePathname } from "next/navigation";
 
 type Props = {
   current: string | null;
+  q?: string;
   difficulties: { value: string; label: string }[];
   allLabel: string;
 };
 
-export function TutosFilter({ current, difficulties, allLabel }: Props) {
+export function TutosFilter({ current, q, difficulties, allLabel }: Props) {
   const router = useRouter();
   const pathname = usePathname();
 
   function set(value: string | null) {
-    const url = value ? `${pathname}?difficulty=${value}` : pathname;
-    router.push(url);
+    const params = new URLSearchParams();
+    if (value) params.set("difficulty", value);
+    if (q) params.set("q", q);
+    const qs = params.toString();
+    router.push(qs ? `${pathname}?${qs}` : pathname);
   }
 
   return (
