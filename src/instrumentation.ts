@@ -5,6 +5,7 @@ export async function register() {
     const { runBackup } = await import("./lib/backup");
     const { sendWeeklyDigest } = await import("./lib/newsletter");
     const { runXScheduled } = await import("./lib/x");
+    const { pruneOldPageViews } = await import("./lib/analytics");
 
     const intervalMin = process.env.PIPELINE_INTERVAL_MIN
       ? parseInt(process.env.PIPELINE_INTERVAL_MIN, 10)
@@ -23,6 +24,12 @@ export async function register() {
         .catch((err: unknown) =>
           console.error("[backup] erreur :", err instanceof Error ? err.message : err)
         );
+      try {
+        const deleted = pruneOldPageViews(180);
+        if (deleted > 0) console.log(`[analytics] purge : ${deleted} évènements > 180j supprimés`);
+      } catch (err) {
+        console.error("[analytics] purge erreur :", err instanceof Error ? err.message : err);
+      }
     });
 
     // Digest newsletter hebdo : mardi 9h (heure de Paris)

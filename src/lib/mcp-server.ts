@@ -14,6 +14,7 @@ import { getSources, addSource, updateSource, deleteSource } from "./sources";
 import { getSubscribers } from "./newsletter";
 import { getSettings, saveSettings } from "./settings";
 import { getDb } from "./db";
+import { getAnalytics } from "./analytics";
 import { runPipeline } from "../../pipeline/run";
 
 export function createMcpServer() {
@@ -171,8 +172,18 @@ export function createMcpServer() {
       },
       {
         name: "get_analytics",
-        description: "Statistiques du site : vues, articles, abonnés, top articles",
-        inputSchema: { type: "object", properties: {} },
+        description:
+          "Statistiques du site : trafic (pages vues, visiteurs uniques, sources, appareils, pays), articles, abonnés, top pages/articles",
+        inputSchema: {
+          type: "object",
+          properties: {
+            range: {
+              type: "string",
+              enum: ["24h", "7d", "30d", "90d", "12m"],
+              description: "Période d'analyse du trafic (défaut : 30d)",
+            },
+          },
+        },
       },
       {
         name: "list_subscribers",
@@ -354,7 +365,24 @@ export function createMcpServer() {
             .prepare("SELECT slug, title, views FROM articles WHERE published = 1 ORDER BY views DESC LIMIT 10")
             .all();
           const subscribers = getSubscribers().length;
-          return ok({ stats, topArticles, subscribers });
+          const range = (["24h", "7d", "30d", "90d", "12m"].includes(args.range as string)
+            ? args.range
+            : "30d") as "24h" | "7d" | "30d" | "90d" | "12m";
+          const traffic = getAnalytics({ range });
+          return ok({
+            stats,
+            topArticles,
+            subscribers,
+            traffic: {
+              range: traffic.range,
+              kpis: traffic.kpis,
+              topPages: traffic.topPages,
+              referrers: traffic.referrers,
+              sections: traffic.sections,
+              devices: traffic.devices,
+              countries: traffic.countries,
+            },
+          });
         }
 
         case "list_subscribers": {

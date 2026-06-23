@@ -159,6 +159,30 @@ export function getDb(): Database.Database {
     );
   `);
 
+  // First-party, privacy-friendly traffic log. No raw IP stored: the visitor
+  // column is a daily-salted hash of ip+ua, so a visitor is unique per day and
+  // cannot be re-identified. Powers the admin analytics dashboard.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS page_views (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      path TEXT NOT NULL,
+      section TEXT NOT NULL DEFAULT 'other',
+      slug TEXT,
+      visitor TEXT NOT NULL,
+      is_unique INTEGER NOT NULL DEFAULT 0,
+      ref_host TEXT,
+      device TEXT NOT NULL DEFAULT 'desktop',
+      lang TEXT,
+      country TEXT,
+      is_bot INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_page_views_created ON page_views(created_at);
+    CREATE INDEX IF NOT EXISTS idx_page_views_visitor ON page_views(visitor, created_at);
+    CREATE INDEX IF NOT EXISTS idx_page_views_section ON page_views(section, created_at);
+    CREATE INDEX IF NOT EXISTS idx_page_views_slug ON page_views(slug, created_at);
+  `);
+
   addColumnIfMissing(db, "pending_news", "body_html", "TEXT");
   addColumnIfMissing(db, "sources", "article_count", "INTEGER NOT NULL DEFAULT 0");
   addColumnIfMissing(db, "sources", "avg_score", "REAL");

@@ -340,7 +340,7 @@ export default async function RootLayout({
         <Script id="sw-init" strategy="afterInteractive" dangerouslySetInnerHTML={{ __html: swInit }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }} />
         <div className="grain-layer" aria-hidden="true" />
-        <ConditionalLayout nav={nav} footer={footer}>
+        <ConditionalLayout nav={nav} footer={footer} lang={lang}>
           {children}
         </ConditionalLayout>
       </body>
