@@ -9,6 +9,9 @@ import {
   deleteArticle,
   setArticleTranslation,
   searchArticlesFts,
+  getAllTags,
+  renameTag,
+  deleteTag,
   getStats,
 } from "./articles";
 import { autoTranslateArticle } from "./translate";
@@ -160,6 +163,53 @@ export function createMcpServer() {
             slug: { type: "string" },
             hours: { type: "number", description: "Durée en heures (défaut : breakingDurationHours des réglages). 0 = retirer le statut." },
           },
+        },
+      },
+      {
+        name: "schedule_article",
+        description: "Planifie la publication d'un article à une date future (le passe en brouillon jusque-là).",
+        inputSchema: {
+          type: "object",
+          required: ["slug", "scheduled_at"],
+          properties: {
+            slug: { type: "string" },
+            scheduled_at: { type: "string", description: "Date ISO 8601 de publication (ex: 2026-06-25T09:00:00Z)" },
+          },
+        },
+      },
+      {
+        name: "unpublish_article",
+        description: "Repasse un article publié en brouillon (le retire du site sans le supprimer).",
+        inputSchema: {
+          type: "object",
+          required: ["slug"],
+          properties: { slug: { type: "string" } },
+        },
+      },
+      {
+        name: "list_tags",
+        description: "Liste tous les tags avec le nombre d'articles associés",
+        inputSchema: { type: "object", properties: {} },
+      },
+      {
+        name: "rename_tag",
+        description: "Renomme un tag (fusionne avec le tag cible s'il existe déjà)",
+        inputSchema: {
+          type: "object",
+          required: ["from", "to"],
+          properties: {
+            from: { type: "string", description: "Nom actuel du tag" },
+            to: { type: "string", description: "Nouveau nom" },
+          },
+        },
+      },
+      {
+        name: "delete_tag",
+        description: "Supprime un tag de tous les articles",
+        inputSchema: {
+          type: "object",
+          required: ["name"],
+          properties: { name: { type: "string" } },
         },
       },
       {
@@ -424,6 +474,37 @@ export function createMcpServer() {
           const until = hours > 0 ? new Date(Date.now() + hours * 3600_000).toISOString() : null;
           db.prepare("UPDATE articles SET breaking_until = ? WHERE id = ?").run(until, row.id);
           return ok({ slug: args.slug, breakingUntil: until });
+        }
+
+        case "schedule_article": {
+          const db = getDb();
+          const row = db.prepare("SELECT id FROM articles WHERE slug = ?").get(args.slug) as { id: number } | undefined;
+          if (!row) return err(`Article "${args.slug}" introuvable`);
+          const when = new Date(args.scheduled_at as string);
+          if (Number.isNaN(when.getTime())) return err("Date scheduled_at invalide");
+          db.prepare("UPDATE articles SET published = 0, scheduled_at = ? WHERE id = ?").run(when.toISOString(), row.id);
+          return ok({ slug: args.slug, scheduledAt: when.toISOString() });
+        }
+
+        case "unpublish_article": {
+          const db = getDb();
+          const res = db.prepare("UPDATE articles SET published = 0 WHERE slug = ?").run(args.slug);
+          if (res.changes === 0) return err(`Article "${args.slug}" introuvable`);
+          return ok({ slug: args.slug, published: false });
+        }
+
+        case "list_tags": {
+          return ok(await getAllTags({ includeDrafts: true }));
+        }
+
+        case "rename_tag": {
+          await renameTag(args.from as string, args.to as string);
+          return ok({ from: args.from, to: args.to });
+        }
+
+        case "delete_tag": {
+          await deleteTag(args.name as string);
+          return ok({ deleted: args.name });
         }
 
         case "delete_article": {
