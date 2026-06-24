@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { useEditor, EditorContent, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
+import { RawEmbed } from "./extensions/RawEmbed";
 
 const buttons: {
   label: string;
@@ -52,6 +54,12 @@ const buttons: {
     isActive: (e) => !!e?.isActive("blockquote"),
     run: (e) => e.chain().focus().toggleBlockquote().run(),
   },
+  {
+    label: "</>",
+    title: "Bloc de code",
+    isActive: (e) => !!e?.isActive("codeBlock"),
+    run: (e) => e.chain().focus().toggleCodeBlock().run(),
+  },
 ];
 
 export function RichTextEditor({
@@ -61,10 +69,14 @@ export function RichTextEditor({
   content: string;
   onChange: (html: string) => void;
 }) {
+  const [embedOpen, setEmbedOpen] = useState(false);
+  const [embedCode, setEmbedCode] = useState("");
+
   const editor = useEditor({
     extensions: [
       StarterKit,
       Link.configure({ openOnClick: false, defaultProtocol: "https" }),
+      RawEmbed,
     ],
     content,
     immediatelyRender: false,
@@ -75,6 +87,30 @@ export function RichTextEditor({
     },
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
   });
+
+  function openEmbed() {
+    if (!editor) return;
+    const current = editor.isActive("rawEmbed")
+      ? (editor.getAttributes("rawEmbed").html as string) ?? ""
+      : "";
+    setEmbedCode(current);
+    setEmbedOpen(true);
+  }
+
+  function applyEmbed() {
+    if (!editor) return;
+    const code = embedCode.trim();
+    if (!code) {
+      setEmbedOpen(false);
+      return;
+    }
+    if (editor.isActive("rawEmbed")) {
+      editor.chain().focus().updateAttributes("rawEmbed", { html: code }).run();
+    } else {
+      editor.chain().focus().setRawEmbed(code).run();
+    }
+    setEmbedOpen(false);
+  }
 
   function setLink() {
     if (!editor) return;
@@ -114,6 +150,16 @@ export function RichTextEditor({
         >
           Lien
         </button>
+        <button
+          type="button"
+          title="Schéma (HTML/SVG)"
+          onClick={openEmbed}
+          className={`border-2 border-ink px-2.5 py-1 text-xs font-bold transition-colors ${
+            editor?.isActive("rawEmbed") ? "bg-[var(--sunshine)]" : "bg-[var(--cream)] hover:bg-[var(--sunshine)]"
+          }`}
+        >
+          Schéma
+        </button>
         <span className="mx-1 w-px bg-ink/20" />
         <button
           type="button"
@@ -133,6 +179,47 @@ export function RichTextEditor({
         </button>
       </div>
       <EditorContent editor={editor} />
+
+      {embedOpen && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setEmbedOpen(false)}
+        >
+          <div
+            className="nb-card flex w-full max-w-[680px] flex-col gap-3 bg-[var(--cream)] p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-sm font-bold">Schéma — HTML / SVG brut</div>
+            <p className="text-xs opacity-70">
+              Colle ici le code d&apos;un schéma (SVG ou HTML). Il est stocké dans l&apos;article
+              (aucun fichier) et préservé à l&apos;édition.
+            </p>
+            <textarea
+              className="min-h-[280px] w-full border-2 border-ink bg-[var(--cream-2)] p-3 font-mono text-xs"
+              value={embedCode}
+              onChange={(e) => setEmbedCode(e.target.value)}
+              placeholder="<figure>…<svg>…</svg></figure>"
+              spellCheck={false}
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setEmbedOpen(false)}
+                className="border-2 border-ink bg-[var(--cream)] px-3 py-1 text-xs font-bold hover:bg-[var(--sunshine)]"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={applyEmbed}
+                className="border-2 border-ink bg-[var(--sunshine)] px-3 py-1 text-xs font-bold"
+              >
+                Insérer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
