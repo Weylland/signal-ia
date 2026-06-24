@@ -290,19 +290,24 @@ export async function runXScheduled(): Promise<XResult> {
   if (xPostsPerDay <= 0) return { skipped: "publication X désactivée (0 post/jour)" };
 
   const slots = computeSlots(xPostsPerDay, xFirstHour, xLastHour);
-  const done = postsTodayParis();
-  if (done >= slots.length) return { skipped: "quota du jour atteint" };
+  // FR et EN ont chacun leur propre compteur de quota (x_posts filtre par lang).
+  const doneFr = postsTodayParis("fr");
+  const doneEn = postsTodayParis("en");
+  if (doneFr >= slots.length && doneEn >= slots.length) return { skipped: "quota du jour atteint" };
 
   const { mins } = parisHourMinute();
   if (mins > 22 * 60) return { skipped: "trop tard pour publier aujourd'hui" };
-  if (mins < slots[done]) return { skipped: "prochain créneau pas encore arrivé" };
+
+  // Utilise le slot FR pour déterminer le créneau courant (langue de référence).
+  const slotIndex = Math.min(doneFr, slots.length - 1);
+  if (mins < slots[slotIndex]) return { skipped: "prochain créneau pas encore arrivé" };
 
   // Dernier créneau de la journée = tuto/insight ; les précédents = actu fraîche.
-  const prefer = xPostsPerDay >= 2 && done === slots.length - 1 ? "tuto" : "news";
-  // Poster FR et EN simultanément ; on retourne le résultat FR (le EN est fire-and-forget).
+  const prefer = xPostsPerDay >= 2 && slotIndex === slots.length - 1 ? "tuto" : "news";
+  // Poster FR et EN simultanément ; on retourne le résultat FR.
   const [result] = await Promise.all([
-    runXDigest("fr", { prefer }),
-    runXDigest("en", { prefer }),
+    doneFr < slots.length ? runXDigest("fr", { prefer }) : Promise.resolve({ skipped: "quota FR atteint" } as XResult),
+    doneEn < slots.length ? runXDigest("en", { prefer }) : Promise.resolve({ skipped: "quota EN atteint" } as XResult),
   ]);
   return result;
 }

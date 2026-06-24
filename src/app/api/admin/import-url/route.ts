@@ -26,10 +26,16 @@ export async function POST(req: NextRequest) {
     html.match(/property="og:description"\s+content="([^"]+)"/i);
   const excerpt = descMatch ? descMatch[1].trim().replace(/\s+/g, " ").slice(0, 300) : "";
 
-  // Extract OG image
+  // Extract OG image — validate URL to avoid javascript: or data: injection
   const imageMatch = html.match(/property="og:image"\s+content="([^"]+)"/i) ||
     html.match(/name="twitter:image"\s+content="([^"]+)"/i);
-  const image = imageMatch ? imageMatch[1].trim() : null;
+  let image: string | null = null;
+  if (imageMatch) {
+    try {
+      const u = new URL(imageMatch[1].trim());
+      if (u.protocol === "https:") image = u.href;
+    } catch {}
+  }
 
   // If Mistral is available, generate a better summary
   const key = process.env.MISTRAL_API_KEY;

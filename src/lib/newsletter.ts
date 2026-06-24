@@ -38,9 +38,8 @@ export async function sendNewsletter(subject: string, html: string): Promise<{ s
   let sent = 0;
   let errors = 0;
 
-  // Resend supports batch up to 100 emails
-  for (let i = 0; i < subscribers.length; i += 50) {
-    const batch = subscribers.slice(i, i + 50);
+  for (let i = 0; i < subscribers.length; i += 100) {
+    const batch = subscribers.slice(i, i + 100);
     const messages = await Promise.all(
       batch.map(async (s) => ({
         from,

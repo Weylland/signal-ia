@@ -30,7 +30,7 @@ export async function register() {
       } catch (err) {
         console.error("[analytics] purge erreur :", err instanceof Error ? err.message : err);
       }
-    });
+    }, { timezone: "Europe/Paris" });
 
     // Digest newsletter hebdo : mardi 9h (heure de Paris)
     cron.default.schedule(
