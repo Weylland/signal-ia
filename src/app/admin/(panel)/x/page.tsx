@@ -50,6 +50,9 @@ export default async function XPage() {
         postsPerDay={settings.xPostsPerDay}
         firstHour={settings.xFirstHour}
         lastHour={settings.xLastHour}
+        tutoCooldownDays={settings.xTutoCooldownDays}
+        newsMaxAgeDays={settings.xNewsMaxAgeDays}
+        generateTuto={settings.xGenerateTuto}
       />
     </div>
   );

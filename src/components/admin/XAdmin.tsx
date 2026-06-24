@@ -22,6 +22,9 @@ export function XAdmin({
   postsPerDay: initialPostsPerDay,
   firstHour: initialFirstHour,
   lastHour: initialLastHour,
+  tutoCooldownDays: initialTutoCooldown,
+  newsMaxAgeDays: initialNewsMaxAge,
+  generateTuto: initialGenerateTuto,
 }: {
   configured: boolean;
   posts: XPost[];
@@ -30,6 +33,9 @@ export function XAdmin({
   postsPerDay: number;
   firstHour: number;
   lastHour: number;
+  tutoCooldownDays: number;
+  newsMaxAgeDays: number;
+  generateTuto: boolean;
 }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
@@ -42,6 +48,11 @@ export function XAdmin({
   const [schedBusy, setSchedBusy] = useState(false);
   const [schedMsg, setSchedMsg] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
+  const [tutoCooldown, setTutoCooldown] = useState(initialTutoCooldown);
+  const [newsMaxAge, setNewsMaxAge] = useState(initialNewsMaxAge);
+  const [genTuto, setGenTuto] = useState(initialGenerateTuto);
+  const [contentBusy, setContentBusy] = useState(false);
+  const [contentMsg, setContentMsg] = useState<string | null>(null);
   const router = useRouter();
 
   const [cText, setCText] = useState("");
@@ -135,6 +146,23 @@ export function XAdmin({
     if (res.ok) router.refresh();
   }
 
+  async function saveContent() {
+    setContentBusy(true);
+    setContentMsg(null);
+    const res = await fetch("/api/admin/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        xTutoCooldownDays: tutoCooldown,
+        xNewsMaxAgeDays: newsMaxAge,
+        xGenerateTuto: genTuto,
+      }),
+    });
+    setContentBusy(false);
+    setContentMsg(res.ok ? "Réglages enregistrés." : "Erreur lors de l'enregistrement.");
+    if (res.ok) router.refresh();
+  }
+
   // Aperçu des créneaux calculés (mêmes règles que le serveur), pour montrer le résultat.
   const slotPreview = (() => {
     if (postsPerDay <= 0) return "Publication en pause (0 post/jour)";
@@ -221,6 +249,42 @@ export function XAdmin({
             {schedBusy ? "Enregistrement…" : "Enregistrer la programmation"}
           </button>
           {schedMsg && <span style={{ ...mono, color: schedMsg.includes("Erreur") ? "var(--er)" : "var(--ok)" }}>{schedMsg}</span>}
+        </div>
+      </div>
+
+      <div style={card}>
+        <div style={{ fontFamily: "var(--ff-h)", fontSize: 18, fontWeight: 700, marginBottom: "var(--s3)" }}>Sélection du contenu</div>
+        <p style={{ ...mono, color: "var(--ink-f)", marginBottom: "var(--s5)" }}>
+          Quels articles le système a le droit de publier automatiquement, et que faire quand il n&apos;y a plus de tuto frais à partager.
+        </p>
+        <div style={{ display: "flex", gap: "var(--s4)", flexWrap: "wrap", marginBottom: "var(--s4)" }}>
+          <div style={{ flex: "1 1 160px" }}>
+            <label style={labelS} htmlFor="x-cooldown">Cooldown tuto (jours)</label>
+            <input id="x-cooldown" className="inp" type="number" min={1} max={365} value={tutoCooldown}
+              onChange={(e) => setTutoCooldown(Math.max(1, Math.min(365, Number(e.target.value))))} style={{ width: "100%" }} />
+            <span style={{ ...mono, fontSize: 10, color: "var(--ink-f)" }}>Délai avant qu&apos;un même tuto puisse être re-posté.</span>
+          </div>
+          <div style={{ flex: "1 1 160px" }}>
+            <label style={labelS} htmlFor="x-newsage">Fraîcheur max news (jours)</label>
+            <input id="x-newsage" className="inp" type="number" min={1} max={30} value={newsMaxAge}
+              onChange={(e) => setNewsMaxAge(Math.max(1, Math.min(30, Number(e.target.value))))} style={{ width: "100%" }} />
+            <span style={{ ...mono, fontSize: 10, color: "var(--ink-f)" }}>Âge max d&apos;une actu pour être tweetée.</span>
+          </div>
+        </div>
+        <label style={{ display: "flex", alignItems: "flex-start", gap: "var(--s3)", marginBottom: "var(--s5)", cursor: "pointer" }}>
+          <input type="checkbox" checked={genTuto} onChange={(e) => setGenTuto(e.target.checked)} style={{ marginTop: 3 }} />
+          <span style={{ ...mono, color: "var(--ink)" }}>
+            Générer un tuto inédit quand le stock est épuisé
+            <span style={{ display: "block", fontSize: 11, color: "var(--ink-f)", marginTop: 2 }}>
+              Activé : si aucun tuto frais n&apos;est dispo au créneau du soir, le système en écrit un (publié + traduit EN), puis le poste. Suit ton réglage LLM (Claude si activé, sinon Mistral). Désactivé : le créneau prend une actu à la place.
+            </span>
+          </span>
+        </label>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--s3)", flexWrap: "wrap" }}>
+          <button className="btn btn-p" onClick={saveContent} disabled={contentBusy} style={{ ...mono }}>
+            {contentBusy ? "Enregistrement…" : "Enregistrer la sélection"}
+          </button>
+          {contentMsg && <span style={{ ...mono, color: contentMsg.includes("Erreur") ? "var(--er)" : "var(--ok)" }}>{contentMsg}</span>}
         </div>
       </div>
 

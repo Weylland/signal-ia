@@ -23,6 +23,9 @@ export type SiteSettings = {
   xPostsPerDay: number;
   xFirstHour: number;
   xLastHour: number;
+  xTutoCooldownDays: number;
+  xNewsMaxAgeDays: number;
+  xGenerateTuto: boolean;
   llmProvider: "mistral" | "claude";
 };
 
@@ -50,6 +53,9 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   xPostsPerDay: 2,
   xFirstHour: 11,
   xLastHour: 18,
+  xTutoCooldownDays: 60,
+  xNewsMaxAgeDays: 2,
+  xGenerateTuto: true,
   llmProvider: "mistral",
 };
 

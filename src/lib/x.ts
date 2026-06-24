@@ -5,6 +5,7 @@ import { generateXCard } from "./x-card";
 import { parisOffsetMs } from "./status";
 import { callLLM } from "./llm";
 import { computeSlots } from "./x-schedule";
+import { generateTuto } from "./tuto-generator";
 
 export type PostLang = "fr" | "en";
 
@@ -42,8 +43,8 @@ function parseTldr(raw: unknown): string[] {
 
 // Actu importante récente, jamais postée sur ce compte/langue.
 function pickNews(lang: PostLang): Candidate | null {
-  const twoDaysAgo = new Date(Date.now() - 2 * 24 * 3600_000).toISOString();
-  const { breakingThreshold } = getSettings();
+  const { breakingThreshold, xNewsMaxAgeDays } = getSettings();
+  const maxAge = new Date(Date.now() - Math.max(1, xNewsMaxAgeDays) * 24 * 3600_000).toISOString();
   const row = getDb()
     .prepare(
       `SELECT slug, title, excerpt, tldr, type, title_en, excerpt_en, tldr_en FROM articles a
@@ -54,14 +55,15 @@ function pickNews(lang: PostLang): Candidate | null {
        ORDER BY COALESCE(score, 0) DESC, date DESC
        LIMIT 1`
     )
-    .get(twoDaysAgo, breakingThreshold, lang) as Omit<Candidate, "tldr" | "tldrEn"> & { tldr: string; tldr_en: string | null; title_en: string | null; excerpt_en: string | null } | undefined;
+    .get(maxAge, breakingThreshold, lang) as Omit<Candidate, "tldr" | "tldrEn"> & { tldr: string; tldr_en: string | null; title_en: string | null; excerpt_en: string | null } | undefined;
   if (!row) return null;
   return { ...row, tldr: parseTldr(row.tldr), titleEn: row.title_en, excerptEn: row.excerpt_en, tldrEn: row.tldr_en ? parseTldr(row.tldr_en) : null };
 }
 
-// Tuto evergreen pas posté depuis au moins 60 jours ; jamais posté en priorité, sinon le plus ancien.
+// Tuto evergreen pas posté depuis le cooldown réglé ; jamais posté en priorité, sinon le plus ancien.
 function pickTuto(lang: PostLang): Candidate | null {
-  const cooldown = new Date(Date.now() - 60 * 24 * 3600_000).toISOString();
+  const cooldownDays = Math.max(1, getSettings().xTutoCooldownDays);
+  const cooldown = new Date(Date.now() - cooldownDays * 24 * 3600_000).toISOString();
   const row = getDb()
     .prepare(
       `SELECT slug, title, excerpt, tldr, type, title_en, excerpt_en, tldr_en FROM articles a
@@ -206,8 +208,26 @@ export async function runXDigest(
   if (!client && !dryRun) return { skipped: "X non configuré (clés manquantes)" };
   if (!dryRun && postedRecently(lang)) return { skipped: `déjà posté il y a moins de ${MIN_GAP_MINUTES} min` };
 
-  const candidate =
-    prefer === "tuto" ? (pickTuto(lang) ?? pickNews(lang)) : (pickNews(lang) ?? pickTuto(lang));
+  // Au plus 1 tuto par jour : un créneau actu sans actu éligible ne doit jamais se
+  // rabattre indéfiniment sur des tutos (cause de la surpublication). Une fois le tuto
+  // du jour posté, les créneaux suivants n'acceptent plus que des actus.
+  const tutoAllowed = tutosTodayParis(lang) === 0;
+  let candidate: Candidate | null;
+  if (prefer === "tuto" && tutoAllowed) {
+    // Créneau tuto du soir : on pioche un tuto evergreen jamais posté ; s'il n'en reste
+    // aucun de frais, on en GÉNÈRE un (publié + traduit EN pour le site) puis on le poste.
+    candidate = pickTuto(lang);
+    if (!candidate && !dryRun && getSettings().xGenerateTuto) {
+      const slug = await generateTuto();
+      if (slug) candidate = pickTuto(lang);
+    }
+    candidate = candidate ?? pickNews(lang);
+  } else if (prefer === "tuto") {
+    // Tuto déjà publié aujourd'hui : ce créneau ne prend plus que de l'actu.
+    candidate = pickNews(lang);
+  } else {
+    candidate = pickNews(lang) ?? (tutoAllowed ? pickTuto(lang) : null);
+  }
   if (!candidate) return { skipped: "rien de pertinent à poster" };
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://watch-ia.com";
@@ -281,6 +301,20 @@ function postsTodayParis(lang: PostLang = "fr"): number {
   return row.c;
 }
 
+// Tutos déjà publiés aujourd'hui (jour Paris) pour cette langue. Plafonne les tutos à
+// 1/jour/langue : sans ça, chaque créneau actu sans actu éligible se rabat sur un tuto
+// et on en publie autant que de créneaux vides.
+function tutosTodayParis(lang: PostLang): number {
+  const row = getDb()
+    .prepare(
+      `SELECT COUNT(*) AS c FROM x_posts x
+       JOIN articles a ON a.slug = x.article_slug
+       WHERE x.lang = ? AND x.posted_at >= ? AND a.type = 'tuto'`
+    )
+    .get(lang, todayStartIso()) as { c: number };
+  return row.c;
+}
+
 // Vérificateur de publication, appelé périodiquement (toutes les 30 min) et au boot.
 // Pilote 100 % des posts auto depuis les réglages : nombre/jour + fenêtre horaire.
 // Publie au plus UN créneau par appel ; rattrape naturellement un créneau raté
@@ -290,26 +324,25 @@ export async function runXScheduled(): Promise<XResult> {
   if (xPostsPerDay <= 0) return { skipped: "publication X désactivée (0 post/jour)" };
 
   const slots = computeSlots(xPostsPerDay, xFirstHour, xLastHour);
-  // FR et EN ont chacun leur propre compteur de quota (x_posts filtre par lang).
-  const doneFr = postsTodayParis("fr");
-  const doneEn = postsTodayParis("en");
-  if (doneFr >= slots.length && doneEn >= slots.length) return { skipped: "quota du jour atteint" };
-
   const { mins } = parisHourMinute();
   if (mins > 22 * 60) return { skipped: "trop tard pour publier aujourd'hui" };
 
-  // Utilise le slot FR pour déterminer le créneau courant (langue de référence).
-  const slotIndex = Math.min(doneFr, slots.length - 1);
-  if (mins < slots[slotIndex]) return { skipped: "prochain créneau pas encore arrivé" };
+  // Le créneau courant est piloté par l'HEURE, pas par le nombre de posts déjà faits :
+  // un créneau actu sans actu disponible est sauté sans bloquer les créneaux suivants,
+  // et un redéploiement ne compresse plus plusieurs créneaux d'un coup hors fenêtre.
+  const dueSlots = slots.filter((s) => mins >= s).length;
+  if (dueSlots === 0) return { skipped: "prochain créneau pas encore arrivé" };
+
+  // Le compte X est francophone : on ne publie qu'en FR, donc le nombre de posts du jour
+  // colle exactement au réglage de l'admin. Les versions EN existent pour le site, pas pour X.
+  const done = postsTodayParis("fr");
+  if (done >= dueSlots) return { skipped: "quota du jour atteint" };
 
   // Dernier créneau de la journée = tuto/insight ; les précédents = actu fraîche.
-  const prefer = xPostsPerDay >= 2 && slotIndex === slots.length - 1 ? "tuto" : "news";
-  // Poster FR et EN simultanément ; on retourne le résultat FR.
-  const [result] = await Promise.all([
-    doneFr < slots.length ? runXDigest("fr", { prefer }) : Promise.resolve({ skipped: "quota FR atteint" } as XResult),
-    doneEn < slots.length ? runXDigest("en", { prefer }) : Promise.resolve({ skipped: "quota EN atteint" } as XResult),
-  ]);
-  return result;
+  // Le plafond strict de 1 tuto/jour est appliqué dans runXDigest.
+  const prefer = xPostsPerDay >= 2 && dueSlots === slots.length ? "tuto" : "news";
+
+  return runXDigest("fr", { prefer });
 }
 
 export type XCustomResult =
