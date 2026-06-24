@@ -1,5 +1,6 @@
 import { getDb } from "./db";
 import { createArticle } from "./articles";
+import { autoTranslateArticle } from "./translate";
 
 /**
  * Publie une news en attente (pending_news) : génère un article via Mistral à
@@ -87,6 +88,7 @@ export async function publishPendingItem(id: number): Promise<string> {
   });
 
   db.prepare("UPDATE pending_news SET status = 'published', article_slug = ? WHERE id = ?").run(slug, id);
+  autoTranslateArticle(slug).catch(() => {});
   return slug;
 }
 

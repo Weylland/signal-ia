@@ -14,6 +14,9 @@ type Candidate = {
   excerpt: string;
   tldr: string[];
   type: "news" | "tuto";
+  titleEn?: string | null;
+  excerptEn?: string | null;
+  tldrEn?: string[] | null;
 };
 
 function getClient(): TwitterApi | null {
@@ -43,7 +46,7 @@ function pickNews(lang: PostLang): Candidate | null {
   const { breakingThreshold } = getSettings();
   const row = getDb()
     .prepare(
-      `SELECT slug, title, excerpt, tldr, type FROM articles a
+      `SELECT slug, title, excerpt, tldr, type, title_en, excerpt_en, tldr_en FROM articles a
        WHERE type = 'news' AND published = 1
          AND date >= ?
          AND COALESCE(score, 0) >= ?
@@ -51,8 +54,9 @@ function pickNews(lang: PostLang): Candidate | null {
        ORDER BY COALESCE(score, 0) DESC, date DESC
        LIMIT 1`
     )
-    .get(twoDaysAgo, breakingThreshold, lang) as Omit<Candidate, "tldr"> & { tldr: string } | undefined;
-  return row ? { ...row, tldr: parseTldr(row.tldr) } : null;
+    .get(twoDaysAgo, breakingThreshold, lang) as Omit<Candidate, "tldr" | "tldrEn"> & { tldr: string; tldr_en: string | null; title_en: string | null; excerpt_en: string | null } | undefined;
+  if (!row) return null;
+  return { ...row, tldr: parseTldr(row.tldr), titleEn: row.title_en, excerptEn: row.excerpt_en, tldrEn: row.tldr_en ? parseTldr(row.tldr_en) : null };
 }
 
 // Tuto evergreen pas posté depuis au moins 60 jours ; jamais posté en priorité, sinon le plus ancien.
@@ -60,7 +64,7 @@ function pickTuto(lang: PostLang): Candidate | null {
   const cooldown = new Date(Date.now() - 60 * 24 * 3600_000).toISOString();
   const row = getDb()
     .prepare(
-      `SELECT slug, title, excerpt, tldr, type FROM articles a
+      `SELECT slug, title, excerpt, tldr, type, title_en, excerpt_en, tldr_en FROM articles a
        WHERE type = 'tuto' AND published = 1
          AND NOT EXISTS (
            SELECT 1 FROM x_posts x
@@ -72,8 +76,9 @@ function pickTuto(lang: PostLang): Candidate | null {
          RANDOM()
        LIMIT 1`
     )
-    .get(lang, cooldown, lang, lang) as Omit<Candidate, "tldr"> & { tldr: string } | undefined;
-  return row ? { ...row, tldr: parseTldr(row.tldr) } : null;
+    .get(lang, cooldown, lang, lang) as Omit<Candidate, "tldr" | "tldrEn"> & { tldr: string; tldr_en: string | null; title_en: string | null; excerpt_en: string | null } | undefined;
+  if (!row) return null;
+  return { ...row, tldr: parseTldr(row.tldr), titleEn: row.title_en, excerptEn: row.excerpt_en, tldrEn: row.tldr_en ? parseTldr(row.tldr_en) : null };
 }
 
 const MAX_LEN = 278;
@@ -103,12 +108,16 @@ function cleanTruncate(text: string, max: number = MAX_LEN): string {
 
 // Génère le texte du tweet : un angle, voix humaine, pas de hashtag ni emoji en rafale.
 async function generatePostText(a: Candidate, lang: PostLang, maxLen: number = MAX_LEN): Promise<string> {
-  const fallback = cleanTruncate(a.title, maxLen);
+  const fallback = cleanTruncate((lang === "en" && a.titleEn) ? a.titleEn : a.title, maxLen);
 
   const isTuto = a.type === "tuto";
   const kind = isTuto ? "tutoriel pratique (contenu intemporel)" : "actualité du moment";
-  const points = a.tldr.length ? `\nFaits / points clés (sers-t'en) :\n- ${a.tldr.join("\n- ")}` : "";
-  const langRule = lang === "fr" ? "Écris en français." : "Write in English.";
+  const isEn = lang === "en";
+  const title = (isEn && a.titleEn) ? a.titleEn : a.title;
+  const excerpt = (isEn && a.excerptEn) ? a.excerptEn : a.excerpt;
+  const tldr = (isEn && a.tldrEn?.length) ? a.tldrEn : a.tldr;
+  const points = tldr.length ? `\nFaits / points clés (sers-t'en) :\n- ${tldr.join("\n- ")}` : "";
+  const langRule = isEn ? "Write in English." : "Écris en français.";
 
   // Un tuto se vend par la VALEUR REPRODUCTIBLE (ce que le lecteur saura faire),
   // pas par une prise de position comme une actu. D'où deux briefs distincts.
@@ -139,8 +148,8 @@ async function generatePostText(a: Candidate, lang: PostLang, maxLen: number = M
       role: "user",
       content: `${intro}
 
-Sujet (${kind}) : "${a.title}"
-${a.excerpt}${points}
+Sujet (${kind}) : "${title}"
+${excerpt}${points}
 
 ${goal}
 
@@ -290,7 +299,12 @@ export async function runXScheduled(): Promise<XResult> {
 
   // Dernier créneau de la journée = tuto/insight ; les précédents = actu fraîche.
   const prefer = xPostsPerDay >= 2 && done === slots.length - 1 ? "tuto" : "news";
-  return runXDigest("fr", { prefer });
+  // Poster FR et EN simultanément ; on retourne le résultat FR (le EN est fire-and-forget).
+  const [result] = await Promise.all([
+    runXDigest("fr", { prefer }),
+    runXDigest("en", { prefer }),
+  ]);
+  return result;
 }
 
 export type XCustomResult =
