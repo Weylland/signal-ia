@@ -168,7 +168,7 @@ INTERDIT :
 ${examples}
 
 Longueur : entre 180 et 240 caractères MAXIMUM (compte-les), et termine TOUJOURS sur une phrase complète ponctuée (. ! ?) — jamais coupé, jamais de « … » final. Renvoie un JSON STRICT : {"text": "..."}`,
-    }], true, true, 0.8);
+    }], true, "tweets", 0.8);
     const parsed = JSON.parse(raw) as { text?: string };
     const text = parsed.text?.trim();
     if (!text) return fallback;

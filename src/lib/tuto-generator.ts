@@ -85,7 +85,7 @@ Réponds en JSON STRICT :
         },
       ],
       true,
-      true,
+      "tutos",
       0.7
     );
     parsed = JSON.parse(raw) as GeneratedTuto;

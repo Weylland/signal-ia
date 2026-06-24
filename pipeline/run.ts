@@ -318,7 +318,7 @@ Le tldr : 3 phrases courtes, autonomes (lisibles hors contexte), sans se répét
       },
     ],
     true,
-    true
+    "articles"
   );
 
   const parsed = JSON.parse(content) as WrittenArticle;
@@ -350,7 +350,7 @@ Réponds en JSON strict : {"title": "...", "excerpt": "...", "markdown": "...", 
         },
       ],
       true,
-      true
+      "translation"
     );
     const parsed = JSON.parse(content);
     if (!parsed.title || !parsed.markdown) return null;

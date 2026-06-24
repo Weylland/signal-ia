@@ -26,7 +26,12 @@ export type SiteSettings = {
   xTutoCooldownDays: number;
   xNewsMaxAgeDays: number;
   xGenerateTuto: boolean;
-  llmProvider: "mistral" | "claude";
+  // Choix du modèle par tâche. La classification (scoring/groupage/dédup) reste
+  // toujours sur Mistral (gratuit) et n'est pas réglable.
+  llmArticles: "mistral" | "claude";
+  llmTutos: "mistral" | "claude";
+  llmTweets: "mistral" | "claude";
+  llmTranslation: "mistral" | "claude";
 };
 
 export const DEFAULT_SETTINGS: SiteSettings = {
@@ -56,7 +61,10 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   xTutoCooldownDays: 60,
   xNewsMaxAgeDays: 2,
   xGenerateTuto: true,
-  llmProvider: "mistral",
+  llmArticles: "mistral",
+  llmTutos: "mistral",
+  llmTweets: "mistral",
+  llmTranslation: "mistral",
 };
 
 export function getSettings(): SiteSettings {

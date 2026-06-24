@@ -51,7 +51,7 @@ async function callClaude(messages: LLMMessage[], json: boolean, temperature: nu
     },
     body: JSON.stringify({
       model: CLAUDE_MODEL,
-      max_tokens: 2048,
+      max_tokens: 4096,
       temperature,
       system: systemPrompt,
       messages: userMsgs,
@@ -66,23 +66,40 @@ async function callClaude(messages: LLMMessage[], json: boolean, temperature: nu
   return text;
 }
 
+// Tâches LLM. "scoring" couvre toute la classification (scoring/groupage/dédup) et
+// reste TOUJOURS sur Mistral (gratuit). Les autres suivent le menu admin par tâche.
+export type LLMTask = "scoring" | "articles" | "tutos" | "tweets" | "translation";
+
+function providerForTask(task: LLMTask): "mistral" | "claude" {
+  if (task === "scoring") return "mistral";
+  const s = getSettings();
+  switch (task) {
+    case "articles":
+      return s.llmArticles;
+    case "tutos":
+      return s.llmTutos;
+    case "tweets":
+      return s.llmTweets;
+    case "translation":
+      return s.llmTranslation;
+  }
+}
+
 /**
- * Appel LLM routé selon le réglage llmProvider.
- * @param premium  si true ET mode "claude", utilise Claude ; sinon Mistral.
+ * Appel LLM routé par tâche selon les réglages admin (un modèle par tâche).
+ * Si la tâche est réglée sur Claude et que Claude échoue (crédits, rate-limit, panne),
+ * on dégrade automatiquement sur Mistral plutôt que d'échouer.
  */
 export async function callLLM(
   messages: LLMMessage[],
   json = false,
-  premium = false,
+  task: LLMTask = "scoring",
   temperature = 0.4
 ): Promise<string> {
-  const { llmProvider } = getSettings();
-  if (premium && llmProvider === "claude") {
+  if (providerForTask(task) === "claude") {
     try {
       return await callClaude(messages, json, temperature);
     } catch (err) {
-      // Claude indisponible (crédits épuisés, rate-limit, panne) : on dégrade sur Mistral
-      // plutôt que d'échouer ou de poster un contenu brut. La qualité baisse, le site continue.
       console.error(
         "[llm] Claude indisponible, repli sur Mistral :",
         err instanceof Error ? err.message : err

@@ -115,22 +115,34 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
               onChange={(e) => set("breakingDurationHours", Number(e.target.value))}
             />
           </label>
-          <label className="flex flex-col gap-1 text-sm font-semibold sm:col-span-2">
-            Modèle LLM (rédaction des articles)
-            <select
-              className="field"
-              value={settings.llmProvider}
-              onChange={(e) => set("llmProvider", e.target.value as "mistral" | "claude")}
-            >
-              <option value="mistral">Tout Mistral — mistral-small-latest (gratuit)</option>
-              <option value="claude">Hybride Claude — rédaction + traduction sur claude-haiku-4-5</option>
-            </select>
+          <div className="flex flex-col gap-3 sm:col-span-2">
+            <span className="text-sm font-semibold">Modèle LLM par tâche</span>
             <span className="text-xs font-normal text-ink/50">
-              En mode hybride, le scoring et le groupage restent sur Mistral (gratuit) ; seules la
-              rédaction et la traduction passent sur Claude pour économiser les crédits. Nécessite
-              ANTHROPIC_API_KEY dans les variables Railway. Repasse sur « Tout Mistral » si les crédits s&apos;épuisent.
+              Choisis Claude ou Mistral pour chaque tâche, indépendamment. Le scoring et le groupage
+              restent toujours sur Mistral (classification gratuite). Claude nécessite ANTHROPIC_API_KEY
+              sur Railway et bascule automatiquement sur Mistral si les crédits s&apos;épuisent.
             </span>
-          </label>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {([
+                ["llmArticles", "Rédaction articles (news)"],
+                ["llmTutos", "Génération tutos"],
+                ["llmTweets", "Texte des tweets X"],
+                ["llmTranslation", "Traduction EN"],
+              ] as const).map(([key, label]) => (
+                <label key={key} className="flex flex-col gap-1 text-sm font-semibold">
+                  {label}
+                  <select
+                    className="field"
+                    value={settings[key]}
+                    onChange={(e) => set(key, e.target.value as "mistral" | "claude")}
+                  >
+                    <option value="mistral">Mistral (gratuit)</option>
+                    <option value="claude">Claude Haiku (premium)</option>
+                  </select>
+                </label>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 

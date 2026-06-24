@@ -41,7 +41,7 @@ export async function publishPendingItem(id: number): Promise<string> {
         },
       ],
       false,
-      true,
+      "articles",
       0.5
     );
     const cleaned = body.trim().replace(/^```html\n?|```$/g, "").trim();
@@ -59,7 +59,7 @@ export async function publishPendingItem(id: number): Promise<string> {
         },
       ],
       false,
-      true,
+      "articles",
       0.3
     );
     // Extraction tolérante (le modèle peut entourer de prose ou de fences selon le provider).
