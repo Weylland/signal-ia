@@ -7,8 +7,12 @@ import {
   createArticle,
   updateArticle,
   deleteArticle,
+  setArticleTranslation,
+  searchArticlesFts,
   getStats,
 } from "./articles";
+import { autoTranslateArticle } from "./translate";
+import { publishPendingItem, rejectPendingItem } from "./moderation";
 import { getGlossary, upsertGlossaryEntry, deleteGlossaryEntry } from "./glossary";
 import { getSources, addSource, updateSource, deleteSource } from "./sources";
 import { getSubscribers } from "./newsletter";
@@ -16,6 +20,45 @@ import { getSettings, saveSettings } from "./settings";
 import { getDb } from "./db";
 import { getAnalytics } from "./analytics";
 import { runPipeline } from "../../pipeline/run";
+
+const EN_FIELDS = {
+  title_en: { type: "string", description: "Titre en anglais" },
+  excerpt_en: { type: "string", description: "Chapeau en anglais" },
+  tldr_en: { type: "array", items: { type: "string" }, description: "Points clés en anglais" },
+  content_en: { type: "string", description: "Corps en anglais (Markdown)" },
+} as const;
+
+/**
+ * Enregistre la version EN d'un article si au moins un champ EN est fourni.
+ * Les champs absents retombent sur l'EN existant, puis sur le FR — pour ne
+ * jamais écraser une traduction partielle déjà en place.
+ */
+async function applyTranslation(
+  slug: string,
+  args: Record<string, unknown>
+): Promise<boolean> {
+  const hasEn =
+    args.title_en !== undefined ||
+    args.excerpt_en !== undefined ||
+    args.tldr_en !== undefined ||
+    args.content_en !== undefined;
+  if (!hasEn) return false;
+
+  const article = await getArticle(slug, { includeDrafts: true });
+  if (!article) return false;
+
+  const html = args.content_en
+    ? await marked.parse((args.content_en as string).trim())
+    : article.htmlEn ?? article.html;
+
+  setArticleTranslation(slug, {
+    title: (args.title_en as string) ?? article.titleEn ?? article.title,
+    excerpt: (args.excerpt_en as string) ?? article.excerptEn ?? article.excerpt,
+    html,
+    tldr: (args.tldr_en as string[]) ?? (article.tldrEn.length > 0 ? article.tldrEn : article.tldr),
+  });
+  return true;
+}
 
 export function createMcpServer() {
   const server = new Server(
@@ -48,13 +91,13 @@ export function createMcpServer() {
       },
       {
         name: "create_article",
-        description: "Crée un article (actualité ou tutoriel) sur watch·ia",
+        description: "Crée un article (actualité ou tutoriel) sur watch·ia. Le corps Markdown peut contenir du HTML/SVG brut (schémas).",
         inputSchema: {
           type: "object",
           required: ["title", "content", "type"],
           properties: {
             title: { type: "string" },
-            content: { type: "string", description: "Contenu en Markdown" },
+            content: { type: "string", description: "Contenu en Markdown (HTML/SVG brut accepté)" },
             type: { type: "string", enum: ["news", "tuto"] },
             excerpt: { type: "string", description: "Résumé court (1 phrase)" },
             tags: { type: "array", items: { type: "string" } },
@@ -62,25 +105,60 @@ export function createMcpServer() {
             image: { type: "string", description: "URL image de couverture" },
             published: { type: "boolean", description: "Publier immédiatement (défaut true)" },
             difficulty: { type: "string", enum: ["debutant", "intermediaire", "avance"], description: "Niveau (tutos uniquement)" },
+            ...EN_FIELDS,
           },
         },
       },
       {
         name: "update_article",
-        description: "Met à jour un article existant",
+        description: "Met à jour un article existant (FR et/ou EN). Seuls les champs fournis sont modifiés.",
         inputSchema: {
           type: "object",
           required: ["slug"],
           properties: {
             slug: { type: "string" },
             title: { type: "string" },
-            content: { type: "string", description: "Contenu en Markdown" },
+            content: { type: "string", description: "Contenu en Markdown (HTML/SVG brut accepté)" },
             excerpt: { type: "string" },
             tags: { type: "array", items: { type: "string" } },
             tldr: { type: "array", items: { type: "string" } },
             image: { type: "string" },
             published: { type: "boolean" },
             difficulty: { type: "string", enum: ["debutant", "intermediaire", "avance"], description: "Niveau (tutos uniquement)" },
+            ...EN_FIELDS,
+          },
+        },
+      },
+      {
+        name: "translate_article",
+        description: "Génère (ou régénère) la version anglaise d'un article via Mistral à partir du FR : titre, chapeau, points clés et corps.",
+        inputSchema: {
+          type: "object",
+          required: ["slug"],
+          properties: { slug: { type: "string" } },
+        },
+      },
+      {
+        name: "search_articles",
+        description: "Recherche plein-texte dans les articles publiés (titre, chapeau, corps, tags)",
+        inputSchema: {
+          type: "object",
+          required: ["query"],
+          properties: {
+            query: { type: "string" },
+            limit: { type: "number", description: "Nombre max (défaut 20)" },
+          },
+        },
+      },
+      {
+        name: "set_breaking",
+        description: "Marque un article comme « à la une » (breaking) pour une durée donnée, ou retire le statut.",
+        inputSchema: {
+          type: "object",
+          required: ["slug"],
+          properties: {
+            slug: { type: "string" },
+            hours: { type: "number", description: "Durée en heures (défaut : breakingDurationHours des réglages). 0 = retirer le statut." },
           },
         },
       },
@@ -230,19 +308,33 @@ export function createMcpServer() {
       },
       {
         name: "update_settings",
-        description: "Met à jour les réglages du site",
+        description: "Met à jour les réglages du site (seuls les champs fournis changent)",
         inputSchema: {
           type: "object",
           properties: {
-            siteTitle: { type: "string" },
-            siteDescription: { type: "string" },
-            maxArticlesPerDay: { type: "number" },
-            maxArticlesPerRun: { type: "number" },
-            queueThreshold: { type: "number" },
+            siteName: { type: "string" },
+            tagline: { type: "string" },
+            seoDescription: { type: "string" },
             breakingThreshold: { type: "number" },
+            queueThreshold: { type: "number" },
+            maxArticlesPerRun: { type: "number" },
+            maxArticlesPerDay: { type: "number" },
+            breakingDurationHours: { type: "number" },
+            socialX: { type: "string" },
+            socialLinkedin: { type: "string" },
+            socialGithub: { type: "string" },
+            maintenanceMode: { type: "boolean" },
+            adsEnabled: { type: "boolean" },
+            adsCode: { type: "string" },
             requireApproval: { type: "boolean" },
             blacklistKeywords: { type: "string" },
             blacklistDomains: { type: "string" },
+            xIncludeLink: { type: "boolean" },
+            xTutoIncludeLink: { type: "boolean" },
+            xPostsPerDay: { type: "number" },
+            xFirstHour: { type: "number" },
+            xLastHour: { type: "number" },
+            llmProvider: { type: "string", enum: ["mistral", "claude"] },
           },
         },
       },
@@ -286,7 +378,8 @@ export function createMcpServer() {
             difficulty: (args.difficulty as string) ?? null,
             sources: [],
           });
-          return ok({ slug, url: `/articles/${slug}` });
+          const translated = await applyTranslation(slug, args);
+          return ok({ slug, url: `/articles/${slug}`, translated });
         }
 
         case "update_article": {
@@ -306,7 +399,31 @@ export function createMcpServer() {
             published: args.published !== undefined ? (args.published as boolean) : existing.published,
             difficulty: (args.difficulty as string) ?? existing.difficulty,
           });
-          return ok({ slug: args.slug });
+          const translated = await applyTranslation(args.slug as string, args);
+          return ok({ slug: args.slug, translated });
+        }
+
+        case "translate_article": {
+          const en = await autoTranslateArticle(args.slug as string);
+          return ok({ slug: args.slug, ...en });
+        }
+
+        case "search_articles": {
+          const results = await searchArticlesFts(args.query as string);
+          const limited = results.slice(0, (args.limit as number) ?? 20);
+          return ok(limited.map((a) => ({
+            slug: a.slug, title: a.title, type: a.type, date: a.date, views: a.views, tags: a.tags,
+          })));
+        }
+
+        case "set_breaking": {
+          const db = getDb();
+          const row = db.prepare("SELECT id FROM articles WHERE slug = ?").get(args.slug) as { id: number } | undefined;
+          if (!row) return err(`Article "${args.slug}" introuvable`);
+          const hours = args.hours === undefined ? getSettings().breakingDurationHours : (args.hours as number);
+          const until = hours > 0 ? new Date(Date.now() + hours * 3600_000).toISOString() : null;
+          db.prepare("UPDATE articles SET breaking_until = ? WHERE id = ?").run(until, row.id);
+          return ok({ slug: args.slug, breakingUntil: until });
         }
 
         case "delete_article": {
@@ -398,14 +515,12 @@ export function createMcpServer() {
         }
 
         case "approve_article": {
-          const db = getDb();
-          db.prepare("UPDATE pending_news SET status = 'approved' WHERE id = ?").run(args.id);
-          return ok({ approved: args.id });
+          const slug = await publishPendingItem(args.id as number);
+          return ok({ approved: args.id, slug, url: `/articles/${slug}` });
         }
 
         case "reject_article": {
-          const db = getDb();
-          db.prepare("UPDATE pending_news SET status = 'rejected' WHERE id = ?").run(args.id);
+          rejectPendingItem(args.id as number);
           return ok({ rejected: args.id });
         }
 
