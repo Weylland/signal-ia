@@ -1,6 +1,7 @@
 import { getDb } from "./db";
 import { slugify } from "./articles";
 import { cleanHtml } from "./sanitize";
+import { callLLM } from "./llm";
 
 export type GlossaryEntry = {
   id: number;
@@ -153,10 +154,10 @@ export function deleteGlossaryEntry(id: number): void {
   db.prepare("DELETE FROM glossary WHERE id = ?").run(id);
 }
 
-// Traduit en anglais les entrées qui n'ont pas encore de version EN (via Mistral).
+// Traduit en anglais les entrées qui n'ont pas encore de version EN.
+// Passe par callLLM (tâche "translation") → suit le menu admin de traduction
+// (Mistral par défaut, Claude si choisi) avec repli Mistral si Claude échoue.
 export async function translateGlossaryToEn(): Promise<{ translated: number; remaining: number }> {
-  const key = process.env.MISTRAL_API_KEY;
-  if (!key) throw new Error("MISTRAL_API_KEY manquante");
   const db = getDb();
   const rows = db
     .prepare("SELECT id, term, definition_html FROM glossary WHERE definition_html_en IS NULL OR definition_html_en = ''")
@@ -166,21 +167,16 @@ export async function translateGlossaryToEn(): Promise<{ translated: number; rem
   let translated = 0;
   for (const r of rows) {
     try {
-      const res = await fetch("https://api.mistral.ai/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-        body: JSON.stringify({
-          model: "mistral-small-latest",
-          temperature: 0.2,
-          messages: [{
-            role: "user",
-            content: `Translate this AI-glossary definition from French to English. Keep the HTML tags intact. Never translate proper nouns (company/product names like OpenAI, Anthropic). Return ONLY the translated HTML, nothing else.\n\nTerm: ${r.term}\nHTML: ${r.definition_html}`,
-          }],
-        }),
-      });
-      if (!res.ok) continue;
-      const data = await res.json() as { choices: { message: { content: string } }[] };
-      const html = cleanHtml(data.choices[0].message.content.replace(/```html|```/g, "").trim());
+      const out = await callLLM(
+        [{
+          role: "user",
+          content: `Translate this AI-glossary definition from French to English. Keep the HTML tags intact. Never translate proper nouns (company/product names like OpenAI, Anthropic). Return ONLY the translated HTML, nothing else.\n\nTerm: ${r.term}\nHTML: ${r.definition_html}`,
+        }],
+        false,
+        "translation",
+        0.2
+      );
+      const html = cleanHtml(out.replace(/```html|```/g, "").trim());
       if (html) {
         update.run(html, r.id);
         translated++;
