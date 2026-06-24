@@ -77,7 +77,18 @@ export async function callLLM(
   temperature = 0.4
 ): Promise<string> {
   const { llmProvider } = getSettings();
-  return premium && llmProvider === "claude"
-    ? callClaude(messages, json, temperature)
-    : callMistral(messages, json, temperature);
+  if (premium && llmProvider === "claude") {
+    try {
+      return await callClaude(messages, json, temperature);
+    } catch (err) {
+      // Claude indisponible (crédits épuisés, rate-limit, panne) : on dégrade sur Mistral
+      // plutôt que d'échouer ou de poster un contenu brut. La qualité baisse, le site continue.
+      console.error(
+        "[llm] Claude indisponible, repli sur Mistral :",
+        err instanceof Error ? err.message : err
+      );
+      return await callMistral(messages, json, temperature);
+    }
+  }
+  return callMistral(messages, json, temperature);
 }

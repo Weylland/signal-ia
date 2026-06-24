@@ -1,10 +1,13 @@
 import { getDb } from "./db";
 import { createArticle } from "./articles";
 import { autoTranslateArticle } from "./translate";
+import { callLLM } from "./llm";
 
 /**
- * Publie une news en attente (pending_news) : génère un article via Mistral à
- * partir du titre/résumé, le crée, puis marque l'item comme publié.
+ * Publie une news en attente (pending_news) : génère un article à partir du
+ * titre/résumé, le crée, puis marque l'item comme publié.
+ * Passe par callLLM → respecte le réglage admin (Claude si activé, sinon Mistral)
+ * et bénéficie du repli Mistral si Claude est indisponible, comme le pipeline.
  * Logique partagée entre la route admin de modération et le serveur MCP
  * (outil approve_article), pour que l'approbation produise réellement un article.
  */
@@ -26,52 +29,47 @@ export async function publishPendingItem(id: number): Promise<string> {
     | undefined;
   if (!item) throw new Error("Item introuvable");
 
-  const key = process.env.MISTRAL_API_KEY;
   let html = `<p>${item.summary || item.title}</p>`;
   let tldr: string[] = [];
 
-  if (key) {
-    try {
-      const res = await fetch("https://api.mistral.ai/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-        body: JSON.stringify({
-          model: "mistral-small-latest",
-          temperature: 0.5,
-          messages: [
-            {
-              role: "user",
-              content: `Rédige un article de news IA en français (300-500 mots) au format HTML basique (<p>, <h2>, <ul><li>) à partir de ce titre et résumé. Retourne uniquement le HTML.\n\nTitre: ${item.title}\nRésumé: ${item.summary}\nSource: ${item.url}`,
-            },
-          ],
-        }),
-      });
-      if (res.ok) {
-        const data = (await res.json()) as { choices: { message: { content: string } }[] };
-        html = data.choices[0].message.content.trim().replace(/^```html\n?|```$/g, "");
-      }
+  try {
+    const body = await callLLM(
+      [
+        {
+          role: "user",
+          content: `Rédige un article de news IA en français (300-500 mots) au format HTML basique (<p>, <h2>, <ul><li>) à partir de ce titre et résumé. Retourne uniquement le HTML.\n\nTitre: ${item.title}\nRésumé: ${item.summary}\nSource: ${item.url}`,
+        },
+      ],
+      false,
+      true,
+      0.5
+    );
+    const cleaned = body.trim().replace(/^```html\n?|```$/g, "").trim();
+    if (cleaned) html = cleaned;
+  } catch {
+    /* garde le fallback <p>résumé</p> */
+  }
 
-      const res2 = await fetch("https://api.mistral.ai/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-        body: JSON.stringify({
-          model: "mistral-small-latest",
-          temperature: 0.3,
-          messages: [
-            {
-              role: "user",
-              content: `Donne 3 points essentiels sur cet article en JSON array de strings. Retourne uniquement le JSON.\n\n${item.title}\n${item.summary}`,
-            },
-          ],
-        }),
-      });
-      if (res2.ok) {
-        const d2 = (await res2.json()) as { choices: { message: { content: string } }[] };
-        try {
-          tldr = JSON.parse(d2.choices[0].message.content.trim()) as string[];
-        } catch {}
-      }
-    } catch {}
+  try {
+    const raw = await callLLM(
+      [
+        {
+          role: "user",
+          content: `Donne 3 points essentiels sur cet article en JSON array de strings. Retourne uniquement le JSON.\n\n${item.title}\n${item.summary}`,
+        },
+      ],
+      false,
+      true,
+      0.3
+    );
+    // Extraction tolérante (le modèle peut entourer de prose ou de fences selon le provider).
+    const match = raw.match(/\[[\s\S]*\]/);
+    if (match) {
+      const parsed = JSON.parse(match[0]);
+      if (Array.isArray(parsed)) tldr = parsed.filter((t): t is string => typeof t === "string");
+    }
+  } catch {
+    /* tldr reste vide */
   }
 
   const slug = await createArticle({
