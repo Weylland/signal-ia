@@ -107,6 +107,12 @@ export function getDb(): Database.Database {
 
     CREATE INDEX IF NOT EXISTS idx_articles_published_date ON articles(published, date DESC);
     CREATE INDEX IF NOT EXISTS idx_pending_news_status ON pending_news(status, seen_at DESC);
+
+    CREATE TABLE IF NOT EXISTS rate_limits (
+      key TEXT PRIMARY KEY,
+      count INTEGER NOT NULL DEFAULT 0,
+      reset_at INTEGER NOT NULL
+    );
   `);
 
   addColumnIfMissing(db, "articles", "type", "TEXT NOT NULL DEFAULT 'news'");

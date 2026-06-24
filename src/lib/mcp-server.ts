@@ -24,6 +24,11 @@ import { getDb } from "./db";
 import { getAnalytics } from "./analytics";
 import { runPipeline } from "../../pipeline/run";
 
+function requireString(v: unknown, field: string): string {
+  if (typeof v !== "string" || !v.trim()) throw new Error(`${field} est requis et doit être une chaîne non vide`);
+  return v.trim();
+}
+
 const EN_FIELDS = {
   title_en: { type: "string", description: "Titre en anglais" },
   excerpt_en: { type: "string", description: "Chapeau en anglais" },
@@ -409,23 +414,26 @@ export function createMcpServer() {
         }
 
         case "get_article": {
-          const article = await getArticle(args.slug as string, { includeDrafts: true });
-          if (!article) return err(`Article "${args.slug}" introuvable`);
+          const slug = requireString(args.slug, "slug");
+          const article = await getArticle(slug, { includeDrafts: true });
+          if (!article) return err(`Article "${slug}" introuvable`);
           return ok(article);
         }
 
         case "create_article": {
-          const html = await marked.parse((args.content as string).trim());
+          const title = requireString(args.title, "title");
+          const content = requireString(args.content, "content");
+          const html = await marked.parse(content.trim());
           const slug = await createArticle({
-            title: args.title as string,
-            excerpt: (args.excerpt as string) ?? "",
+            title,
+            excerpt: typeof args.excerpt === "string" ? args.excerpt : "",
             html,
             type: (args.type as "news" | "tuto") ?? "news",
-            tags: (args.tags as string[]) ?? [],
-            tldr: (args.tldr as string[]) ?? [],
-            image: (args.image as string) ?? null,
+            tags: Array.isArray(args.tags) ? (args.tags as string[]) : [],
+            tldr: Array.isArray(args.tldr) ? (args.tldr as string[]) : [],
+            image: typeof args.image === "string" ? args.image : null,
             published: args.published !== false,
-            difficulty: (args.difficulty as string) ?? null,
+            difficulty: typeof args.difficulty === "string" ? args.difficulty : null,
             sources: [],
           });
           const translated = await applyTranslation(slug, args);
@@ -433,24 +441,25 @@ export function createMcpServer() {
         }
 
         case "update_article": {
-          const existing = await getArticle(args.slug as string, { includeDrafts: true });
-          if (!existing) return err(`Article "${args.slug}" introuvable`);
-          const html = args.content
-            ? await marked.parse((args.content as string).trim())
+          const slug = requireString(args.slug, "slug");
+          const existing = await getArticle(slug, { includeDrafts: true });
+          if (!existing) return err(`Article "${slug}" introuvable`);
+          const html = typeof args.content === "string" && args.content.trim()
+            ? await marked.parse(args.content.trim())
             : existing.html;
-          await updateArticle(args.slug as string, {
-            title: (args.title as string) ?? existing.title,
-            excerpt: (args.excerpt as string) ?? existing.excerpt,
+          await updateArticle(slug, {
+            title: typeof args.title === "string" ? args.title : existing.title,
+            excerpt: typeof args.excerpt === "string" ? args.excerpt : existing.excerpt,
             html,
             type: existing.type,
-            tags: (args.tags as string[]) ?? existing.tags,
-            tldr: (args.tldr as string[]) ?? existing.tldr,
-            image: (args.image as string) ?? existing.image,
-            published: args.published !== undefined ? (args.published as boolean) : existing.published,
-            difficulty: (args.difficulty as string) ?? existing.difficulty,
+            tags: Array.isArray(args.tags) ? (args.tags as string[]) : existing.tags,
+            tldr: Array.isArray(args.tldr) ? (args.tldr as string[]) : existing.tldr,
+            image: typeof args.image === "string" ? args.image : existing.image,
+            published: typeof args.published === "boolean" ? args.published : existing.published,
+            difficulty: typeof args.difficulty === "string" ? args.difficulty : existing.difficulty,
           });
-          const translated = await applyTranslation(args.slug as string, args);
-          return ok({ slug: args.slug, translated });
+          const translated = await applyTranslation(slug, args);
+          return ok({ slug, translated });
         }
 
         case "translate_article": {

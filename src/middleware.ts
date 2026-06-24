@@ -8,10 +8,20 @@ function pass(request: NextRequest) {
 }
 
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const { pathname, method } = request.nextUrl as NextRequest["nextUrl"] & { method?: string };
+  const reqMethod = request.method;
 
   if (pathname === "/admin/login" || pathname === "/api/admin/login") {
     return pass(request);
+  }
+
+  // CSRF : les mutations admin doivent venir du même origin
+  if (pathname.startsWith("/api/admin/") && reqMethod !== "GET" && reqMethod !== "HEAD") {
+    const origin = request.headers.get("origin");
+    const host = request.headers.get("host");
+    if (origin && host && !origin.endsWith(`//${host}`)) {
+      return NextResponse.json({ error: "Origin non autorisé" }, { status: 403 });
+    }
   }
 
   const token = request.cookies.get(SESSION_COOKIE)?.value;

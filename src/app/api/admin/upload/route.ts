@@ -12,6 +12,14 @@ const ALLOWED: Record<string, string> = {
   "image/avif": ".avif",
 };
 
+const MAGIC: Record<string, (b: Buffer) => boolean> = {
+  "image/jpeg": (b) => b[0] === 0xFF && b[1] === 0xD8 && b[2] === 0xFF,
+  "image/png":  (b) => b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4E && b[3] === 0x47,
+  "image/webp": (b) => b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46
+                    && b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50,
+  "image/avif": (b) => b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70,
+};
+
 export async function POST(request: NextRequest) {
   const formData = await request.formData().catch(() => null);
   const file = formData?.get("file");
@@ -30,9 +38,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const buffer = Buffer.from(await file.arrayBuffer());
+  if (!MAGIC[file.type]?.(buffer)) {
+    return NextResponse.json({ error: "Contenu du fichier invalide" }, { status: 415 });
+  }
+
   const name = `${Date.now()}-${crypto.randomBytes(4).toString("hex")}${ext}`;
   await mkdir(UPLOADS_DIR, { recursive: true });
-  await writeFile(path.join(UPLOADS_DIR, name), Buffer.from(await file.arrayBuffer()));
+  await writeFile(path.join(UPLOADS_DIR, name), buffer);
 
   return NextResponse.json({ ok: true, url: `/uploads/${name}` });
 }
