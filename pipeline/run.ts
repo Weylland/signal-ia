@@ -46,6 +46,7 @@ type StoryGroup = {
 };
 
 type WrittenArticle = {
+  title: string;
   markdown: string;
   tldr: string[];
 };
@@ -298,7 +299,12 @@ RÈGLE ABSOLUE — ZÉRO INVENTION : tu te bases UNIQUEMENT sur les informations
 STRUCTURE :
 - Première phrase (chapeau) : énonce le fait central — qui, quoi, et pourquoi ça compte. Pas d'introduction qui tourne autour.
 - 2-3 paragraphes qui développent les faits, le contexte, les implications concrètes.
-- Pas de titre (fourni à part). Pas de conclusion creuse du type "l'avenir nous le dira".
+- Pas de titre # dans le corps. Pas de conclusion creuse du type "l'avenir nous le dira".
+
+TITRE : rédige aussi le titre de l'article (un titre provisoire t'est fourni, améliore-le).
+- Français NATUREL et grammaticalement complet : commence par un déterminant quand c'est une phrase nominale ("Les entreprises limitent…", jamais "Entreprises limitent…"). Pas de titre tronqué façon dépêche.
+- Factuel et 100 % vérifiable depuis les sources : aucun chiffre, superlatif ni conséquence inventé. Informatif, pas putaclic, pas de question rhétorique.
+- Concis : 60 à 100 caractères, une seule idée principale. Noms propres exacts et intacts.
 
 MISE EN FORME : Markdown sobre — paragraphes séparés par une ligne vide, gras (**...**) seulement pour un terme clé occasionnel. Pas de titre #, pas de listes sauf si vraiment justifié.
 
@@ -309,7 +315,7 @@ PÉRIMÈTRE — ne dis rien que la source ne dit pas : n'introduis aucune entrep
 NOMS PROPRES : ne traduis ni n'altère jamais les noms propres (médias, entreprises, produits, personnes). « The Verge », « The New York Times », « OpenAI » exactement — jamais « le Verge » ni « le New York Times ».
 
 Réponds en JSON strict :
-{"markdown": "le corps de l'article en Markdown", "tldr": ["point clé 1", "point clé 2", "point clé 3"]}
+{"title": "le titre final", "markdown": "le corps de l'article en Markdown", "tldr": ["point clé 1", "point clé 2", "point clé 3"]}
 Le tldr : 3 phrases courtes, autonomes (lisibles hors contexte), sans se répéter entre elles, chacune portant un fait distinct.`,
       },
       {
@@ -323,6 +329,7 @@ Le tldr : 3 phrases courtes, autonomes (lisibles hors contexte), sans se répét
 
   const parsed = JSON.parse(content) as WrittenArticle;
   return {
+    title: typeof parsed.title === "string" ? parsed.title.trim() : "",
     markdown: parsed.markdown ?? "",
     tldr: Array.isArray(parsed.tldr) ? parsed.tldr.slice(0, 3) : [],
   };
@@ -509,8 +516,12 @@ async function main() {
 
         const shouldPublish = !settings.requireApproval || group.breaking;
 
+        // Titre rédigé par le LLM "articles" (Claude si activé) ; repli sur le titre
+        // provisoire du groupage (Mistral) si la rédaction n'en a pas produit.
+        const finalTitle = written.title || group.title;
+
         const slug = await createArticle({
-          title: group.title,
+          title: finalTitle,
           excerpt: group.angle,
           tags: group.tags,
           image,
@@ -524,7 +535,7 @@ async function main() {
           date: articleDate,
         });
 
-        const en = await translateArticle(group.title, group.angle, written.markdown, written.tldr);
+        const en = await translateArticle(finalTitle, group.angle, written.markdown, written.tldr);
         if (en) {
           setArticleTranslation(slug, {
             title: en.title,
