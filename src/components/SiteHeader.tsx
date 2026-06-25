@@ -198,20 +198,37 @@ export function SiteHeader({ links, lang, labels, isAdmin, siteName = "watch·ia
             Admin ↗
           </Link>
         )}
-        <div className="mt-auto flex gap-3 pt-6">
-          <button onClick={toggleTheme} className="btn flex-1" style={{ minHeight: 48 }}>
-            {theme === "dark" ? (lang === "en" ? "Light theme" : "Thème clair") : lang === "en" ? "Dark theme" : "Thème sombre"}
-          </button>
-          <button
-            onClick={() => {
-              setMob(false);
-              openCmdk();
-            }}
-            className="btn flex-1"
-            style={{ minHeight: 48 }}
-          >
-            ⌘ {labels.search}
-          </button>
+        <div className="mt-auto flex flex-col gap-3 pt-6">
+          <div className="flex items-center justify-center gap-4 py-2 font-mono text-sm">
+            <button
+              onClick={() => { setLang("fr"); setMob(false); }}
+              className={`cursor-pointer transition-colors ${lang === "fr" ? "text-[var(--ac)] font-bold" : "text-[var(--ink-f)] hover:text-[var(--ink)]"}`}
+            >
+              FR
+            </button>
+            <span className="opacity-40">/</span>
+            <button
+              onClick={() => { setLang("en"); setMob(false); }}
+              className={`cursor-pointer transition-colors ${lang === "en" ? "text-[var(--ac)] font-bold" : "text-[var(--ink-f)] hover:text-[var(--ink)]"}`}
+            >
+              EN
+            </button>
+          </div>
+          <div className="flex gap-3">
+            <button onClick={toggleTheme} className="btn flex-1" style={{ minHeight: 48 }}>
+              {theme === "dark" ? (lang === "en" ? "Light theme" : "Thème clair") : lang === "en" ? "Dark theme" : "Thème sombre"}
+            </button>
+            <button
+              onClick={() => {
+                setMob(false);
+                openCmdk();
+              }}
+              className="btn flex-1"
+              style={{ minHeight: 48 }}
+            >
+              ⌘ {labels.search}
+            </button>
+          </div>
         </div>
       </div>
     </>
