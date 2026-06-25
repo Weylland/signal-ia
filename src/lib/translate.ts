@@ -9,7 +9,13 @@ import { callLLM } from "./llm";
 
 async function translateOne(prompt: string): Promise<string> {
   const out = await callLLM([{ role: "user", content: prompt }], false, "translation", 0.3);
-  return out.trim();
+  // Le modèle entoure parfois sa sortie d'un bloc markdown (```html … ```) : on le retire
+  // pour ne pas stocker la fence en clair dans le HTML EN.
+  return out
+    .trim()
+    .replace(/^```(?:html|json|markdown)?\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
 }
 
 export type ArticleTranslation = {
