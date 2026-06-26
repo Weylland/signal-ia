@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { SiteSettings } from "@/lib/settings";
+import { Tooltip } from "./Tooltip";
 
 export function SettingsForm({ initial }: { initial: SiteSettings }) {
   const [settings, setSettings] = useState(initial);
@@ -24,13 +25,23 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
     setMessage(res.ok ? "Réglages enregistrés." : "Erreur lors de l'enregistrement.");
   }
 
+  const llmTooltips: Record<string, string> = {
+    llmArticles: "Modèle utilisé pour rédiger le corps des articles de news. Claude donne de meilleurs résultats mais coûte ~0,001 $/article. Mistral est gratuit.",
+    llmTutos: "Modèle utilisé pour générer les tutos quand le stock est épuisé. Claude produit des tutos plus structurés.",
+    llmTweets: "Modèle utilisé pour rédiger le texte des tweets automatiques. Impact faible sur la qualité — Mistral suffit.",
+    llmTranslation: "Modèle utilisé pour la traduction FR → EN (articles, tutos, tldr). Claude est plus fiable sur les longs HTML.",
+  };
+
   return (
     <div className="flex flex-col gap-8">
       <section className="nb-card p-6">
         <h2 className="font-display text-xl font-bold">Identité du site</h2>
         <div className="mt-4 flex flex-col gap-4">
           <label className="flex flex-col gap-1 text-sm font-semibold">
-            Nom du site
+            <span className="flex items-center">
+              Nom du site
+              <Tooltip text="Affiché dans l'en-tête, le footer et les meta tags. Utilisé aussi dans les cartes X. Le « · » entre les deux mots est stylistique." />
+            </span>
             <input
               className="field"
               value={settings.siteName}
@@ -38,7 +49,10 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm font-semibold">
-            Tagline
+            <span className="flex items-center">
+              Tagline
+              <Tooltip text="Phrase courte affichée sous le nom du site en page d'accueil et dans certains metas." />
+            </span>
             <input
               className="field"
               value={settings.tagline}
@@ -46,7 +60,10 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm font-semibold">
-            Description SEO
+            <span className="flex items-center">
+              Description SEO
+              <Tooltip text="Texte affiché par Google sous le titre dans les résultats de recherche. 150-160 caractères idéalement." />
+            </span>
             <textarea
               className="field min-h-20"
               value={settings.seoDescription}
@@ -64,7 +81,10 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
         </p>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className="flex flex-col gap-1 text-sm font-semibold">
-            Seuil breaking (0-10)
+            <span className="flex items-center">
+              Seuil breaking (0-10)
+              <Tooltip text="Score IA minimum pour publier immédiatement avec le badge « À chaud ». Au-dessus de ce seuil = publication instantanée. En dessous, l'article attend en file ou est ignoré." />
+            </span>
             <input
               type="number"
               min={0}
@@ -75,7 +95,10 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm font-semibold">
-            Seuil file d&apos;attente (0-10)
+            <span className="flex items-center">
+              Seuil file d&apos;attente (0-10)
+              <Tooltip text="Score IA minimum pour qu'une news soit mise en file d'attente. En dessous de ce seuil, elle est ignorée et jamais publiée. Doit être inférieur au seuil breaking." />
+            </span>
             <input
               type="number"
               min={0}
@@ -86,7 +109,10 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm font-semibold">
-            Articles max par passage
+            <span className="flex items-center">
+              Articles max par passage
+              <Tooltip text="Nombre max d'articles rédigés à chaque run du pipeline. Limite la consommation LLM par passage. Le pipeline tourne automatiquement toutes les heures." />
+            </span>
             <input
               type="number"
               min={0}
@@ -96,7 +122,10 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm font-semibold">
-            Articles max par jour
+            <span className="flex items-center">
+              Articles max par jour
+              <Tooltip text="Plafond quotidien d'articles publiés toutes sources confondues. Le pipeline s'arrête dès que ce nombre est atteint, même s'il reste du contenu à traiter." />
+            </span>
             <input
               type="number"
               min={0}
@@ -106,7 +135,10 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm font-semibold">
-            Durée du badge « À chaud » (heures)
+            <span className="flex items-center">
+              Durée du badge « À chaud » (heures)
+              <Tooltip text="Temps pendant lequel le badge « À chaud » reste visible sur un article après sa publication. Passé ce délai, le badge disparaît automatiquement. N'affecte pas la publication elle-même." />
+            </span>
             <input
               type="number"
               min={1}
@@ -116,7 +148,10 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
             />
           </label>
           <div className="flex flex-col gap-3 sm:col-span-2">
-            <span className="text-sm font-semibold">Modèle LLM par tâche</span>
+            <span className="flex items-center text-sm font-semibold">
+              Modèle LLM par tâche
+              <Tooltip text="Scoring et groupage des news restent toujours sur Mistral (gratuit). Claude nécessite ANTHROPIC_API_KEY sur Railway et bascule automatiquement sur Mistral si les crédits s'épuisent." />
+            </span>
             <span className="text-xs font-normal text-ink/50">
               Choisis Claude ou Mistral pour chaque tâche, indépendamment. Le scoring et le groupage
               restent toujours sur Mistral (classification gratuite). Claude nécessite ANTHROPIC_API_KEY
@@ -130,7 +165,10 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
                 ["llmTranslation", "Traduction EN"],
               ] as const).map(([key, label]) => (
                 <label key={key} className="flex flex-col gap-1 text-sm font-semibold">
-                  {label}
+                  <span className="flex items-center">
+                    {label}
+                    <Tooltip text={llmTooltips[key]} />
+                  </span>
                   <select
                     className="field"
                     value={settings[key]}
@@ -188,10 +226,16 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
               checked={settings.requireApproval}
               onChange={(e) => set("requireApproval", e.target.checked)}
             />
-            Approbation manuelle — les articles scorés ≥ seuil passent en file de modération au lieu d&apos;être auto-publiés
+            <span className="flex items-center">
+              Approbation manuelle — les articles scorés ≥ seuil passent en file de modération au lieu d&apos;être auto-publiés
+              <Tooltip text="Activé : chaque article doit être approuvé manuellement dans la file de modération avant d'être visible sur le site. Utile en rodage ou si tu veux contrôler chaque publication." />
+            </span>
           </label>
           <label className="flex flex-col gap-1 text-sm font-semibold">
-            Blacklist mots-clés (un par ligne, insensible à la casse)
+            <span className="flex items-center">
+              Blacklist mots-clés (un par ligne, insensible à la casse)
+              <Tooltip text="Si un de ces mots apparaît dans le titre ou le corps d'une news, elle est ignorée par le pipeline. Pratique pour filtrer crypto, NFT, sujets hors périmètre." />
+            </span>
             <textarea
               className="field min-h-20 font-mono text-xs"
               placeholder={"crypto\nnft\nblockchain"}
@@ -200,7 +244,10 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm font-semibold">
-            Blacklist domaines sources (un par ligne)
+            <span className="flex items-center">
+              Blacklist domaines sources (un par ligne)
+              <Tooltip text="Les flux RSS de ces domaines sont ignorés entièrement lors du scoring. Utile pour bloquer des sources répétitives, spammy ou hors sujet sans les supprimer de la liste." />
+            </span>
             <textarea
               className="field min-h-16 font-mono text-xs"
               placeholder={"spamsite.com\nbadsource.net"}
@@ -214,7 +261,10 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
               checked={settings.maintenanceMode}
               onChange={(e) => set("maintenanceMode", e.target.checked)}
             />
-            Mode maintenance (le site public affiche une page d&apos;attente)
+            <span className="flex items-center">
+              Mode maintenance (le site public affiche une page d&apos;attente)
+              <Tooltip text="Le site public affiche une page « bientôt disponible ». L'admin reste accessible normalement. Le pipeline continue de tourner en arrière-plan." />
+            </span>
           </label>
           <label className="flex items-center gap-3 text-sm font-semibold">
             <input
@@ -222,7 +272,10 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
               checked={settings.adsEnabled}
               onChange={(e) => set("adsEnabled", e.target.checked)}
             />
-            Activer la publicité (les emplacements existent déjà, désactivés par défaut)
+            <span className="flex items-center">
+              Activer la publicité (les emplacements existent déjà, désactivés par défaut)
+              <Tooltip text="Active les emplacements pub déjà intégrés dans le layout. Tu peux coller le code AdSense ou autre réseau dans le champ qui apparaît en dessous." />
+            </span>
           </label>
           {settings.adsEnabled && (
             <label className="flex flex-col gap-1 text-sm font-semibold">

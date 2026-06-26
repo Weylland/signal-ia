@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Tooltip } from "./Tooltip";
 
 type XPost = {
   id: number;
@@ -228,17 +229,32 @@ export function XAdmin({
         </p>
         <div style={{ display: "flex", gap: "var(--s4)", flexWrap: "wrap", marginBottom: "var(--s4)" }}>
           <div style={{ flex: "1 1 120px" }}>
-            <label style={labelS} htmlFor="x-ppd">Posts / jour</label>
+            <label style={labelS} htmlFor="x-ppd">
+              <span style={{ display: "inline-flex", alignItems: "center" }}>
+                Posts / jour
+                <Tooltip text="0 = publication en pause. Le dernier créneau est toujours un tuto, les autres des actus. Maximum 6." />
+              </span>
+            </label>
             <input id="x-ppd" className="inp" type="number" min={0} max={6} value={postsPerDay}
               onChange={(e) => setPostsPerDay(Math.max(0, Math.min(6, Number(e.target.value))))} style={{ width: "100%" }} />
           </div>
           <div style={{ flex: "1 1 120px" }}>
-            <label style={labelS} htmlFor="x-fh">1ᵉʳ créneau (h)</label>
+            <label style={labelS} htmlFor="x-fh">
+              <span style={{ display: "inline-flex", alignItems: "center" }}>
+                1ᵉʳ créneau (h)
+                <Tooltip text="Heure du premier post de la journée (heure Paris). Ex : 9 = premier post à 9h00." />
+              </span>
+            </label>
             <input id="x-fh" className="inp" type="number" min={0} max={23} value={firstHour}
               onChange={(e) => setFirstHour(Math.max(0, Math.min(23, Number(e.target.value))))} style={{ width: "100%" }} />
           </div>
           <div style={{ flex: "1 1 120px" }}>
-            <label style={labelS} htmlFor="x-lh">Dernier créneau (h)</label>
+            <label style={labelS} htmlFor="x-lh">
+              <span style={{ display: "inline-flex", alignItems: "center" }}>
+                Dernier créneau (h)
+                <Tooltip text="Heure du dernier post (heure Paris). Ce créneau est réservé au tuto. Doit être supérieur au premier créneau." />
+              </span>
+            </label>
             <input id="x-lh" className="inp" type="number" min={0} max={23} value={lastHour}
               onChange={(e) => setLastHour(Math.max(0, Math.min(23, Number(e.target.value))))} style={{ width: "100%" }} />
           </div>
@@ -259,16 +275,24 @@ export function XAdmin({
         </p>
         <div style={{ display: "flex", gap: "var(--s4)", flexWrap: "wrap", marginBottom: "var(--s4)" }}>
           <div style={{ flex: "1 1 160px" }}>
-            <label style={labelS} htmlFor="x-cooldown">Cooldown tuto (jours)</label>
+            <label style={labelS} htmlFor="x-cooldown">
+              <span style={{ display: "inline-flex", alignItems: "center" }}>
+                Cooldown tuto (jours)
+                <Tooltip text="Un même tuto ne peut pas être reposté avant ce délai. Évite de répéter le même contenu trop souvent à tes abonnés." />
+              </span>
+            </label>
             <input id="x-cooldown" className="inp" type="number" min={1} max={365} value={tutoCooldown}
               onChange={(e) => setTutoCooldown(Math.max(1, Math.min(365, Number(e.target.value))))} style={{ width: "100%" }} />
-            <span style={{ ...mono, fontSize: 10, color: "var(--ink-f)" }}>Délai avant qu&apos;un même tuto puisse être re-posté.</span>
           </div>
           <div style={{ flex: "1 1 160px" }}>
-            <label style={labelS} htmlFor="x-newsage">Fraîcheur max news (jours)</label>
+            <label style={labelS} htmlFor="x-newsage">
+              <span style={{ display: "inline-flex", alignItems: "center" }}>
+                Fraîcheur max news (jours)
+                <Tooltip text="Une actu plus vieille que ce nombre de jours ne sera pas tweetée. Évite de partager des infos périmées. Recommandé : 1-2 jours." />
+              </span>
+            </label>
             <input id="x-newsage" className="inp" type="number" min={1} max={30} value={newsMaxAge}
               onChange={(e) => setNewsMaxAge(Math.max(1, Math.min(30, Number(e.target.value))))} style={{ width: "100%" }} />
-            <span style={{ ...mono, fontSize: 10, color: "var(--ink-f)" }}>Âge max d&apos;une actu pour être tweetée.</span>
           </div>
         </div>
         <label style={{ display: "flex", alignItems: "flex-start", gap: "var(--s3)", marginBottom: "var(--s5)", cursor: "pointer" }}>
