@@ -6,6 +6,10 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
+  if (request.cookies.get("wia_notrack")?.value === "1") {
+    return NextResponse.json({ ok: true });
+  }
+
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
 
   // Garde-fou anti-flood : 120 évènements / minute / IP.

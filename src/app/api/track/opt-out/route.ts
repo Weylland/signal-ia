@@ -1,0 +1,17 @@
+import { NextRequest, NextResponse } from "next/server";
+
+/**
+ * Visite cette URL une fois pour ne plus jamais apparaître dans les Analytics
+ * (cookie 1 an). Pratique pour exclure ses propres visites du site public.
+ */
+export async function GET(request: NextRequest) {
+  const url = new URL(request.url);
+  const back = url.searchParams.get("back") || "/";
+  const res = NextResponse.redirect(new URL(back, request.url));
+  res.cookies.set("wia_notrack", "1", {
+    maxAge: 365 * 24 * 3600,
+    path: "/",
+    sameSite: "lax",
+  });
+  return res;
+}
