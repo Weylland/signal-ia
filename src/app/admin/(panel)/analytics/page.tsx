@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { getAnalytics, type Range, type Period } from "@/lib/analytics";
 
 export const dynamic = "force-dynamic";
@@ -120,6 +121,7 @@ function BarList({
 
 export default async function AnalyticsPage({ searchParams }: PageProps<"/admin/analytics">) {
   const sp = await searchParams;
+  const notTracked = (await cookies()).get("wia_notrack")?.value === "1";
   const range = (RANGES.some((r) => r.key === sp.range) ? sp.range : "30d") as Range;
   const bucketParam = BUCKETS.some((b) => b.key === sp.bucket) ? (sp.bucket as Period) : undefined;
   const a = getAnalytics({ range, bucket: range === "24h" ? undefined : bucketParam });
@@ -175,16 +177,26 @@ export default async function AnalyticsPage({ searchParams }: PageProps<"/admin/
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: a.kpis.liveNow > 0 ? "var(--ok)" : "var(--ink-f)", display: "inline-block" }} />
             <span style={{ color: "var(--ink-d)" }}>{a.kpis.liveNow} actif{a.kpis.liveNow > 1 ? "s" : ""} (5 min)</span>
           </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--s3)" }}>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: notTracked ? "var(--wn)" : "var(--ok)", display: "inline-block" }} />
+            <span style={{ color: "var(--ink-d)" }}>
+              {notTracked ? "Tu n'es pas tracké sur ce navigateur" : "Tu es tracké sur ce navigateur"}
+            </span>
+          </div>
           <a
-            href="/api/track/opt-out?back=/admin/analytics"
+            href={notTracked ? "/api/track/opt-in?back=/admin/analytics" : "/api/track/opt-out?back=/admin/analytics"}
             style={{
               fontFamily: "var(--ff-m)", fontSize: 11, padding: "var(--s2) var(--s4)",
               border: "1px solid var(--ln-h)", background: "var(--bg-r)", color: "var(--ink-d)",
               textDecoration: "none", whiteSpace: "nowrap",
             }}
-            title="Pose un cookie 1 an sur ce navigateur : tes propres visites du site public ne seront plus comptées."
+            title={
+              notTracked
+                ? "Retire le cookie d'exclusion : tes visites du site public seront de nouveau comptées."
+                : "Pose un cookie 1 an sur ce navigateur : tes propres visites du site public ne seront plus comptées."
+            }
           >
-            Ne plus me tracker ↗
+            {notTracked ? "Réactiver le tracking ↗" : "Ne plus me tracker ↗"}
           </a>
         </div>
       </div>
