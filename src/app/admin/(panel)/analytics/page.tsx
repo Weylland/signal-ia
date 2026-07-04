@@ -170,9 +170,22 @@ export default async function AnalyticsPage({ searchParams }: PageProps<"/admin/
             Mesure maison, sans cookie ni traceur tiers · IP hashée quotidiennement
           </p>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--s3)", fontFamily: "var(--ff-m)", fontSize: 12 }}>
-          <span style={{ width: 8, height: 8, borderRadius: "50%", background: a.kpis.liveNow > 0 ? "var(--ok)" : "var(--ink-f)", display: "inline-block" }} />
-          <span style={{ color: "var(--ink-d)" }}>{a.kpis.liveNow} actif{a.kpis.liveNow > 1 ? "s" : ""} (5 min)</span>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--s5)", fontFamily: "var(--ff-m)", fontSize: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--s3)" }}>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: a.kpis.liveNow > 0 ? "var(--ok)" : "var(--ink-f)", display: "inline-block" }} />
+            <span style={{ color: "var(--ink-d)" }}>{a.kpis.liveNow} actif{a.kpis.liveNow > 1 ? "s" : ""} (5 min)</span>
+          </div>
+          <a
+            href="/api/track/opt-out?back=/admin/analytics"
+            style={{
+              fontFamily: "var(--ff-m)", fontSize: 11, padding: "var(--s2) var(--s4)",
+              border: "1px solid var(--ln-h)", background: "var(--bg-r)", color: "var(--ink-d)",
+              textDecoration: "none", whiteSpace: "nowrap",
+            }}
+            title="Pose un cookie 1 an sur ce navigateur : tes propres visites du site public ne seront plus comptées."
+          >
+            Ne plus me tracker ↗
+          </a>
         </div>
       </div>
 
