@@ -7,7 +7,10 @@ import { NextRequest, NextResponse } from "next/server";
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const back = url.searchParams.get("back") || "/";
-  const res = NextResponse.redirect(new URL(back, request.url));
+  // request.url reflète l'adresse interne du conteneur derrière le proxy Railway
+  // (ex. localhost:8080) : on redirige toujours vers le domaine public.
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const res = NextResponse.redirect(new URL(back, siteUrl));
   res.cookies.set("wia_notrack", "1", {
     maxAge: 365 * 24 * 3600,
     path: "/",
