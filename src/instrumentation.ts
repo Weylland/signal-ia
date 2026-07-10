@@ -56,7 +56,7 @@ export async function register() {
         );
 
     cron.default.schedule("*/30 * * * *", () => void tickX("check"), { timezone: "Europe/Paris" });
-    // Rattrapage immédiat au boot (redéploiement Railway), sans attendre le prochain tick.
+    // Rattrapage immédiat au boot (redéploiement), sans attendre le prochain tick.
     setTimeout(() => void tickX("check boot"), 15_000);
 
     console.log(`[watch·ia] Pipeline toutes les ${intervalMin} min · backup quotidien 03:00 · newsletter mardi 09:00 · posts X pilotés par les réglages`);

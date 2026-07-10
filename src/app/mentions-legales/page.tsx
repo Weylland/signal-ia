@@ -22,12 +22,12 @@ export default function MentionsLegalesPage() {
 
         <h2>Hébergement</h2>
         <p>
-          Railway Corp.
+          OVH SAS
           <br />
-          San Francisco, Californie, États-Unis
+          2 rue Kellermann, 59100 Roubaix, France
           <br />
-          <a href="https://railway.com" target="_blank" rel="noopener noreferrer">
-            railway.com
+          <a href="https://www.ovhcloud.com" target="_blank" rel="noopener noreferrer">
+            ovhcloud.com
           </a>
         </p>
 

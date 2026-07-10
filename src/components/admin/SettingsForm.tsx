@@ -150,12 +150,12 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
           <div className="flex flex-col gap-3 sm:col-span-2">
             <span className="flex items-center text-sm font-semibold">
               Modèle LLM par tâche
-              <Tooltip text="Scoring et groupage des news restent toujours sur Mistral (gratuit). Claude nécessite ANTHROPIC_API_KEY sur Railway et bascule automatiquement sur Mistral si les crédits s'épuisent." />
+              <Tooltip text="Scoring et groupage des news restent toujours sur Mistral (gratuit). Claude nécessite ANTHROPIC_API_KEY côté serveur et bascule automatiquement sur Mistral si les crédits s'épuisent." />
             </span>
             <span className="text-xs font-normal text-ink/50">
               Choisis Claude ou Mistral pour chaque tâche, indépendamment. Le scoring et le groupage
               restent toujours sur Mistral (classification gratuite). Claude nécessite ANTHROPIC_API_KEY
-              sur Railway et bascule automatiquement sur Mistral si les crédits s&apos;épuisent.
+              côté serveur et bascule automatiquement sur Mistral si les crédits s&apos;épuisent.
             </span>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {([

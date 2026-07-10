@@ -318,7 +318,7 @@ function tutosTodayParis(lang: PostLang): number {
 // Vérificateur de publication, appelé périodiquement (toutes les 30 min) et au boot.
 // Pilote 100 % des posts auto depuis les réglages : nombre/jour + fenêtre horaire.
 // Publie au plus UN créneau par appel ; rattrape naturellement un créneau raté
-// (redéploiement Railway) au tick suivant. Rien après 22h pour éviter une heure incongrue.
+// (redéploiement) au tick suivant. Rien après 22h pour éviter une heure incongrue.
 export async function runXScheduled(): Promise<XResult> {
   const { xPostsPerDay, xFirstHour, xLastHour } = getSettings();
   if (xPostsPerDay <= 0) return { skipped: "publication X désactivée (0 post/jour)" };

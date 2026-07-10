@@ -217,7 +217,7 @@ export function XAdmin({
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--s5)" }}>
       {!configured && (
         <div style={{ ...card, borderLeft: "3px solid var(--wn)", color: "var(--wn)", ...mono }}>
-          Clés X absentes. Renseigne X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN et X_ACCESS_SECRET dans les variables Railway.
+          Clés X absentes. Renseigne X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN et X_ACCESS_SECRET dans les variables d&apos;environnement du serveur.
         </div>
       )}
 

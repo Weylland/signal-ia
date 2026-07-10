@@ -51,7 +51,7 @@ export default function BackupPage() {
       {/* Info */}
       <div style={{ padding: "var(--s5)", background: "var(--bg-r)", border: "1px solid var(--ln)", borderLeft: "3px solid var(--ac)" }}>
         <div style={{ fontFamily: "var(--ff-m)", fontSize: 11, color: "var(--ink-f)", lineHeight: 1.6 }}>
-          Les sauvegardes sont stockées dans le dossier <code style={{ fontFamily: "var(--ff-m)", background: "var(--bg-d)", padding: "1px 4px" }}>backups/</code> du volume Railway.
+          Les sauvegardes sont stockées dans le dossier <code style={{ fontFamily: "var(--ff-m)", background: "var(--bg-d)", padding: "1px 4px" }}>backups/</code> du volume de données.
           Un cron tourne chaque nuit à 03h00. Maximum 14 snapshots conservés (rotation automatique).
           Le téléchargement renvoie le snapshot le plus récent en format SQLite natif.
         </div>
