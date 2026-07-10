@@ -27,8 +27,8 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
 
   const llmTooltips: Record<string, string> = {
     llmArticles: "Modèle utilisé pour rédiger le corps des articles de news. Claude donne de meilleurs résultats mais coûte ~0,001 $/article. Mistral est gratuit.",
-    llmTutos: "Modèle utilisé pour générer les tutos quand le stock est épuisé. Claude produit des tutos plus structurés.",
-    llmTweets: "Modèle utilisé pour rédiger le texte des tweets automatiques. Impact faible sur la qualité — Mistral suffit.",
+    llmTutos: "Modèle utilisé pour générer un tuto quand le stock est épuisé. Sur Claude, un modèle frontier (Sonnet) est utilisé pour la justesse des commandes ; le tuto est créé en brouillon à relire avant publication.",
+    llmTweets: "Modèle utilisé pour rédiger le texte des tweets automatiques. Sur Claude, un modèle frontier (Sonnet) donne une écriture plus naturelle et moins répétitive que Mistral.",
     llmTranslation: "Modèle utilisé pour la traduction FR → EN (articles, tutos, tldr). Claude est plus fiable sur les longs HTML.",
   };
 
@@ -175,7 +175,11 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
                     onChange={(e) => set(key, e.target.value as "mistral" | "claude")}
                   >
                     <option value="mistral">Mistral (gratuit)</option>
-                    <option value="claude">Claude Haiku (premium)</option>
+                    <option value="claude">
+                      {key === "llmTutos" || key === "llmTweets"
+                        ? "Claude Sonnet (premium)"
+                        : "Claude Haiku (premium)"}
+                    </option>
                   </select>
                 </label>
               ))}
