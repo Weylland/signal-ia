@@ -3,7 +3,7 @@ import { getDb } from "./db";
 import { getSettings } from "./settings";
 import { generateXCard } from "./x-card";
 import { parisOffsetMs } from "./status";
-import { callLLM } from "./llm";
+import { callLLM, CLAUDE_MODEL_FRONTIER } from "./llm";
 import { computeSlots } from "./x-schedule";
 import { generateTuto } from "./tuto-generator";
 
@@ -127,23 +127,24 @@ async function generatePostText(a: Candidate, lang: PostLang, maxLen: number = M
     ? `Tu animes un compte X de veille IA. Ce post présente un TUTO pratique du site : ton job est de donner envie de le faire en montrant la valeur concrète qu'on en retire. ${langRule}`
     : `Tu animes un compte X de veille IA qu'on suit pour ses PRISES DE POSITION, pas pour relayer des titres. ${langRule}`;
 
-  const goal = isTuto
-    ? `Écris UN post (1 à 3 phrases) qui donne envie de suivre le tuto :
-- Pars d'un RÉSULTAT CONCRET ou d'un point de friction réel traité dans le tuto (une commande, un vrai piège, un gain de temps, un "ça marche enfin"). Sers-toi des points clés fournis.
-- Dis ce que le lecteur saura FAIRE après l'avoir suivi — concret et reproductible, jamais "découvrez comment".
-- Ton de quelqu'un qui l'a vraiment fait et partage le raccourci ou le piège qu'il aurait aimé connaître avant.`
-    : `Écris UN post (1 à 3 phrases) qui apporte une vraie valeur :
-- Pars d'un FAIT CONCRET du sujet (un chiffre, un nom, une décision, une conséquence) et ajoute TON ANGLE : ce que ça révèle, pourquoi c'est important, ou une opinion assumée.
-- Donne envie de lire la suite par la substance, pas par le racolage.
-- Ton humain, vif, comme quelqu'un de calé qui balance une observation à ses abonnés.`;
-
-  const examples = isTuto
-    ? `Exemples du NIVEAU attendu (ton, densité — invente sur TON sujet) :
-- "Faire tourner un modèle IA en local, c'est une install et une commande, et ça tourne hors ligne. Le seul vrai arbitrage c'est la RAM : sous 16 Go, reste sur un 7B quantisé plutôt qu'un gros modèle qui va ramer."
-- "Un RAG qui répond à côté, 9 fois sur 10 le problème c'est le découpage des documents, pas le modèle. Le tuto montre comment chunker proprement avant de vectoriser, étape par étape."`
-    : `Exemples du NIVEAU attendu (ton, densité — invente sur TON sujet) :
-- "OpenAI casse ses prix de 40%. Traduction : la bataille des modèles ne se joue plus sur le benchmark mais sur le coût par token. Anthropic et Google vont devoir suivre."
-- "Un agent qui lit tes mails peut être détourné par un simple mail piégé. La prompt injection n'a aucun équivalent en sécu classique — et la majorité des apps IA y sont vulnérables par défaut."`;
+  // Rotation d'angles : sans ça, tous les posts suivent le même moule (« fait + opinion »)
+  // et se ressemblent quand on les lit à la suite — c'est ce qui fait « écrit par une IA ».
+  // Un angle tiré au hasard par post force une structure et une accroche différentes.
+  const newsAngles = [
+    { brief: "Prends le CONTRE-PIED de la lecture évidente : ce que tout le monde va retenir de travers ou négliger.", ex: "Tout le monde va parler du benchmark. Le vrai signal, c'est que ça tourne sur un laptop : pour cette tâche, le cloud n'est plus obligatoire." },
+    { brief: "Pars d'un CHIFFRE du sujet et déplie ce qu'il implique vraiment, sans le paraphraser.", ex: "300 000 requêtes par seconde annoncées. À ce rythme le goulot n'est plus le modèle mais ta base de données, et la plupart des archis cassent avant l'IA." },
+    { brief: "Dis ce que ça CHANGE CONCRÈTEMENT pour un dev ou un indépendant, dès cette semaine.", ex: "Tu peux remplacer ton script de classification maison par un appel d'API, pour moins cher qu'un café par mois. Le fait-main sur ce genre de tâche n'a plus de sens." },
+    { brief: "Démonte une IDÉE REÇUE que le sujet vient contredire.", ex: "On répète que l'IA code à notre place. Cette sortie montre l'inverse : elle accélère qui sait déjà ce qu'il veut, et perd les autres." },
+    { brief: "Relie le sujet à une TENDANCE DE FOND, en une observation posée, sans emphase.", ex: "Encore un labo qui ouvre ses poids. Le vrai basculement de l'année, ce n'est pas la performance, c'est que l'open weight devient l'option par défaut." },
+  ];
+  const tutoAngles = [
+    { brief: "Pars du PIÈGE que le tuto évite : le truc qui fait perdre deux heures et qu'on aurait aimé connaître avant.", ex: "Un RAG qui répond à côté, 9 fois sur 10 c'est le découpage des documents, pas le modèle. Le tuto montre comment chunker avant de vectoriser." },
+    { brief: "Dis le RÉSULTAT CONCRET : ce que le lecteur saura faire après, en une phrase nette.", ex: "À la fin tu fais tourner un modèle en local, hors ligne, en une install et une commande. Le seul vrai arbitrage, c'est la RAM." },
+    { brief: "Donne le RACCOURCI non évident du tuto, celui qu'on ne trouve pas en cherchant vite fait.", ex: "Pour du JSON fiable d'un LLM, le secret n'est pas le prompt : c'est de renvoyer l'erreur de validation au modèle pour qu'il se corrige tout seul." },
+    { brief: "Attaque par le MYTHE « c'est compliqué » que le tuto dégonfle.", ex: "Se faire un assistant IA sur mesure, on imagine du code. En vrai c'est trois paragraphes d'instructions et deux fichiers, zéro ligne de code." },
+  ];
+  const pool = isTuto ? tutoAngles : newsAngles;
+  const angle = pool[Math.floor(Math.random() * pool.length)];
 
   try {
     const raw = await callLLM([{
@@ -153,22 +154,26 @@ async function generatePostText(a: Candidate, lang: PostLang, maxLen: number = M
 Sujet (${kind}) : "${title}"
 ${excerpt}${points}
 
-${goal}
+Écris UN post pour X, 1 à 3 phrases. ANGLE IMPOSÉ pour ce post : ${angle.brief}
+${isTuto ? "Ton de quelqu'un qui l'a vraiment fait et partage ce qu'il aurait aimé savoir avant." : "Ton humain et affûté, comme quelqu'un de calé qui lâche une observation à ses abonnés."}
 
-INTERDIT :
+INTERDIT (c'est exactement ça qui fait « écrit par une IA ») :
 - Recopier ou paraphraser le titre.
+- Les béquilles de transition toutes faites : "Traduction :", "En clair :", "Le vrai sujet :", "Spoiler :", "Résultat :", "Bref". Enchaîne tes idées sans étiquette.
+- Ouvrir comme un post type : varie la première phrase (pas systématiquement un nom propre suivi d'un verbe, pas systématiquement une question).
 - Inventer un chiffre, un fait, une commande ou une conséquence absent du sujet. Reste strictement sur ce qui est fourni.
-- Mal interpréter les chiffres : ne dis jamais "passe de X à Y" ou "réduit/augmente" sauf si le sujet l'affirme explicitement. Des variantes d'un même produit (tiny/small/medium…) sont une gamme, pas une évolution.
-- Empiler des questions rhétoriques ("et si… ? le pari de… ?") — au plus UNE question, et seulement si elle fait mouche.
+- Mal interpréter les chiffres : jamais "passe de X à Y" ni "réduit/augmente" sauf si le sujet l'affirme explicitement. Des variantes d'un même produit (tiny/small/medium…) sont une gamme, pas une évolution.
+- Empiler les questions rhétoriques — au plus UNE, et seulement si elle fait mouche.
 - Hashtags, liens, emojis en rafale (un seul emoji max, et seulement s'il est naturel).
-- Tout markdown : pas d'astérisques *, pas de gras, pas de _ ni de backticks. X affiche ces signes en clair. Pour insister, choisis tes mots, pas du formatage.
+- Tout markdown (astérisques, gras, _, backticks) : X l'affiche en clair. Pour insister, choisis tes mots.
 - Terminer par « … » ou laisser une phrase en suspens.
 - Formules creuses : "découvrez", "à ne pas manquer", "dans un monde où", "révolution", "🚀", "game changer".
 
-${examples}
+Exemple du NIVEAU et du TON attendus (invente sur TON sujet, ne le copie surtout pas) :
+« ${angle.ex} »
 
 Longueur : entre 180 et 240 caractères MAXIMUM (compte-les), et termine TOUJOURS sur une phrase complète ponctuée (. ! ?) — jamais coupé, jamais de « … » final. Renvoie un JSON STRICT : {"text": "..."}`,
-    }], true, "tweets", 0.8);
+    }], true, "tweets", 0.9, CLAUDE_MODEL_FRONTIER);
     const parsed = JSON.parse(raw) as { text?: string };
     const text = parsed.text?.trim();
     if (!text) return fallback;
