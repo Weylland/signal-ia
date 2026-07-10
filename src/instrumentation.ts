@@ -6,6 +6,7 @@ export async function register() {
     const { sendWeeklyDigest } = await import("./lib/newsletter");
     const { runXScheduled } = await import("./lib/x");
     const { pruneOldPageViews } = await import("./lib/analytics");
+    const { pruneOldLlmTraces } = await import("./lib/llm-metrics");
 
     const intervalMin = process.env.PIPELINE_INTERVAL_MIN
       ? parseInt(process.env.PIPELINE_INTERVAL_MIN, 10)
@@ -29,6 +30,12 @@ export async function register() {
         if (deleted > 0) console.log(`[analytics] purge : ${deleted} évènements > 180j supprimés`);
       } catch (err) {
         console.error("[analytics] purge erreur :", err instanceof Error ? err.message : err);
+      }
+      try {
+        const deleted = pruneOldLlmTraces(90);
+        if (deleted > 0) console.log(`[llm] purge : ${deleted} traces > 90j supprimées`);
+      } catch (err) {
+        console.error("[llm] purge erreur :", err instanceof Error ? err.message : err);
       }
     }, { timezone: "Europe/Paris" });
 

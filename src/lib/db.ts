@@ -202,6 +202,19 @@ export function getDb(): Database.Database {
       read INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
     );
+
+    CREATE TABLE IF NOT EXISTS llm_traces (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ts TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+      task TEXT NOT NULL,
+      model TEXT NOT NULL,
+      tokens_in INTEGER,
+      tokens_out INTEGER,
+      cost REAL,
+      latency_ms INTEGER,
+      status TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_llm_traces_ts ON llm_traces(ts);
   `);
 
   db.exec(`

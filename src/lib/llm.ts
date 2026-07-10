@@ -4,6 +4,9 @@
 // simple (scoring, groupage) reste sur Mistral, gratuit, dans tous les cas.
 
 import { getSettings, type LLMChoice } from "./settings";
+import { recordLlmTrace } from "./llm-metrics";
+
+type LLMResult = { text: string; usageIn: number; usageOut: number };
 
 const MISTRAL_API_URL = "https://api.mistral.ai/v1/chat/completions";
 const MISTRAL_MODEL = "mistral-small-latest";
@@ -22,7 +25,7 @@ export const CHOICE_MODEL: Record<LLMChoice, { provider: "mistral" | "claude"; m
 
 export type LLMMessage = { role: string; content: string };
 
-async function callMistral(messages: LLMMessage[], json: boolean, temperature: number): Promise<string> {
+async function callMistral(messages: LLMMessage[], json: boolean, temperature: number): Promise<LLMResult> {
   const apiKey = process.env.MISTRAL_API_KEY;
   if (!apiKey) throw new Error("MISTRAL_API_KEY manquante — https://console.mistral.ai");
 
@@ -38,10 +41,14 @@ async function callMistral(messages: LLMMessage[], json: boolean, temperature: n
   });
   if (!res.ok) throw new Error(`Mistral API ${res.status} : ${await res.text()}`);
   const data = await res.json();
-  return data.choices[0].message.content;
+  return {
+    text: data.choices[0].message.content,
+    usageIn: data.usage?.prompt_tokens ?? 0,
+    usageOut: data.usage?.completion_tokens ?? 0,
+  };
 }
 
-async function callClaude(messages: LLMMessage[], json: boolean, temperature: number, model: string = CLAUDE_HAIKU): Promise<string> {
+async function callClaude(messages: LLMMessage[], json: boolean, temperature: number, model: string = CLAUDE_HAIKU): Promise<LLMResult> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY manquante — https://console.anthropic.com");
 
@@ -78,7 +85,11 @@ async function callClaude(messages: LLMMessage[], json: boolean, temperature: nu
   if (text.startsWith("```")) {
     text = text.replace(/^```(?:json)?\s*\n?/, "").replace(/\n?```\s*$/, "").trim();
   }
-  return text;
+  return {
+    text,
+    usageIn: data.usage?.input_tokens ?? 0,
+    usageOut: data.usage?.output_tokens ?? 0,
+  };
 }
 
 // Tâches LLM. "scoring" couvre toute la classification (scoring/groupage/dédup) et
@@ -113,16 +124,36 @@ export async function callLLM(
   temperature = 0.4
 ): Promise<string> {
   const { provider, model } = CHOICE_MODEL[choiceForTask(task)];
+  const t0 = Date.now();
+
   if (provider === "claude") {
     try {
-      return await callClaude(messages, json, temperature, model);
+      const r = await callClaude(messages, json, temperature, model);
+      recordLlmTrace({ task, model, tokensIn: r.usageIn, tokensOut: r.usageOut, latencyMs: Date.now() - t0, status: "ok" });
+      return r.text;
     } catch (err) {
       console.error(
         "[llm] Claude indisponible, repli sur Mistral :",
         err instanceof Error ? err.message : err
       );
-      return await callMistral(messages, json, temperature);
+      const t1 = Date.now();
+      try {
+        const r = await callMistral(messages, json, temperature);
+        recordLlmTrace({ task, model: MISTRAL_MODEL, tokensIn: r.usageIn, tokensOut: r.usageOut, latencyMs: Date.now() - t1, status: "fallback" });
+        return r.text;
+      } catch (e2) {
+        recordLlmTrace({ task, model, tokensIn: null, tokensOut: null, latencyMs: Date.now() - t0, status: "error" });
+        throw e2;
+      }
     }
   }
-  return callMistral(messages, json, temperature);
+
+  try {
+    const r = await callMistral(messages, json, temperature);
+    recordLlmTrace({ task, model, tokensIn: r.usageIn, tokensOut: r.usageOut, latencyMs: Date.now() - t0, status: "ok" });
+    return r.text;
+  } catch (e) {
+    recordLlmTrace({ task, model, tokensIn: null, tokensOut: null, latencyMs: Date.now() - t0, status: "error" });
+    throw e;
+  }
 }

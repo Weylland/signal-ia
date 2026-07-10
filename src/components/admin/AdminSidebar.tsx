@@ -30,6 +30,7 @@ const NAV = [
     items: [
       { l: "Tags", p: "/admin/tags", i: "#" },
       { l: "Sources RSS", p: "/admin/sources", i: "⊚" },
+      { l: "Coûts IA", p: "/admin/couts", i: "$" },
       { l: "Réglages", p: "/admin/reglages", i: "⚙" },
       { l: "Sauvegarde", p: "/admin/backup", i: "⊞" },
     ],
