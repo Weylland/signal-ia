@@ -59,10 +59,15 @@ async function callClaude(messages: LLMMessage[], json: boolean, temperature: nu
   });
   if (!res.ok) throw new Error(`Anthropic API ${res.status} : ${await res.text()}`);
   const data = await res.json();
-  let text: string = data.content[0].text;
-  // Claude peut entourer le JSON d'un bloc markdown malgré la consigne : on le retire.
-  const match = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (match) text = match[1].trim();
+  let text: string = data.content[0].text.trim();
+  // Claude peut entourer le JSON d'un bloc markdown malgré la consigne : on retire
+  // UNIQUEMENT un fence qui ENVELOPPE toute la réponse. Une recherche globale de
+  // ```...``` casserait un tuto dont le champ markdown contient lui-même des blocs de
+  // code : elle capturerait la première fence interne et tronquerait le JSON (parse
+  // échoue → tuto jamais généré, repli silencieux sur une actu).
+  if (text.startsWith("```")) {
+    text = text.replace(/^```(?:json)?\s*\n?/, "").replace(/\n?```\s*$/, "").trim();
+  }
   return text;
 }
 
