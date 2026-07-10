@@ -3,7 +3,7 @@ import { getDb } from "./db";
 import { getSettings } from "./settings";
 import { generateXCard } from "./x-card";
 import { parisOffsetMs } from "./status";
-import { callLLM, CLAUDE_MODEL_FRONTIER } from "./llm";
+import { callLLM } from "./llm";
 import { computeSlots } from "./x-schedule";
 import { generateTuto } from "./tuto-generator";
 
@@ -173,7 +173,7 @@ Exemple du NIVEAU et du TON attendus (invente sur TON sujet, ne le copie surtout
 « ${angle.ex} »
 
 Longueur : entre 180 et 240 caractères MAXIMUM (compte-les), et termine TOUJOURS sur une phrase complète ponctuée (. ! ?) — jamais coupé, jamais de « … » final. Renvoie un JSON STRICT : {"text": "..."}`,
-    }], true, "tweets", 0.9, CLAUDE_MODEL_FRONTIER);
+    }], true, "tweets", 0.9);
     const parsed = JSON.parse(raw) as { text?: string };
     const text = parsed.text?.trim();
     if (!text) return fallback;

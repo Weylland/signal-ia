@@ -1,6 +1,6 @@
 import { marked } from "marked";
 import { getDb } from "./db";
-import { callLLM, CLAUDE_MODEL_FRONTIER } from "./llm";
+import { callLLM } from "./llm";
 import { createArticle } from "./articles";
 import { autoTranslateArticle } from "./translate";
 
@@ -98,8 +98,7 @@ Réponds en JSON STRICT :
       ],
       true,
       "tutos",
-      0.7,
-      CLAUDE_MODEL_FRONTIER
+      0.7
     );
     parsed = JSON.parse(raw) as GeneratedTuto;
   } catch {

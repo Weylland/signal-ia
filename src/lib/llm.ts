@@ -3,16 +3,22 @@
 // public — articles, traductions, tweets) passent sur Claude. La classification
 // simple (scoring, groupage) reste sur Mistral, gratuit, dans tous les cas.
 
-import { getSettings } from "./settings";
+import { getSettings, type LLMChoice } from "./settings";
 
 const MISTRAL_API_URL = "https://api.mistral.ai/v1/chat/completions";
 const MISTRAL_MODEL = "mistral-small-latest";
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
-const CLAUDE_MODEL = "claude-haiku-4-5-20251001";
-// Modèle frontier réservé aux contenus longs où la justesse prime sur le coût
-// (génération de tuto : commandes exécutables, pièges techniques). Rare, donc le
-// surcoût est négligeable.
-export const CLAUDE_MODEL_FRONTIER = "claude-sonnet-5";
+const CLAUDE_HAIKU = "claude-haiku-4-5-20251001";
+const CLAUDE_SONNET = "claude-sonnet-5";
+const CLAUDE_OPUS = "claude-opus-4-8";
+
+// Chaque choix de tâche → un fournisseur + un modèle concret.
+export const CHOICE_MODEL: Record<LLMChoice, { provider: "mistral" | "claude"; model: string }> = {
+  mistral: { provider: "mistral", model: MISTRAL_MODEL },
+  haiku: { provider: "claude", model: CLAUDE_HAIKU },
+  sonnet: { provider: "claude", model: CLAUDE_SONNET },
+  opus: { provider: "claude", model: CLAUDE_OPUS },
+};
 
 export type LLMMessage = { role: string; content: string };
 
@@ -35,7 +41,7 @@ async function callMistral(messages: LLMMessage[], json: boolean, temperature: n
   return data.choices[0].message.content;
 }
 
-async function callClaude(messages: LLMMessage[], json: boolean, temperature: number, model: string = CLAUDE_MODEL): Promise<string> {
+async function callClaude(messages: LLMMessage[], json: boolean, temperature: number, model: string = CLAUDE_HAIKU): Promise<string> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY manquante — https://console.anthropic.com");
 
@@ -79,7 +85,8 @@ async function callClaude(messages: LLMMessage[], json: boolean, temperature: nu
 // reste TOUJOURS sur Mistral (gratuit). Les autres suivent le menu admin par tâche.
 export type LLMTask = "scoring" | "articles" | "tutos" | "tweets" | "translation";
 
-function providerForTask(task: LLMTask): "mistral" | "claude" {
+// La classification (scoring) est forcée sur Mistral ; les autres suivent le réglage admin.
+export function choiceForTask(task: LLMTask): LLMChoice {
   if (task === "scoring") return "mistral";
   const s = getSettings();
   switch (task) {
@@ -103,10 +110,10 @@ export async function callLLM(
   messages: LLMMessage[],
   json = false,
   task: LLMTask = "scoring",
-  temperature = 0.4,
-  model?: string
+  temperature = 0.4
 ): Promise<string> {
-  if (providerForTask(task) === "claude") {
+  const { provider, model } = CHOICE_MODEL[choiceForTask(task)];
+  if (provider === "claude") {
     try {
       return await callClaude(messages, json, temperature, model);
     } catch (err) {

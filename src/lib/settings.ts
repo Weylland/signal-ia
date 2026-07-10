@@ -1,5 +1,10 @@
 import { getDb } from "./db";
 
+// Choix de modèle par tâche. "mistral" = gratuit ; les autres = Claude (premium),
+// du plus rapide/économique au plus capable.
+export type LLMChoice = "mistral" | "haiku" | "sonnet" | "opus";
+export const LLM_CHOICES: readonly LLMChoice[] = ["mistral", "haiku", "sonnet", "opus"];
+
 export type SiteSettings = {
   siteName: string;
   tagline: string;
@@ -28,10 +33,10 @@ export type SiteSettings = {
   xGenerateTuto: boolean;
   // Choix du modèle par tâche. La classification (scoring/groupage/dédup) reste
   // toujours sur Mistral (gratuit) et n'est pas réglable.
-  llmArticles: "mistral" | "claude";
-  llmTutos: "mistral" | "claude";
-  llmTweets: "mistral" | "claude";
-  llmTranslation: "mistral" | "claude";
+  llmArticles: LLMChoice;
+  llmTutos: LLMChoice;
+  llmTweets: LLMChoice;
+  llmTranslation: LLMChoice;
 };
 
 export const DEFAULT_SETTINGS: SiteSettings = {
@@ -91,6 +96,13 @@ export function getSettings(): SiteSettings {
   // Champs d'identité obligatoires : un vide retombe sur le défaut pour ne jamais casser le branding.
   for (const key of ["siteName", "tagline", "seoDescription"] as const) {
     if (!result[key].trim()) result[key] = DEFAULT_SETTINGS[key];
+  }
+  // Modèles par tâche : normalise vers un LLMChoice valide, en migrant l'ancien binaire
+  // "claude" → sonnet pour les tâches de qualité (tutos/tweets), haiku sinon.
+  for (const key of ["llmArticles", "llmTutos", "llmTweets", "llmTranslation"] as const) {
+    const v = result[key] as string;
+    if ((LLM_CHOICES as readonly string[]).includes(v)) continue;
+    result[key] = v === "claude" ? (key === "llmTutos" || key === "llmTweets" ? "sonnet" : "haiku") : "mistral";
   }
   return result;
 }

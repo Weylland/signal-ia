@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { SiteSettings } from "@/lib/settings";
+import type { SiteSettings, LLMChoice } from "@/lib/settings";
 import { Tooltip } from "./Tooltip";
 
 export function SettingsForm({ initial }: { initial: SiteSettings }) {
@@ -26,10 +26,10 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
   }
 
   const llmTooltips: Record<string, string> = {
-    llmArticles: "Modèle utilisé pour rédiger le corps des articles de news. Claude donne de meilleurs résultats mais coûte ~0,001 $/article. Mistral est gratuit.",
-    llmTutos: "Modèle utilisé pour générer un tuto quand le stock est épuisé. Sur Claude, un modèle frontier (Sonnet) est utilisé pour la justesse des commandes ; le tuto est créé en brouillon à relire avant publication.",
-    llmTweets: "Modèle utilisé pour rédiger le texte des tweets automatiques. Sur Claude, un modèle frontier (Sonnet) donne une écriture plus naturelle et moins répétitive que Mistral.",
-    llmTranslation: "Modèle utilisé pour la traduction FR → EN (articles, tutos, tldr). Claude est plus fiable sur les longs HTML.",
+    llmArticles: "Modèle pour rédiger le corps des news. Mistral (gratuit) suffit souvent ; Haiku → Sonnet → Opus montent en qualité et en coût.",
+    llmTutos: "Modèle pour générer un tuto quand le stock X est épuisé (créé en brouillon à relire). Sonnet ou Opus recommandés pour la justesse des commandes.",
+    llmTweets: "Modèle pour rédiger le texte des tweets automatiques. Sonnet donne une écriture plus naturelle et moins répétitive que Mistral.",
+    llmTranslation: "Modèle pour la traduction FR → EN (articles, tutos, tldr). Claude est plus fiable que Mistral sur les longs HTML.",
   };
 
   return (
@@ -172,14 +172,12 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
                   <select
                     className="field"
                     value={settings[key]}
-                    onChange={(e) => set(key, e.target.value as "mistral" | "claude")}
+                    onChange={(e) => set(key, e.target.value as LLMChoice)}
                   >
-                    <option value="mistral">Mistral (gratuit)</option>
-                    <option value="claude">
-                      {key === "llmTutos" || key === "llmTweets"
-                        ? "Claude Sonnet (premium)"
-                        : "Claude Haiku (premium)"}
-                    </option>
+                    <option value="mistral">Mistral · gratuit</option>
+                    <option value="haiku">Claude Haiku · rapide</option>
+                    <option value="sonnet">Claude Sonnet · qualité</option>
+                    <option value="opus">Claude Opus · max</option>
                   </select>
                 </label>
               ))}
