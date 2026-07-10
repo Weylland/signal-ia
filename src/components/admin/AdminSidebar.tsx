@@ -36,7 +36,7 @@ const NAV = [
   },
 ];
 
-function SidebarInner({ path, onClose, onLogout, siteName }: { path: string; onClose?: () => void; onLogout: () => void; siteName: string }) {
+function SidebarInner({ path, onClose, onLogout, siteName, unread }: { path: string; onClose?: () => void; onLogout: () => void; siteName: string; unread: number }) {
   const brand = splitBrand(siteName);
   return (
     <aside className="adm-side">
@@ -133,6 +133,24 @@ function SidebarInner({ path, onClose, onLogout, siteName }: { path: string; onC
                     {it.i}
                   </span>
                   {it.l}
+                  {it.p === "/admin/messages" && unread > 0 && (
+                    <span
+                      style={{
+                        marginLeft: "auto",
+                        background: "var(--ac)",
+                        color: "var(--bg-d)",
+                        fontFamily: "var(--ff-m)",
+                        fontSize: 9,
+                        fontWeight: 700,
+                        padding: "1px 6px",
+                        borderRadius: 8,
+                        minWidth: 16,
+                        textAlign: "center",
+                      }}
+                    >
+                      {unread}
+                    </span>
+                  )}
                 </Link>
               );
             })}
@@ -193,7 +211,7 @@ function SidebarInner({ path, onClose, onLogout, siteName }: { path: string; onC
   );
 }
 
-export function AdminLayoutClient({ children, siteName = "watch·ia" }: { children: React.ReactNode; siteName?: string }) {
+export function AdminLayoutClient({ children, siteName = "watch·ia", unreadMessages = 0 }: { children: React.ReactNode; siteName?: string; unreadMessages?: number }) {
   const [mob, setMob] = useState(false);
   const path = usePathname() ?? "/admin";
   const router = useRouter();
@@ -219,7 +237,7 @@ export function AdminLayoutClient({ children, siteName = "watch·ia" }: { childr
         onClick={() => setMob(false)}
       />
 
-      <SidebarInner path={path} onClose={() => setMob(false)} onLogout={handleLogout} siteName={siteName} />
+      <SidebarInner path={path} onClose={() => setMob(false)} onLogout={handleLogout} siteName={siteName} unread={unreadMessages} />
 
       <div className="adm-main">
         {/* Top bar */}

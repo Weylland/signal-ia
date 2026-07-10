@@ -9,6 +9,31 @@ export function SourceManager({ sources }: { sources: Source[] }) {
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [testing, setTesting] = useState<string | null>(null);
+  const [testMsg, setTestMsg] = useState<{ key: string; ok: boolean; text: string } | null>(null);
+
+  async function test(key: string, feedUrl: string, id?: number) {
+    if (!feedUrl.trim()) return;
+    setTesting(key);
+    setTestMsg(null);
+    try {
+      const res = await fetch("/api/admin/sources/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: feedUrl, id }),
+      });
+      const data = await res.json();
+      setTestMsg(
+        data.ok
+          ? { key, ok: true, text: `Flux OK — ${data.count} article${data.count > 1 ? "s" : ""}` }
+          : { key, ok: false, text: data.error ?? "Flux illisible" }
+      );
+    } catch {
+      setTestMsg({ key, ok: false, text: "Test impossible" });
+    }
+    setTesting(null);
+    if (id !== undefined) router.refresh();
+  }
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
@@ -77,12 +102,24 @@ export function SourceManager({ sources }: { sources: Source[] }) {
                 </p>
               )}
             </div>
+            <button
+              onClick={() => test(String(source.id), source.url, source.id)}
+              disabled={testing === String(source.id)}
+              className="nb-btn text-xs"
+            >
+              {testing === String(source.id) ? "Test…" : "Tester"}
+            </button>
             <button onClick={() => toggle(source)} className="nb-btn text-xs">
               {source.active ? "Désactiver" : "Activer"}
             </button>
             <button onClick={() => remove(source)} className="nb-btn text-xs">
               Supprimer
             </button>
+            {testMsg && testMsg.key === String(source.id) && (
+              <p className="w-full text-xs font-semibold" style={{ color: testMsg.ok ? "var(--ok)" : "var(--er)" }}>
+                {testMsg.text}
+              </p>
+            )}
           </div>
         ))}
         {sources.length === 0 && <p className="p-4 text-sm">Aucune source.</p>}
@@ -103,10 +140,23 @@ export function SourceManager({ sources }: { sources: Source[] }) {
             required
           />
         </label>
+        <button
+          type="button"
+          onClick={() => test("new", url)}
+          disabled={testing === "new" || !url.trim()}
+          className="nb-btn text-xs"
+        >
+          {testing === "new" ? "Test…" : "Tester"}
+        </button>
         <button type="submit" className="nb-btn nb-btn-primary">
           + Ajouter
         </button>
         {error && <p className="text-sm font-semibold text-red-700">{error}</p>}
+        {testMsg && testMsg.key === "new" && (
+          <p className="w-full text-sm font-semibold" style={{ color: testMsg.ok ? "var(--ok)" : "var(--er)" }}>
+            {testMsg.text}
+          </p>
+        )}
       </form>
     </section>
   );

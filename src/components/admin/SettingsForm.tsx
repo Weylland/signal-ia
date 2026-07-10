@@ -34,7 +34,18 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
 
   return (
     <div className="flex flex-col gap-8">
-      <section className="nb-card p-6">
+      <nav
+        className="sticky top-0 z-10 flex flex-wrap gap-2 py-3"
+        style={{ background: "var(--bg-d)", borderBottom: "1px solid var(--ln)", fontFamily: "var(--ff-m)", fontSize: 11 }}
+      >
+        {([["identite", "Identité"], ["pipeline", "Pipeline"], ["ia", "Modèles IA"], ["reseaux", "Réseaux"], ["avance", "Avancé"]] as const).map(([id, l]) => (
+          <a key={id} href={`#${id}`} style={{ border: "1px solid var(--ln)", padding: "3px 8px", color: "var(--ink-d)", textDecoration: "none" }}>
+            {l}
+          </a>
+        ))}
+      </nav>
+
+      <section id="identite" className="nb-card p-6" style={{ scrollMarginTop: 56 }}>
         <h2 className="font-display text-xl font-bold">Identité du site</h2>
         <div className="mt-4 flex flex-col gap-4">
           <label className="flex flex-col gap-1 text-sm font-semibold">
@@ -73,7 +84,7 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
         </div>
       </section>
 
-      <section className="nb-card p-6">
+      <section id="pipeline" className="nb-card p-6" style={{ scrollMarginTop: 56 }}>
         <h2 className="font-display text-xl font-bold">Pipeline</h2>
         <p className="mt-1 text-sm text-ink/60">
           Une news notée au-dessus du seuil breaking est publiée immédiatement avec le badge « À
@@ -147,46 +158,44 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
               onChange={(e) => set("breakingDurationHours", Number(e.target.value))}
             />
           </label>
-          <div className="flex flex-col gap-3 sm:col-span-2">
-            <span className="flex items-center text-sm font-semibold">
-              Modèle LLM par tâche
-              <Tooltip text="Scoring et groupage des news restent toujours sur Mistral (gratuit). Claude nécessite ANTHROPIC_API_KEY côté serveur et bascule automatiquement sur Mistral si les crédits s'épuisent." />
-            </span>
-            <span className="text-xs font-normal text-ink/50">
-              Choisis Claude ou Mistral pour chaque tâche, indépendamment. Le scoring et le groupage
-              restent toujours sur Mistral (classification gratuite). Claude nécessite ANTHROPIC_API_KEY
-              côté serveur et bascule automatiquement sur Mistral si les crédits s&apos;épuisent.
-            </span>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {([
-                ["llmArticles", "Rédaction articles (news)"],
-                ["llmTutos", "Génération tutos"],
-                ["llmTweets", "Texte des tweets X"],
-                ["llmTranslation", "Traduction EN"],
-              ] as const).map(([key, label]) => (
-                <label key={key} className="flex flex-col gap-1 text-sm font-semibold">
-                  <span className="flex items-center">
-                    {label}
-                    <Tooltip text={llmTooltips[key]} />
-                  </span>
-                  <select
-                    className="field"
-                    value={settings[key]}
-                    onChange={(e) => set(key, e.target.value as LLMChoice)}
-                  >
-                    <option value="mistral">Mistral · gratuit</option>
-                    <option value="haiku">Claude Haiku · rapide</option>
-                    <option value="sonnet">Claude Sonnet · qualité</option>
-                    <option value="opus">Claude Opus · max</option>
-                  </select>
-                </label>
-              ))}
-            </div>
-          </div>
         </div>
       </section>
 
-      <section className="nb-card p-6">
+      <section id="ia" className="nb-card p-6" style={{ scrollMarginTop: 56 }}>
+        <h2 className="font-display text-xl font-bold">Modèles IA (par tâche)</h2>
+        <p className="mt-1 text-sm text-ink/60">
+          Un modèle par tâche, indépendamment. Le scoring et le groupage des news restent toujours
+          sur Mistral (classification gratuite, non réglable). Claude nécessite ANTHROPIC_API_KEY
+          côté serveur et bascule automatiquement sur Mistral si les crédits s&apos;épuisent.
+        </p>
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {([
+            ["llmArticles", "Rédaction articles (news)"],
+            ["llmTutos", "Génération tutos"],
+            ["llmTweets", "Texte des tweets X"],
+            ["llmTranslation", "Traduction EN"],
+          ] as const).map(([key, label]) => (
+            <label key={key} className="flex flex-col gap-1 text-sm font-semibold">
+              <span className="flex items-center">
+                {label}
+                <Tooltip text={llmTooltips[key]} />
+              </span>
+              <select
+                className="field"
+                value={settings[key]}
+                onChange={(e) => set(key, e.target.value as LLMChoice)}
+              >
+                <option value="mistral">Mistral · gratuit</option>
+                <option value="haiku">Claude Haiku · rapide</option>
+                <option value="sonnet">Claude Sonnet · qualité</option>
+                <option value="opus">Claude Opus · max</option>
+              </select>
+            </label>
+          ))}
+        </div>
+      </section>
+
+      <section id="reseaux" className="nb-card p-6" style={{ scrollMarginTop: 56 }}>
         <h2 className="font-display text-xl font-bold">Réseaux sociaux (footer)</h2>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
           <label className="flex flex-col gap-1 text-sm font-semibold">
@@ -219,7 +228,7 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
         </div>
       </section>
 
-      <section className="nb-card p-6">
+      <section id="avance" className="nb-card p-6" style={{ scrollMarginTop: 56 }}>
         <h2 className="font-display text-xl font-bold">Avancé</h2>
         <div className="mt-4 flex flex-col gap-4">
           <label className="flex items-center gap-3 text-sm font-semibold">
