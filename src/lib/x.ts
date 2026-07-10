@@ -214,12 +214,13 @@ export async function runXDigest(
   const tutoAllowed = tutosTodayParis(lang) === 0;
   let candidate: Candidate | null;
   if (prefer === "tuto" && tutoAllowed) {
-    // Créneau tuto du soir : on pioche un tuto evergreen jamais posté ; s'il n'en reste
-    // aucun de frais, on en GÉNÈRE un (publié + traduit EN pour le site) puis on le poste.
+    // Créneau tuto du soir : on pioche un tuto evergreen jamais posté. S'il n'en reste
+    // aucun de frais, on GÉNÈRE un brouillon (frontier) à relire — il n'est PAS posté
+    // maintenant (published=0) : ce créneau se rabat alors sur une actu, et le tuto
+    // partira sur X une fois relu et publié à la main.
     candidate = pickTuto(lang);
     if (!candidate && !dryRun && getSettings().xGenerateTuto) {
-      const slug = await generateTuto();
-      if (slug) candidate = pickTuto(lang);
+      await generateTuto();
     }
     candidate = candidate ?? pickNews(lang);
   } else if (prefer === "tuto") {

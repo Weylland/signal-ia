@@ -9,6 +9,10 @@ const MISTRAL_API_URL = "https://api.mistral.ai/v1/chat/completions";
 const MISTRAL_MODEL = "mistral-small-latest";
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 const CLAUDE_MODEL = "claude-haiku-4-5-20251001";
+// Modèle frontier réservé aux contenus longs où la justesse prime sur le coût
+// (génération de tuto : commandes exécutables, pièges techniques). Rare, donc le
+// surcoût est négligeable.
+export const CLAUDE_MODEL_FRONTIER = "claude-sonnet-5";
 
 export type LLMMessage = { role: string; content: string };
 
@@ -31,7 +35,7 @@ async function callMistral(messages: LLMMessage[], json: boolean, temperature: n
   return data.choices[0].message.content;
 }
 
-async function callClaude(messages: LLMMessage[], json: boolean, temperature: number): Promise<string> {
+async function callClaude(messages: LLMMessage[], json: boolean, temperature: number, model: string = CLAUDE_MODEL): Promise<string> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY manquante — https://console.anthropic.com");
 
@@ -50,7 +54,7 @@ async function callClaude(messages: LLMMessage[], json: boolean, temperature: nu
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: CLAUDE_MODEL,
+      model,
       max_tokens: 4096,
       temperature,
       system: systemPrompt,
@@ -99,11 +103,12 @@ export async function callLLM(
   messages: LLMMessage[],
   json = false,
   task: LLMTask = "scoring",
-  temperature = 0.4
+  temperature = 0.4,
+  model?: string
 ): Promise<string> {
   if (providerForTask(task) === "claude") {
     try {
-      return await callClaude(messages, json, temperature);
+      return await callClaude(messages, json, temperature, model);
     } catch (err) {
       console.error(
         "[llm] Claude indisponible, repli sur Mistral :",

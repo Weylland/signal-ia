@@ -1,13 +1,17 @@
 import { marked } from "marked";
 import { getDb } from "./db";
-import { callLLM } from "./llm";
+import { callLLM, CLAUDE_MODEL_FRONTIER } from "./llm";
 import { createArticle } from "./articles";
 import { autoTranslateArticle } from "./translate";
 
 // Génération d'un tuto evergreen quand le stock à partager sur X est épuisé.
 // C'est le SEUL endroit où le système écrit du contenu de toutes pièces : le pipeline
-// ne produit que des news, et le poster X ne fait que piocher l'existant. Le tuto est
-// publié sur le site (FR) + traduit en EN, puis le poster X récupère sa version FR.
+// ne produit que des news, et le poster X ne fait que piocher l'existant.
+//
+// Qualité > automatisation : le tuto est écrit par un modèle FRONTIER (justesse des
+// commandes) et créé en BROUILLON (published=0), jamais publié ni posté sans relecture.
+// Il apparaît dans /admin/articles (filtre Brouillons) ; une fois relu et publié à la
+// main, le poster X le prendra à un prochain créneau du soir via pickTuto.
 
 const TUTO_THEMES =
   "prompting efficace, ChatGPT / Claude / Gemini / Mistral en pratique, automatisation avec n8n, " +
@@ -42,10 +46,18 @@ function normalizeDifficulty(raw: unknown): Difficulty {
 }
 
 /**
- * Écrit un tuto inédit, le publie (FR) et le traduit en EN. Renvoie le slug, ou null
- * si la génération échoue (le poster X retombe alors sur une actu, jamais sur du vide).
+ * Écrit un tuto inédit EN BROUILLON (non publié) et le traduit en EN, pour relecture
+ * manuelle avant mise en ligne. Renvoie le slug créé, ou null si rien n'a été généré
+ * (échec LLM, ou un brouillon est déjà en attente).
  */
 export async function generateTuto(): Promise<string | null> {
+  // Anti-empilement : un seul brouillon de tuto en attente de relecture à la fois.
+  // Sans ça, chaque créneau du soir (stock épuisé) en générerait un nouveau chaque jour.
+  const pending = getDb()
+    .prepare("SELECT COUNT(*) AS c FROM articles WHERE type = 'tuto' AND published = 0")
+    .get() as { c: number };
+  if (pending.c > 0) return null;
+
   const existing = existingTutoTitles();
   const avoid = existing.length
     ? `\n\nTUTOS DÉJÀ PUBLIÉS — n'en propose AUCUN qui recoupe l'un de ceux-ci, choisis un sujet ou un angle réellement nouveau :\n- ${existing.join("\n- ")}`
@@ -86,7 +98,8 @@ Réponds en JSON STRICT :
       ],
       true,
       "tutos",
-      0.7
+      0.7,
+      CLAUDE_MODEL_FRONTIER
     );
     parsed = JSON.parse(raw) as GeneratedTuto;
   } catch {
@@ -106,14 +119,15 @@ Réponds en JSON STRICT :
     difficulty: normalizeDifficulty(parsed.difficulty),
     tags: Array.isArray(parsed.tags) ? parsed.tags.filter((t) => typeof t === "string" && t.trim()) : [],
     tldr: Array.isArray(parsed.tldr) ? parsed.tldr.filter((t) => typeof t === "string" && t.trim()).slice(0, 3) : [],
-    published: true,
+    published: false,
   });
 
-  // Traduction EN pour le site (best-effort : un échec ne bloque pas la publication FR).
+  // Traduction EN dès la génération (best-effort). Le brouillon FR reste la source de
+  // vérité ; si tu le retouches en relecture, retraduis avant publication.
   try {
     await autoTranslateArticle(slug);
   } catch {
-    /* la version FR reste publiée ; l'EN pourra être régénérée plus tard */
+    /* le brouillon FR reste intact ; l'EN pourra être régénérée à la relecture */
   }
 
   return slug;
