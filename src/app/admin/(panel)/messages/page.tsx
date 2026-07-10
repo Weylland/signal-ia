@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getDb } from "@/lib/db";
 import { Pagination } from "@/components/Pagination";
+import { MessageActions, MarkAllReadButton } from "@/components/admin/MessageActions";
 
 export const dynamic = "force-dynamic";
 
@@ -50,11 +51,14 @@ export default async function MessagesPage({ searchParams }: PageProps<"/admin/m
 
   return (
     <div>
-      <div style={{ marginBottom: "var(--s7)" }}>
-        <h1 style={{ fontFamily: "var(--ff-h)", fontSize: 26, fontWeight: 700, letterSpacing: "-.02em" }}>Messages</h1>
-        <p style={{ fontFamily: "var(--ff-m)", fontSize: 12, color: "var(--ink-f)", marginTop: "var(--s2)" }}>
-          {all.length} message{all.length > 1 ? "s" : ""} · {totalUnread > 0 ? `${totalUnread} non lu${totalUnread > 1 ? "s" : ""}` : "tous lus"}
-        </p>
+      <div style={{ marginBottom: "var(--s7)", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "var(--s5)", flexWrap: "wrap" }}>
+        <div>
+          <h1 style={{ fontFamily: "var(--ff-h)", fontSize: 26, fontWeight: 700, letterSpacing: "-.02em" }}>Messages</h1>
+          <p style={{ fontFamily: "var(--ff-m)", fontSize: 12, color: "var(--ink-f)", marginTop: "var(--s2)" }}>
+            {all.length} message{all.length > 1 ? "s" : ""} · {totalUnread > 0 ? `${totalUnread} non lu${totalUnread > 1 ? "s" : ""}` : "tous lus"}
+          </p>
+        </div>
+        <MarkAllReadButton count={totalUnread} />
       </div>
 
       <form method="get" style={{ display: "flex", gap: "var(--s3)", marginBottom: "var(--s5)", flexWrap: "wrap", alignItems: "center" }}>
@@ -95,10 +99,11 @@ export default async function MessagesPage({ searchParams }: PageProps<"/admin/m
               </div>
               {m.subject && <div style={{ fontFamily: "var(--ff-h)", fontSize: 13, fontWeight: 600, marginBottom: "var(--s2)", color: "var(--ink-d)" }}>{m.subject}</div>}
               <p style={{ fontFamily: "var(--ff-b)", fontSize: 13, color: "var(--ink-d)", lineHeight: 1.6, marginBottom: "var(--s4)" }}>{m.message}</p>
-              <div style={{ display: "flex", gap: "var(--s3)" }}>
+              <div style={{ display: "flex", gap: "var(--s3)", flexWrap: "wrap", alignItems: "center" }}>
                 <a href={`mailto:${m.email}`} className="btn btn-sm btn-p" style={{ fontFamily: "var(--ff-m)", fontSize: 11 }}>
                   Répondre ↗
                 </a>
+                <MessageActions id={m.id} unread={!m.read} />
               </div>
             </div>
           ))}

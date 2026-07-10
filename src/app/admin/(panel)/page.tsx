@@ -171,12 +171,16 @@ export default async function AdminDashboard() {
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--s2)" }}>
             {sources.map((s) => {
-              const health = "ok";
+              const err = s.lastStatus === "error" || !!s.lastError;
+              const pending = !s.lastFetchAt;
+              const cls = err ? "s-err" : pending ? "s-wn" : "s-ok";
+              const color = err ? "var(--er)" : pending ? "var(--wn)" : "var(--ok)";
+              const label = err ? "erreur" : pending ? "attente" : "ok";
               return (
-                <div key={s.id} style={{ display: "flex", alignItems: "center", gap: "var(--s3)", padding: "var(--s3) var(--s4)", background: "var(--bg-r)", border: "1px solid var(--ln)" }}>
-                  <span className="s-ok" style={{ flexShrink: 0 }} />
+                <div key={s.id} title={s.lastError ?? undefined} style={{ display: "flex", alignItems: "center", gap: "var(--s3)", padding: "var(--s3) var(--s4)", background: "var(--bg-r)", border: "1px solid var(--ln)" }}>
+                  <span className={cls} style={{ flexShrink: 0 }} />
                   <span style={{ fontFamily: "var(--ff-h)", fontSize: 13, flex: 1 }}>{s.name}</span>
-                  <span style={{ fontFamily: "var(--ff-m)", fontSize: 10, color: "var(--ok)", textTransform: "uppercase", letterSpacing: ".06em" }}>{health}</span>
+                  <span style={{ fontFamily: "var(--ff-m)", fontSize: 10, color, textTransform: "uppercase", letterSpacing: ".06em" }}>{label}</span>
                 </div>
               );
             })}
