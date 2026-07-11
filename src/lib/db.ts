@@ -215,6 +215,13 @@ export function getDb(): Database.Database {
       status TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_llm_traces_ts ON llm_traces(ts);
+
+    CREATE TABLE IF NOT EXISTS x_slot_locks (
+      day TEXT NOT NULL,
+      slot INTEGER NOT NULL,
+      claimed_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+      PRIMARY KEY (day, slot)
+    );
   `);
 
   db.exec(`

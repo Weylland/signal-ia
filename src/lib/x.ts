@@ -321,6 +321,36 @@ function tutosTodayParis(lang: PostLang): number {
   return row.c;
 }
 
+// Clé de jour calendaire Paris (YYYY-MM-DD), pour verrouiller un créneau par jour.
+function parisDayKey(at = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Paris",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(at);
+}
+
+// Prise de créneau ATOMIQUE : l'INSERT sur une clé unique (jour, créneau) ne peut réussir
+// qu'une seule fois. Deux process/conteneurs qui démarrent en même temps (redéploiements
+// qui se chevauchent) ne peuvent donc pas poster le même créneau — la garde n'est plus une
+// lecture-puis-écriture non atomique (cause des double-posts).
+function claimSlot(day: string, slot: number): boolean {
+  try {
+    getDb().prepare("INSERT INTO x_slot_locks (day, slot) VALUES (?, ?)").run(day, slot);
+    return true;
+  } catch {
+    return false; // clé déjà présente → un autre appel a pris ce créneau
+  }
+}
+function releaseSlot(day: string, slot: number): void {
+  try {
+    getDb().prepare("DELETE FROM x_slot_locks WHERE day = ? AND slot = ?").run(day, slot);
+  } catch {
+    /* best-effort */
+  }
+}
+
 // Vérificateur de publication, appelé périodiquement (toutes les 30 min) et au boot.
 // Pilote 100 % des posts auto depuis les réglages : nombre/jour + fenêtre horaire.
 // Publie au plus UN créneau par appel ; rattrape naturellement un créneau raté
@@ -344,11 +374,27 @@ export async function runXScheduled(): Promise<XResult> {
   const done = postsTodayParis("fr");
   if (done >= dueSlots) return { skipped: "quota du jour atteint" };
 
+  // On remplit le créneau n°`done` du jour. La prise est atomique : si un autre appel
+  // (autre tick, autre conteneur en cours de démarrage) l'a déjà prise, on s'arrête ici.
+  const day = parisDayKey();
+  if (!claimSlot(day, done)) return { skipped: "créneau déjà pris (anti double-post)" };
+
   // Dernier créneau de la journée = tuto/insight ; les précédents = actu fraîche.
   // Le plafond strict de 1 tuto/jour est appliqué dans runXDigest.
   const prefer = xPostsPerDay >= 2 && dueSlots === slots.length ? "tuto" : "news";
 
-  return runXDigest("fr", { prefer });
+  let result: XResult;
+  try {
+    result = await runXDigest("fr", { prefer });
+  } catch (e) {
+    // Échec d'envoi (rate-limit X, réseau…) : on relâche pour retenter au tick suivant.
+    releaseSlot(day, done);
+    throw e;
+  }
+  // Rien posté (pas de contenu éligible) : on relâche le verrou pour que le créneau
+  // puisse être rempli plus tard dans la journée quand du contenu arrive.
+  if ("skipped" in result) releaseSlot(day, done);
+  return result;
 }
 
 export type XCustomResult =
